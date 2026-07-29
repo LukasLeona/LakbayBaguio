@@ -29,6 +29,7 @@ Opening `index.html` directly also works for most features, but Live Server is r
 - Local browser saving, itinerary copying, desktop printing / PDF saving, and mobile responsiveness
 - Mobile step navigation that highlights the current section while scrolling
 - Restored information, travel-reminder, call-to-action, and full footer sections
+- Kabsat, a Taglish emotional-support and travel-companion bot with quick replies, Baguio-curse conversation, trip-aware reactions, mute controls, and a guided breathing pause
 
 ## Color palette
 
@@ -78,6 +79,32 @@ The project uses:
 
 A paid Google Maps API key is not required for the current implementation. The embedded preview shows a selected place, while the route buttons open full directions in Google Maps.
 
+## Kabsat travel companion
+
+Kabsat is a fully local, scripted bot. It does not require an API key, internet connection, or paid AI service. It includes:
+
+- A floating avatar with short speech-bubble messages that pop out beside it
+- Several rotating Taglish prompts per visit, with click-to-open chat behavior
+- Taglish comfort, solo-trip, couple-trip, barkada, food, weather, and itinerary messages
+- An interactive Baguio-curse conversation
+- Context messages when destinations are selected or an itinerary is generated
+- A 30-second guided breathing pause
+- Mute and close controls
+- Mobile-friendly chat layout
+- A clear notice that it is not professional counseling or live transport advice
+
+Edit its messages and conversation branches inside:
+
+```text
+assets/js/bot.js
+```
+
+The avatar is located at:
+
+```text
+assets/img/kabsat-avatar.svg
+```
+
 ## Data and fare notes
 
 `assets/js/data.js` contains:
@@ -104,10 +131,12 @@ lakbay-baguio/
     ├── img/
     │   ├── logo.svg
     │   ├── favicon.svg
+    │   ├── kabsat-avatar.svg
     │   └── destinations/
     └── js/
         ├── data.js
-        └── app.js
+        ├── app.js
+        └── bot.js
 ```
 
 ## Mobile printing

@@ -3342,3 +3342,496 @@ img {
     flex-basis: 156px;
   }
 }
+
+/* Kabsat — supportive Baguio travel companion */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.kabsat-bot {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 4200;
+  width: 66px;
+  height: 66px;
+  font-family: "Poppins", sans-serif;
+  overflow: visible;
+}
+
+.kabsat-launcher {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 66px;
+  height: 66px;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, .68);
+  border-radius: 22px;
+  background: var(--ink);
+  color: var(--white);
+  box-shadow: 0 18px 44px rgba(23, 53, 47, .28);
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.kabsat-launcher::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 1px solid rgba(255, 160, 46, .32);
+  border-radius: 26px;
+  opacity: 0;
+  transform: scale(.92);
+  animation: kabsatLauncherHalo 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+.kabsat-launcher:hover,
+.kabsat-launcher:focus-visible {
+  transform: translateY(-3px);
+  background: #102d27;
+  box-shadow: 0 23px 52px rgba(23, 53, 47, .34);
+}
+.kabsat-launcher-avatar {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+}
+.kabsat-launcher-avatar img {
+  width: 52px;
+  height: 52px;
+  display: block;
+  border-radius: 17px;
+}
+.kabsat-launcher-avatar i {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  padding-inline: 5px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--orange);
+  color: var(--ink);
+  font-size: .58rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.kabsat-teaser {
+  position: absolute;
+  right: 76px;
+  bottom: 7px;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 116px));
+  min-height: 51px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 15px 11px 16px;
+  border: 1px solid rgba(255, 160, 46, .88);
+  border-radius: 17px 17px 5px 17px;
+  outline: 0;
+  background: rgba(22, 38, 34, .97);
+  color: #fff;
+  box-shadow: 0 18px 45px rgba(23, 53, 47, .24);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateX(14px) scale(.96);
+  transform-origin: right center;
+  transition: opacity .26s ease, transform .26s cubic-bezier(.2,.8,.2,1), border-color .2s ease;
+  text-align: left;
+}
+.kabsat-teaser::after {
+  content: "";
+  position: absolute;
+  right: -8px;
+  bottom: 12px;
+  width: 15px;
+  height: 15px;
+  border-right: 1px solid rgba(255, 160, 46, .88);
+  border-bottom: 1px solid rgba(255, 160, 46, .88);
+  background: rgba(22, 38, 34, .97);
+  transform: rotate(-45deg);
+  border-radius: 0 0 3px 0;
+}
+.kabsat-teaser[hidden] { display: none !important; }
+.kabsat-teaser.show {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  animation: kabsatTeaserPop .42s cubic-bezier(.2,.9,.25,1.15) both;
+}
+.kabsat-teaser:hover,
+.kabsat-teaser:focus-visible {
+  border-color: var(--yellow);
+  transform: translateX(-3px) scale(1.01);
+}
+.kabsat-teaser > span:last-child {
+  position: relative;
+  z-index: 1;
+  font-size: .73rem;
+  line-height: 1.45;
+  font-weight: 500;
+}
+.kabsat-teaser-sparkle {
+  position: relative;
+  z-index: 1;
+  color: var(--yellow);
+  font-size: .88rem;
+  line-height: 1;
+  animation: kabsatSparkle 1.8s ease-in-out infinite;
+}
+@keyframes kabsatTeaserPop {
+  0% { opacity: 0; transform: translateX(16px) scale(.92); }
+  65% { opacity: 1; transform: translateX(-3px) scale(1.02); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes kabsatSparkle {
+  50% { transform: rotate(14deg) scale(1.22); opacity: .72; }
+}
+@keyframes kabsatLauncherHalo {
+  45% { opacity: .58; transform: scale(1.04); }
+  75%, 100% { opacity: 0; transform: scale(1.12); }
+}
+
+.kabsat-panel {
+  position: absolute;
+  right: 0;
+  bottom: 78px;
+  width: min(390px, calc(100vw - 32px));
+  max-height: min(680px, calc(100vh - 116px));
+  display: grid;
+  grid-template-rows: auto auto minmax(175px, 1fr) auto auto auto;
+  overflow: hidden;
+  border: 1px solid rgba(129, 154, 145, .26);
+  border-radius: 26px;
+  background: rgba(251, 252, 248, .985);
+  box-shadow: 0 28px 80px rgba(23, 53, 47, .28);
+  opacity: 0;
+  transform: translateY(14px) scale(.97);
+  transform-origin: bottom right;
+  transition: opacity .22s ease, transform .22s ease;
+}
+.kabsat-panel.show { opacity: 1; transform: translateY(0) scale(1); }
+
+.kabsat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px 15px 14px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(135deg, rgba(209, 216, 190, .58), rgba(238, 239, 224, .9));
+}
+.kabsat-identity { min-width: 0; display: flex; align-items: center; gap: 10px; }
+.kabsat-avatar-wrap {
+  width: 43px;
+  height: 43px;
+  flex: 0 0 auto;
+  padding: 3px;
+  border-radius: 15px;
+  background: rgba(255,255,255,.72);
+}
+.kabsat-avatar-wrap img { width: 100%; height: 100%; border-radius: 12px; }
+.kabsat-identity strong,
+.kabsat-identity span { display: block; }
+.kabsat-identity strong { font-size: .9rem; line-height: 1.2; }
+.kabsat-identity span { margin-top: 3px; color: var(--ink-soft); font-size: .57rem; white-space: nowrap; }
+.kabsat-identity span i {
+  width: 7px;
+  height: 7px;
+  display: inline-block;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: #6e9c72;
+  box-shadow: 0 0 0 3px rgba(110,156,114,.14);
+}
+.kabsat-header-actions { display: flex; gap: 6px; }
+.kabsat-icon-button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(23, 53, 47, .1);
+  border-radius: 11px;
+  background: rgba(255,255,255,.68);
+  cursor: pointer;
+  font-size: .82rem;
+}
+.kabsat-icon-button:hover { background: var(--white); }
+
+.kabsat-mood-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 31px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--sage-deep);
+  background: #fff;
+  font-size: .53rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.kabsat-mood-strip i { width: 3px; height: 3px; border-radius: 50%; background: var(--orange); }
+
+.kabsat-messages {
+  min-height: 175px;
+  overflow-y: auto;
+  padding: 16px 14px 8px;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sage) transparent;
+  background: radial-gradient(circle at 100% 0, rgba(167,193,168,.16), transparent 33%), #fbfcf8;
+}
+.kabsat-message {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  margin-bottom: 11px;
+  animation: kabsatMessageIn .26s ease both;
+}
+.kabsat-message > img {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+}
+.kabsat-message.user { justify-content: flex-end; }
+.kabsat-bubble {
+  max-width: 82%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px 16px 16px 16px;
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 7px 18px rgba(23,53,47,.05);
+  font-size: .69rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.kabsat-message.user .kabsat-bubble {
+  border-color: transparent;
+  border-radius: 16px 7px 16px 16px;
+  background: var(--sage-deep);
+  color: var(--white);
+}
+.kabsat-message.context .kabsat-bubble {
+  border-color: rgba(255,160,46,.28);
+  background: #fffaf0;
+}
+@keyframes kabsatMessageIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.kabsat-typing {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px 8px;
+  background: #fbfcf8;
+}
+.kabsat-typing[hidden] { display: none; }
+.kabsat-typing img { width: 26px; height: 26px; border-radius: 9px; }
+.kabsat-typing > span {
+  display: flex;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px 15px 15px 15px;
+  background: white;
+}
+.kabsat-typing i { width: 5px; height: 5px; border-radius: 50%; background: var(--sage-deep); animation: kabsatTyping 1s ease-in-out infinite; }
+.kabsat-typing i:nth-child(2) { animation-delay: .15s; }
+.kabsat-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes kabsatTyping { 50% { transform: translateY(-3px); opacity: .45; } }
+
+.kabsat-replies {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 8px 14px 10px;
+  border-top: 1px solid rgba(23,53,47,.06);
+  background: #fbfcf8;
+  scrollbar-width: none;
+}
+.kabsat-replies::-webkit-scrollbar { display: none; }
+.kabsat-replies:empty { display: none; }
+.kabsat-replies button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid rgba(129,154,145,.28);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: .6rem;
+  font-weight: 600;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.kabsat-replies button:hover,
+.kabsat-replies button:focus-visible {
+  border-color: var(--sage-deep);
+  background: var(--cream);
+  transform: translateY(-1px);
+}
+
+.kabsat-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  border-top: 1px solid var(--line);
+  background: white;
+}
+.kabsat-input-row input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 13px;
+  border: 1px solid rgba(23,53,47,.14);
+  border-radius: 13px;
+  outline: none;
+  background: #fbfcf8;
+  color: var(--ink);
+  font-size: .66rem;
+}
+.kabsat-input-row input:focus { border-color: var(--sage-deep); box-shadow: 0 0 0 3px rgba(129,154,145,.14); }
+.kabsat-input-row button {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 13px;
+  background: var(--sage-deep);
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.kabsat-input-row button:hover { background: #6f8980; }
+.kabsat-note {
+  margin: 0;
+  padding: 0 14px 11px;
+  background: white;
+  color: var(--ink-soft);
+  font-size: .48rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.kabsat-breathe-card {
+  margin: 4px 0 13px 33px;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 15px;
+  border: 1px solid rgba(129,154,145,.24);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(238,239,224,.9), rgba(209,216,190,.56));
+  text-align: center;
+  animation: kabsatMessageIn .28s ease both;
+}
+.kabsat-breathe-circle {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(23,53,47,.12);
+  border-radius: 50%;
+  background: rgba(255,255,255,.72);
+  transition: transform 4s ease, background 1s ease;
+}
+.kabsat-breathe-circle.inhale { transform: scale(1.18); background: rgba(167,193,168,.75); }
+.kabsat-breathe-circle.hold { transform: scale(1.18); }
+.kabsat-breathe-circle.exhale { transform: scale(.86); transition-duration: 6s; background: rgba(255,255,255,.78); }
+.kabsat-breathe-circle span { font-size: .58rem; font-weight: 700; }
+.kabsat-breathe-card strong { font-size: .72rem; }
+.kabsat-breathe-card small { color: var(--ink-soft); font-size: .52rem; }
+.kabsat-breathe-card button {
+  margin-top: 3px;
+  padding: 6px 10px;
+  border: 1px solid rgba(23,53,47,.12);
+  border-radius: 999px;
+  background: white;
+  cursor: pointer;
+  font-size: .55rem;
+}
+
+@media (max-width: 680px) {
+  .kabsat-bot {
+    right: 12px;
+    bottom: 12px;
+    width: 60px;
+    height: 60px;
+  }
+  .kabsat-launcher {
+    width: 60px;
+    height: 60px;
+    padding: 5px;
+    border-radius: 20px;
+  }
+  .kabsat-launcher-avatar,
+  .kabsat-launcher-avatar img { width: 48px; height: 48px; }
+  .kabsat-panel {
+    right: 0;
+    bottom: 70px;
+    width: calc(100vw - 24px);
+    max-height: min(660px, calc(100dvh - 88px));
+    border-radius: 23px;
+  }
+  .kabsat-bot.is-open .kabsat-launcher { display: none; }
+  .kabsat-teaser {
+    right: 69px;
+    bottom: 5px;
+    max-width: calc(100vw - 96px);
+    min-height: 48px;
+    padding: 10px 13px;
+    border-radius: 16px 16px 5px 16px;
+  }
+  .kabsat-teaser > span:last-child {
+    font-size: .66rem;
+    line-height: 1.42;
+  }
+  .kabsat-teaser-sparkle { font-size: .76rem; }
+  .kabsat-messages { padding-inline: 12px; }
+  .kabsat-bubble { max-width: 86%; font-size: .67rem; }
+  .kabsat-replies { padding-inline: 12px; }
+  .kabsat-input-row { padding-inline: 10px; }
+}
+
+@media (max-height: 650px) and (min-width: 681px) {
+  .kabsat-panel { max-height: calc(100vh - 88px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kabsat-panel,
+  .kabsat-teaser,
+  .kabsat-launcher,
+  .kabsat-message,
+  .kabsat-typing i,
+  .kabsat-breathe-circle,
+  .kabsat-launcher::before,
+  .kabsat-teaser-sparkle { animation: none !important; transition: none !important; }
+}
+
+@media print {
+  .kabsat-bot { display: none !important; }
+}

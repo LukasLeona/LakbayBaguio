@@ -439,9 +439,57 @@
     </div>
   </footer>
 
+  <section class="kabsat-bot" id="kabsatBot" aria-label="Kabsat, your Baguio travel companion">
+    <button class="kabsat-teaser" id="kabsatTeaser" type="button" aria-label="Open Kabsat chat" hidden>
+      <span class="kabsat-teaser-sparkle" aria-hidden="true">✦</span>
+      <span id="kabsatTeaserText">Pagod ka ba? Pahinga muna tayo. 🌲</span>
+    </button>
+
+    <div class="kabsat-panel" id="kabsatPanel" role="dialog" aria-modal="false" aria-labelledby="kabsatTitle" hidden>
+      <header class="kabsat-header">
+        <div class="kabsat-identity">
+          <span class="kabsat-avatar-wrap"><img src="assets/img/kabsat-avatar.svg" alt="" /></span>
+          <div>
+            <strong id="kabsatTitle">Kabsat</strong>
+            <span><i aria-hidden="true"></i> Your Baguio travel companion</span>
+          </div>
+        </div>
+        <div class="kabsat-header-actions">
+          <button class="kabsat-icon-button" id="kabsatMute" type="button" aria-label="Mute automatic Kabsat messages" title="Mute automatic messages">🔔</button>
+          <button class="kabsat-icon-button" id="kabsatClose" type="button" aria-label="Close Kabsat">×</button>
+        </div>
+      </header>
+
+      <div class="kabsat-mood-strip" aria-hidden="true">
+        <span>Slow down</span><i></i><span>Breathe</span><i></i><span>Enjoy Baguio</span>
+      </div>
+
+      <div class="kabsat-messages" id="kabsatMessages" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+      <div class="kabsat-typing" id="kabsatTyping" hidden aria-label="Kabsat is typing">
+        <img src="assets/img/kabsat-avatar.svg" alt="" />
+        <span><i></i><i></i><i></i></span>
+      </div>
+
+      <div class="kabsat-replies" id="kabsatReplies" aria-label="Quick replies"></div>
+
+      <form class="kabsat-input-row" id="kabsatForm">
+        <label class="sr-only" for="kabsatInput">Message Kabsat</label>
+        <input id="kabsatInput" type="text" maxlength="160" autocomplete="off" placeholder="Type a mood or Baguio question…" />
+        <button type="submit" aria-label="Send message">➜</button>
+      </form>
+      <p class="kabsat-note">Scripted friendly support only—not professional counseling or live transport advice.</p>
+    </div>
+
+    <button class="kabsat-launcher" id="kabsatLauncher" type="button" aria-controls="kabsatPanel" aria-expanded="false" aria-label="Open Kabsat chat" title="Chat with Kabsat">
+      <span class="kabsat-launcher-avatar"><img src="assets/img/kabsat-avatar.svg" alt="Kabsat bot" /><i id="kabsatUnread" aria-hidden="true" hidden>1</i></span>
+    </button>
+  </section>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="assets/js/data.js"></script>
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/bot.js"></script>
 </body>
 </html>
