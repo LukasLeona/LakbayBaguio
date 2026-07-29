@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Build a convenient Baguio itinerary with destination suggestions, commute guidance, fare estimates, and Google Maps directions." />
+  <meta name="theme-color" content="#819A91" />
+  <title>Lakbay Baguio — Smart Itinerary Planner</title>
+
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#planner">Skip to planner</a>
+
+  <div class="page-loader" id="pageLoader" aria-hidden="true">
+    <img src="assets/img/favicon.svg" alt="" />
+    <span>Preparing your Baguio trip…</span>
+  </div>
+
+  <header class="site-header" id="top">
+    <div class="container nav-wrap">
+      <a class="brand" href="#top" aria-label="Lakbay Baguio home">
+        <img src="assets/img/logo.svg" alt="Lakbay Baguio" />
+      </a>
+
+      <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mainNav">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="main-nav" id="mainNav" aria-label="Primary navigation">
+        <a href="#planner">Plan a trip</a>
+        <a href="#destinations">Destinations</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#travel-notes">Travel notes</a>
+      </nav>
+
+      <a class="nav-cta" href="#planner">Build my route <span aria-hidden="true">→</span></a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero section-shell">
+      <div class="container hero-grid">
+        <div class="hero-copy reveal">
+          <div class="eyebrow"><span></span> Built for curious Baguio travelers</div>
+          <h1>Your Baguio trip, arranged in the <em>right order.</em></h1>
+          <p class="hero-lead">Pick the places you want to visit. Lakbay Baguio groups nearby stops, respects opening times, estimates fares, and explains where to walk, ride a jeepney, or take a taxi.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#planner">Create my itinerary <span aria-hidden="true">↗</span></a>
+            <a class="button button-ghost" href="#how-it-works">See how it works</a>
+          </div>
+          <div class="hero-proof" aria-label="Planner benefits">
+            <div><strong>48</strong><span>places listed</span></div>
+            <div><strong>1–5</strong><span>travel days</span></div>
+            <div><strong>3</strong><span>travel modes</span></div>
+          </div>
+        </div>
+
+        <div class="hero-visual reveal delay-1" aria-label="Illustration of a Baguio route">
+          <div class="mist mist-one"></div>
+          <div class="mist mist-two"></div>
+          <div class="mountain mountain-back"></div>
+          <div class="mountain mountain-front"></div>
+          <div class="route-card">
+            <div class="route-card-head">
+              <span class="status-dot"></span>
+              <div><small>Suggested route</small><strong>City Center → East Baguio</strong></div>
+              <span class="weather-chip">Cool & easy</span>
+            </div>
+            <div class="mini-route">
+              <div class="mini-stop active"><span>1</span><div><strong>Burnham Park</strong><small>Start with a relaxed walk</small></div></div>
+              <div class="mini-line"><i></i><small>Walk · 8 min</small></div>
+              <div class="mini-stop"><span>2</span><div><strong>Baguio Cathedral</strong><small>Quick city-center stop</small></div></div>
+              <div class="mini-line"><i></i><small>Jeepney · estimated fare</small></div>
+              <div class="mini-stop"><span>3</span><div><strong>Botanical Garden</strong><small>Continue along Leonard Wood Road</small></div></div>
+            </div>
+          </div>
+          <div class="floating-note note-one"><span>🚶</span><div><strong>Walkable pair</strong><small>Save a ride</small></div></div>
+          <div class="floating-note note-two"><span>🧭</span><div><strong>Route optimized</strong><small>Less backtracking</small></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="planner-section" id="planner">
+      <div class="container">
+        <div class="section-heading centered reveal">
+          <div class="eyebrow"><span></span> Plan in a few taps</div>
+          <h2>Build a route around your day</h2>
+          <p>Complete the three steps below. The navigation stays visible and follows your progress.</p>
+        </div>
+
+        <form class="planner-card reveal" id="plannerForm" novalidate>
+          <div class="progress-sticky-wrap" id="progressStickyWrap">
+            <nav class="planner-progress" id="plannerProgress" aria-label="Planner steps">
+              <span class="progress-track" aria-hidden="true"><i id="progressTrackFill"></i></span>
+              <button class="progress-item active" type="button" data-progress="1" data-target="trip-details" aria-current="step">
+                <span class="progress-number">01</span>
+                <span class="progress-copy"><strong>Trip details</strong><small>Dates and schedule</small></span>
+              </button>
+              <button class="progress-item" type="button" data-progress="2" data-target="destinations">
+                <span class="progress-number">02</span>
+                <span class="progress-copy"><strong>Destinations</strong><small>Pick or auto-choose</small></span>
+              </button>
+              <button class="progress-item" type="button" data-progress="3" data-target="preferences">
+                <span class="progress-number">03</span>
+                <span class="progress-copy"><strong>Preferences</strong><small>Choose your pace</small></span>
+              </button>
+            </nav>
+          </div>
+
+          <section class="form-section planner-step" id="trip-details" data-step-section="1">
+            <div class="form-section-title">
+              <span>01</span>
+              <div><h3>Begin your trip</h3><p>Tell us where, when, and how long your Baguio trip will be.</p></div>
+            </div>
+
+            <div class="form-grid form-grid-six">
+              <label class="field field-wide">
+                <span>Starting point</span>
+                <div class="input-with-action">
+                  <select id="startLocation" required aria-describedby="startHelp"></select>
+                  <button id="useLocation" class="location-button" type="button" title="Use my current location" aria-label="Use my current location">⌖</button>
+                </div>
+                <small id="startHelp">Includes Victory Liner, Gov. Pack, Genesis Transport, and JoyBus.</small>
+              </label>
+
+              <label class="field">
+                <span>Trip date</span>
+                <input id="tripDate" type="date" />
+              </label>
+
+              <label class="field">
+                <span>Number of days</span>
+                <select id="tripDays">
+                  <option value="1" selected>1 day</option>
+                  <option value="2">2 days</option>
+                  <option value="3">3 days</option>
+                  <option value="4">4 days</option>
+                  <option value="5">5 days</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Daily start time</span>
+                <input id="startTime" type="time" value="08:00" required />
+              </label>
+
+              <label class="field">
+                <span>Time available each day</span>
+                <select id="tripHours">
+                  <option value="4">4 hours</option>
+                  <option value="6">6 hours</option>
+                  <option value="8" selected>8 hours</option>
+                  <option value="10">10 hours</option>
+                  <option value="12">Full day</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Travelers</span>
+                <input id="travelers" type="number" min="1" max="12" value="2" required />
+              </label>
+            </div>
+
+            <aside class="arrival-tip" id="arrivalTip" hidden aria-live="polite"></aside>
+          </section>
+
+          <div class="form-divider"></div>
+
+          <section class="form-section planner-step" id="destinations" data-step-section="2">
+            <div class="form-section-title destination-title-row">
+              <span>02</span>
+              <div><h3>Choose your destinations</h3><p>Swipe through compact cards, then manage your selected places from the list below.</p></div>
+              <div class="selection-count"><strong id="selectionCount">0</strong><span>selected</span></div>
+            </div>
+
+            <div class="selected-drawer" id="selectedDrawer">
+              <div class="selected-drawer-head">
+                <div><strong>Your selected places</strong><small id="selectedHint">Choose at least two destinations.</small></div>
+                <button class="text-button danger" id="clearSelections" type="button">Clear all</button>
+              </div>
+              <div class="selected-chips" id="selectedChips" aria-live="polite">
+                <span class="empty-selection">No destinations selected yet.</span>
+              </div>
+            </div>
+
+            <div class="destination-actions">
+              <label class="search-field">
+                <span aria-hidden="true">⌕</span>
+                <input id="destinationSearch" type="search" placeholder="Search a place, activity, or area…" autocomplete="off" />
+              </label>
+              <label class="compact-field">
+                <span>Auto-pick theme</span>
+                <select id="autoPickTheme">
+                  <option value="balanced">Balanced Baguio highlights</option>
+                  <option value="popular">Most visited</option>
+                  <option value="nature">Nature and views</option>
+                  <option value="culture">Arts and culture</option>
+                  <option value="food">Food and shopping</option>
+                  <option value="family">Family-friendly</option>
+                  <option value="hidden">Less obvious places</option>
+                </select>
+              </label>
+              <button class="button button-accent" id="autoChoose" type="button"><span aria-hidden="true">✦</span> Let Lakbay choose</button>
+            </div>
+
+            <div class="area-filters" id="areaFilters" aria-label="Filter destinations by category"></div>
+
+            <div class="destination-rail-wrap">
+              <button class="rail-control rail-prev" id="railPrev" type="button" aria-label="Scroll destinations left">‹</button>
+              <div class="destination-rail" id="destinationGrid" tabindex="0" aria-label="Destination choices"></div>
+              <button class="rail-control rail-next" id="railNext" type="button" aria-label="Scroll destinations right">›</button>
+            </div>
+            <p class="swipe-hint">Swipe sideways to explore more places <span aria-hidden="true">↔</span></p>
+            <p class="field-error" id="destinationError" role="alert"></p>
+          </section>
+
+          <div class="form-divider"></div>
+
+          <section class="form-section planner-step" id="preferences" data-step-section="3">
+            <div class="form-section-title">
+              <span>03</span>
+              <div><h3>Pick your travel style</h3><p>We will balance time, cost, walking, and convenience around this preference.</p></div>
+            </div>
+
+            <div class="preference-grid" id="preferenceGrid">
+              <label class="preference-card active">
+                <input type="radio" name="preference" value="balanced" checked />
+                <span class="preference-icon">⚖</span>
+                <strong>Balanced</strong>
+                <small>A practical mix of cost and convenience</small>
+                <i>✓</i>
+              </label>
+              <label class="preference-card">
+                <input type="radio" name="preference" value="cheapest" />
+                <span class="preference-icon">₱</span>
+                <strong>Cheapest</strong>
+                <small>Prefer walking and jeepneys when reasonable</small>
+                <i>✓</i>
+              </label>
+              <label class="preference-card">
+                <input type="radio" name="preference" value="fastest" />
+                <span class="preference-icon">⚡</span>
+                <strong>Fastest</strong>
+                <small>Reduce waiting and transfers</small>
+                <i>✓</i>
+              </label>
+              <label class="preference-card">
+                <input type="radio" name="preference" value="less-walking" />
+                <span class="preference-icon">🚕</span>
+                <strong>Less walking</strong>
+                <small>Favor door-to-door convenience</small>
+                <i>✓</i>
+              </label>
+            </div>
+
+            <div class="preference-lower-grid">
+              <fieldset class="mode-fieldset">
+                <legend>Allowed transportation</legend>
+                <label><input type="checkbox" name="mode" value="walk" checked /><span>🚶 Walk</span></label>
+                <label><input type="checkbox" name="mode" value="jeepney" checked /><span>🚐 Jeepney</span></label>
+                <label><input type="checkbox" name="mode" value="taxi" checked /><span>🚕 Taxi</span></label>
+              </fieldset>
+
+              <details class="fare-settings">
+                <summary>Adjust planning fare assumptions</summary>
+                <div class="fare-grid">
+                  <label><span>Jeepney minimum</span><input id="jeepMinimum" type="number" value="13" min="0" step="1" /></label>
+                  <label><span>Base distance (km)</span><input id="jeepBaseKm" type="number" value="4" min="0" step="0.5" /></label>
+                  <label><span>Added per km</span><input id="jeepPerKm" type="number" value="1.8" min="0" step="0.1" /></label>
+                  <label><span>Taxi flag-down</span><input id="taxiFlag" type="number" value="50" min="0" step="1" /></label>
+                  <label><span>Taxi per km</span><input id="taxiPerKm" type="number" value="15" min="0" step="1" /></label>
+                </div>
+                <p>These are editable estimates only. Verify current fares with the driver or dispatcher.</p>
+              </details>
+            </div>
+
+            <button class="generate-button" type="submit">
+              <span><small>Ready when you are</small><strong>Generate my Baguio plan</strong></span>
+              <i aria-hidden="true">→</i>
+            </button>
+          </section>
+        </form>
+      </div>
+    </section>
+
+    <section class="results-section" id="results" hidden>
+      <div class="container">
+        <div class="results-topbar reveal">
+          <div>
+            <div class="eyebrow"><span></span> Your generated plan</div>
+            <h2 id="resultsTitle">A smoother trip around Baguio</h2>
+            <p id="resultsSubtitle"></p>
+          </div>
+          <div class="results-actions">
+            <button class="button button-ghost" id="editPlan" type="button">Edit choices</button>
+            <button class="button button-ghost" id="copyPlan" type="button">Copy plan</button>
+            <button class="button button-primary" id="printPlan" type="button">Print / Save PDF</button>
+          </div>
+        </div>
+
+        <div class="trip-summary" id="tripSummary"></div>
+        <div class="day-tabs" id="dayTabs" aria-label="Select itinerary day"></div>
+
+        <div class="results-layout">
+          <article class="route-panel">
+            <div class="panel-heading">
+              <div><small>STEP-BY-STEP ROUTE</small><h3>Your day at a glance</h3></div>
+              <span class="estimate-chip">Planning estimate</span>
+            </div>
+            <div class="route-timeline" id="routeTimeline"></div>
+          </article>
+
+          <aside class="map-panel">
+            <div class="panel-heading map-heading">
+              <div><small>GOOGLE MAPS</small><h3>See the route</h3></div>
+              <button class="icon-button" id="fitMap" type="button" title="Show the day route" aria-label="Show the day route">↗</button>
+            </div>
+            <div class="google-map-shell">
+              <iframe id="googleMapFrame" title="Google Map for the selected route" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+              <div class="map-overlay-note" id="mapOverlayNote">Select a generated day to preview its first stop.</div>
+            </div>
+            <div class="map-actions" id="mapActions"></div>
+            <p class="map-note">Google Maps may use your device location when the route opens. Confirm live traffic, jeepney loading points, and temporary road changes locally.</p>
+          </aside>
+        </div>
+
+        <div class="results-note" id="resultsNote"></div>
+      </div>
+    </section>
+
+    <section class="how-section" id="how-it-works">
+      <div class="container how-layout">
+        <div class="how-copy reveal">
+          <div class="eyebrow light"><span></span> Less guessing, more exploring</div>
+          <h2>A simple plan built around the way Baguio actually feels.</h2>
+          <p>The goal is not to pack every attraction into one day. It is to show a practical sequence, make the travel tradeoffs visible, and help visitors move with more confidence.</p>
+          <a class="button button-muted" href="#planner">Start planning</a>
+        </div>
+
+        <div class="how-steps reveal delay-1">
+          <a class="how-step" href="#destinations">
+            <span class="how-step-number">01</span>
+            <span><strong>Choose your stops</strong><small>Search and select the attractions that matter to you.</small></span>
+            <i aria-hidden="true">→</i>
+          </a>
+          <a class="how-step" href="#preferences">
+            <span class="how-step-number">02</span>
+            <span><strong>Set your priorities</strong><small>Choose a balanced, cheaper, faster, or low-walking route.</small></span>
+            <i aria-hidden="true">⚙</i>
+          </a>
+          <a class="how-step" href="#results">
+            <span class="how-step-number">03</span>
+            <span><strong>Follow the sequence</strong><small>See activity ideas, loading-area guidance, Google Maps links, visit durations, and estimated fares.</small></span>
+            <i aria-hidden="true">→</i>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="travel-notes" id="travel-notes">
+      <div class="container">
+        <div class="section-heading centered reveal">
+          <div class="eyebrow"><span></span> Before you ride</div>
+          <h2>Small reminders for a smoother trip</h2>
+        </div>
+
+        <div class="reminder-grid">
+          <article class="reminder-card reveal">
+            <span class="reminder-number">01</span>
+            <span class="reminder-icon" aria-hidden="true">🚌</span>
+            <h3>Confirm before boarding</h3>
+            <p>Ask the driver or dispatcher whether the jeepney passes your exact destination and where to get off.</p>
+          </article>
+          <article class="reminder-card reveal delay-1">
+            <span class="reminder-number">02</span>
+            <span class="reminder-icon" aria-hidden="true">☁</span>
+            <h3>Allow a weather buffer</h3>
+            <p>Rain, fog, and weekend crowds can add waiting and travel time. Keep your schedule flexible.</p>
+          </article>
+          <article class="reminder-card reveal delay-2">
+            <span class="reminder-number">03</span>
+            <span class="reminder-icon" aria-hidden="true">💵</span>
+            <h3>Carry small bills</h3>
+            <p>Exact or smaller denominations make jeepney and taxi payments easier, especially during busy hours.</p>
+          </article>
+          <article class="reminder-card reveal delay-2">
+            <span class="reminder-number">04</span>
+            <span class="reminder-icon" aria-hidden="true">🚶</span>
+            <h3>Use walkable clusters</h3>
+            <p>Several city-center landmarks are close enough to visit on foot, avoiding unnecessary rides.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section">
+      <div class="container">
+        <div class="cta-card reveal">
+          <div class="cta-copy">
+            <span class="cta-icon" aria-hidden="true">⌖</span>
+            <span><small>Your Baguio day starts here</small><h2>Spend less time figuring out the route.</h2></span>
+          </div>
+          <a class="button button-light" href="#planner">Build my itinerary <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <img src="assets/img/logo.svg" alt="Lakbay Baguio" />
+        <p>A single-page itinerary planner with Google Maps navigation, commute guidance, and activity ideas for Baguio and nearby Benguet.</p>
+      </div>
+      <div>
+        <strong>Explore</strong>
+        <a href="#planner">Trip planner</a>
+        <a href="#destinations">Destinations</a>
+        <a href="#how-it-works">How it works</a>
+      </div>
+      <div>
+        <strong>Official references</strong>
+        <a href="https://visita.baguio.gov.ph/" target="_blank" rel="noopener noreferrer">Baguio VISITA ↗</a>
+        <a href="https://alternateroutes.baguio.gov.ph/" target="_blank" rel="noopener noreferrer">Traffic &amp; PUJ routes ↗</a>
+      </div>
+      <div>
+        <strong>Important</strong>
+        <p>Routes, terminal locations, hours, and fares are planning estimates. Verify locally before traveling.</p>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© <span id="currentYear"></span> Lakbay Baguio</span>
+      <span>Plan gently. Travel responsibly. <span aria-hidden="true">♻</span></span>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

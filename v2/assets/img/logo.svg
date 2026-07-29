@@ -1,0 +1,12 @@
+<svg width="530" height="145" viewBox="0 0 530 145" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="4" y="4" width="137" height="137" rx="35" fill="#EEEEE0" stroke="#819A91" stroke-width="8"/>
+  <path d="M24 99C43 76 58 66 74 54C91 41 107 27 126 20V107H24V99Z" fill="#D1D8BE"/>
+  <path d="M32 102C50 84 64 78 79 67C95 55 109 42 127 32" stroke="#819A91" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="75" cy="69" r="10" fill="#819A91"/>
+  <path d="M75 60C64 60 56 68 56 78C56 92 75 110 75 110C75 110 94 92 94 78C94 68 86 60 75 60Z" fill="#819A91"/>
+  <circle cx="75" cy="78" r="6" fill="#EEEEE0"/>
+  <path d="M34 42L47 18L60 42H52L63 59H31L42 42H34Z" fill="#819A91"/>
+  <path d="M106 67L116 48L126 67H120L129 82H103L112 67H106Z" fill="#819A91"/>
+  <text x="166" y="69" fill="#263A33" font-family="Poppins, Arial, sans-serif" font-size="55" font-weight="800" letter-spacing="-2">Lakbay</text>
+  <text x="166" y="122" fill="#819A91" font-family="Poppins, Arial, sans-serif" font-size="55" font-weight="800" letter-spacing="-2">Baguio</text>
+</svg>
