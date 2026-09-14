@@ -680,9 +680,28 @@ begin
     raise exception 'Conversation is unavailable';
   end if;
 
-  update public.conversation_members
-  set left_at = now()
-  where conversation_id = p_conversation_id and left_at is null;
+  -- Conversation members and messages cascade from this delete. Reports retain
+  -- their moderation record with a null conversation_id.
+  delete from public.conversations where id = p_conversation_id;
+end;
+$$;
+
+create or replace function public.cleanup_inactive_conversations()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  deleted_count integer;
+begin
+  delete from public.conversations c
+  where coalesce(
+    (select max(m.created_at) from public.messages m where m.conversation_id = c.id),
+    c.created_at
+  ) <= now() - interval '30 minutes';
+  get diagnostics deleted_count = row_count;
+  return deleted_count;
 end;
 $$;
 
@@ -810,6 +829,7 @@ revoke all on function public.list_conversations() from public, anon, authentica
 revoke all on function public.mark_conversation_read(uuid) from public, anon, authenticated;
 revoke all on function public.block_user(uuid) from public, anon, authenticated;
 revoke all on function public.end_conversation(uuid) from public, anon, authenticated;
+revoke all on function public.cleanup_inactive_conversations() from public, anon, authenticated;
 revoke all on function public.cleanup_stale_presence() from public, anon, authenticated;
 revoke all on function public.enforce_message_rate_limit() from public, anon, authenticated;
 revoke all on function public.enforce_report_integrity() from public, anon, authenticated;
@@ -828,6 +848,17 @@ grant execute on function public.end_conversation(uuid) to authenticated;
 
 -- Run cleanup_stale_presence from a trusted scheduled job only.
 grant execute on function public.cleanup_stale_presence() to service_role;
+grant execute on function public.cleanup_inactive_conversations() to service_role;
+
+-- Enable this extension and job from the Supabase SQL editor. The named-job
+-- check keeps this source safe to run again during future schema updates.
+create extension if not exists pg_cron with schema pg_catalog;
+select cron.schedule(
+  'cleanup-inactive-lakbay-chats',
+  '*/5 * * * *',
+  $job$select public.cleanup_inactive_conversations();$job$
+)
+where not exists (select 1 from cron.job where jobname = 'cleanup-inactive-lakbay-chats');
 
 do $$
 begin

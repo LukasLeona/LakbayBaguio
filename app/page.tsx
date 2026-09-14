@@ -11,7 +11,6 @@ import {
   MapPin,
   Route,
   Sparkles,
-  Star,
   Store,
   Trees,
   Utensils,
@@ -24,7 +23,7 @@ import { featuredRestaurants, hotels, parks } from "@/lib/places";
 const moodCards = [
   { title: "Pine & quiet", copy: "Forest paths and slow mornings", image: "/assets/img/destinations/camp-john-hay.jpg", icon: Trees, href: "/explore?type=park" },
   { title: "Culture trail", copy: "Art, heritage, and Cordilleran stories", image: "/assets/img/destinations/tam-awan-village.jpg", icon: Camera, href: "/explore?type=park" },
-  { title: "City appetite", copy: "Local tables and café weather", image: "/assets/img/destinations/ili-likha.jpg", icon: Coffee, href: "/explore?type=restaurant" },
+  { title: "City appetite", copy: "Local tables and café weather", image: "/assets/img/venues/restaurant-warm-3.jpg", icon: Coffee, href: "/explore?type=restaurant" },
 ];
 
 const quickActions = [
@@ -141,13 +140,7 @@ export default function HomePage() {
             <Link href="/explore?type=hotel" className="button dark">Browse stays <ArrowRight size={17} /></Link>
           </div>
           <div className="stay-card-stack">
-            {hotels.slice(0, 3).map((hotel, index) => (
-              <Link href={`/plan?place=${hotel.id}`} className="stay-mini-card" key={hotel.id}>
-                <img src={hotel.image} alt="" loading="lazy" />
-                <span><small>{hotel.area}</small><strong>{hotel.name}</strong><em><Star size={12} fill="currentColor" /> {hotel.price}</em></span>
-                <b>0{index + 1}</b>
-              </Link>
-            ))}
+            {hotels.slice(0, 3).map((hotel) => <PlaceCard key={hotel.id} place={hotel} compact />)}
           </div>
         </div>
       </section>

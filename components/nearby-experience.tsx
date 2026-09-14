@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Clock3, LocateFixed, LockKeyhole, MapPin, MessageCircle, Navigation, Radio, ShieldCheck, Users, WifiOff } from "lucide-react";
+import { Check, Clock3, LocateFixed, LockKeyhole, MapPin, MessageCircle, Navigation, Radio, ShieldCheck, Sparkles, Users, WifiOff, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NearbyMap, type MapTraveler } from "./nearby-map";
 import { TravelerAvatar } from "./traveler-avatar";
@@ -16,6 +16,17 @@ const previewTravelers: Traveler[] = [
   { user_id: "preview-4", alias: "CloudFox19", avatar_seed: 7, distance_band: "3–5 km", last_seen: new Date().toISOString(), display_latitude: 16.428, display_longitude: 120.585 },
 ];
 
+const BAGUIO_CENTER = { lat: 16.4023, lng: 120.596 };
+
+function distanceFromBaguioMeters(location: { lat: number; lng: number }) {
+  const radians = (value: number) => value * Math.PI / 180;
+  const latitudeDelta = radians(location.lat - BAGUIO_CENTER.lat);
+  const longitudeDelta = radians(location.lng - BAGUIO_CENTER.lng);
+  const a = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(radians(BAGUIO_CENTER.lat)) * Math.cos(radians(location.lat)) * Math.sin(longitudeDelta / 2) ** 2;
+  return 6_371_000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export function NearbyExperience() {
   const configured = isCommunityConfigured();
   const [travelers, setTravelers] = useState<Traveler[]>(configured ? [] : previewTravelers);
@@ -27,6 +38,7 @@ export function NearbyExperience() {
   const [status, setStatus] = useState(configured ? "Share your location to find travelers around you." : "Preview mode — connect Supabase to go live.");
   const [busy, setBusy] = useState(false);
   const [requested, setRequested] = useState<string[]>([]);
+  const [outsideBaguio, setOutsideBaguio] = useState(false);
 
   const refreshTravelers = useCallback(async () => {
     const client = getSupabaseBrowserClient();
@@ -86,6 +98,12 @@ export function NearbyExperience() {
     setStatus("Getting your location…");
     navigator.geolocation.getCurrentPosition(async (position) => {
       const location = { lat: position.coords.latitude, lng: position.coords.longitude };
+      if (distanceFromBaguioMeters(location) > 15_000) {
+        setOutsideBaguio(true);
+        setStatus("Nearby is available only while you’re in Baguio City.");
+        setBusy(false);
+        return;
+      }
       try {
         const client = getSupabaseBrowserClient();
         if (!client) return;
@@ -134,6 +152,8 @@ export function NearbyExperience() {
       <aside className="nearby-panel">
         <header className="nearby-profile"><TravelerAvatar alias={alias} seed={3} size="large" /><div><span>Your anonymous name</span><strong>{alias}</strong></div><Link href="/chats" aria-label="Open chats"><MessageCircle /></Link></header>
 
+        <div className="encounter-note"><Sparkles /><p><strong>Baguio is packed—but still no organic encounter?</strong> Maybe they’re hiding on your radar. 👀</p></div>
+
         <div className="visibility-card">
           <div className="visibility-heading"><div className="radar-icon"><Radio /></div><div><strong>{visible ? "Radar is active" : "Turn on traveler radar"}</strong><span>{status}</span></div></div>
           {!visible ? (
@@ -158,6 +178,8 @@ export function NearbyExperience() {
 
         <div className="safety-note"><ShieldCheck /><p><strong>Privacy by design</strong>Exact coordinates stay protected. Other people receive only a coarse, time-limited map area.</p></div>
       </aside>
+
+      {outsideBaguio ? <div className="location-gate-backdrop" role="presentation"><section className="location-gate-modal" role="dialog" aria-modal="true" aria-labelledby="location-gate-title"><button type="button" onClick={() => setOutsideBaguio(false)} aria-label="Close"><X /></button><span><MapPin /></span><small>Traveler radar</small><h2 id="location-gate-title">Save this for Baguio.</h2><p>Nearby is only available while you’re in Baguio City. We’ll keep your location private and won’t turn on the radar here.</p><button className="button primary full" type="button" onClick={() => setOutsideBaguio(false)}>Got it</button></section></div> : null}
     </div>
   );
 }

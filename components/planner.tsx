@@ -5,6 +5,7 @@ import {
   Check,
   ChevronRight,
   Crosshair,
+  LoaderCircle,
   Search,
   Sparkles,
   X,
@@ -170,6 +171,7 @@ export function Planner() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [locating, setLocating] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [restored, setRestored] = useState(false);
 
   const selectedDestinations = useMemo(
@@ -340,6 +342,7 @@ export function Planner() {
 
   function buildPlan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (generating) return;
     const request: PlannerRequest = { start: selectedStart, destinations: selectedDestinations, date: tripDate, numberOfDays, availableMinutes: availableHours * 60, travelers, modes, preference, fareSettings, startTime };
     const issues = validatePlannerRequest(request);
     if (issues.length) {
@@ -349,12 +352,16 @@ export function Planner() {
       else scrollToStep("trip-details");
       return;
     }
-    const next = generateItinerary(request);
-    setResult(next);
-    setActiveDay(0);
-    setSaved(false);
     setError("");
-    window.setTimeout(() => document.getElementById("itinerary-result")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    setGenerating(true);
+    window.setTimeout(() => {
+      const next = generateItinerary(request);
+      setResult(next);
+      setActiveDay(0);
+      setSaved(false);
+      setGenerating(false);
+      window.setTimeout(() => document.getElementById("itinerary-result")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    }, 900);
   }
 
   function savePlan() {
@@ -418,7 +425,7 @@ export function Planner() {
           <details className="fare-assumptions"><summary>Adjust planning fare assumptions</summary><div><label><span>Jeepney minimum</span><input type="number" min="0" step="1" value={fareSettings.jeepMinimum} onChange={(event) => updateFare("jeepMinimum", event.target.value)} /></label><label><span>Base distance (km)</span><input type="number" min="0" step="0.5" value={fareSettings.jeepBaseKm} onChange={(event) => updateFare("jeepBaseKm", event.target.value)} /></label><label><span>Added per km</span><input type="number" min="0" step="0.1" value={fareSettings.jeepPerKm} onChange={(event) => updateFare("jeepPerKm", event.target.value)} /></label><label><span>Taxi flag-down</span><input type="number" min="0" step="1" value={fareSettings.taxiFlag} onChange={(event) => updateFare("taxiFlag", event.target.value)} /></label><label><span>Taxi per km</span><input type="number" min="0" step="1" value={fareSettings.taxiPerKm} onChange={(event) => updateFare("taxiPerKm", event.target.value)} /></label></div><p>Editable estimates only. Verify current fares with the driver or dispatcher.</p></details>
 
           {error ? <p className="planner-error" role="alert">{error}</p> : null}
-          <button className="generate-plan-button" type="submit"><span><small>Ready when you are</small><strong>Generate my Baguio plan</strong></span><ChevronRight size={22} /></button>
+          <button className="generate-plan-button" type="submit" disabled={generating} aria-busy={generating}><span><small>{generating ? "Mapping time, fare, and directions" : "Ready when you are"}</small><strong>{generating ? "Building your Baguio route…" : "Generate my Baguio plan"}</strong></span>{generating ? <LoaderCircle className="spin" size={22} /> : <ChevronRight size={22} />}</button>
           <p className="planner-estimate-note">Routes are planning suggestions. Confirm opening hours, fares, admission rules, weather, and loading areas locally.</p>
         </section>
       </form>

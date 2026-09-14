@@ -11,6 +11,15 @@ export type Place = {
   lng: number;
   duration: number;
   image?: string;
+  gallery?: string[];
+  highlights?: string[];
+  address?: string;
+  externalUrl?: string;
+  externalLabel?: string;
+  photoCredit?: {
+    label: string;
+    url: string;
+  };
   popular?: boolean;
   price?: "Free" | "Budget" | "Mid-range" | "Premium";
 };

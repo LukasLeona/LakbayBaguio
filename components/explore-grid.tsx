@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, BedDouble, Clock3, Compass, MapPin, Search, SlidersHorizontal, Trees, Utensils } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { PlaceCard } from "./place-card";
+import { PlaceCard, PlaceDetailsModal } from "./place-card";
 import { places } from "@/lib/places";
 import type { Place, PlaceKind } from "@/lib/types";
 
@@ -23,19 +23,23 @@ const featuredPlaces = featuredIds.flatMap((id) => {
 
 const categoryCards: { kind: PlaceKind; label: string; copy: string; icon: typeof Trees; image: string }[] = [
   { kind: "park", label: "Parks & landmarks", copy: "Fresh air, views, and heritage", icon: Trees, image: "/assets/img/destinations/wright-park.jpg" },
-  { kind: "restaurant", label: "Restaurants", copy: "Local plates and creative cafés", icon: Utensils, image: "/assets/img/destinations/ili-likha.jpg" },
-  { kind: "hotel", label: "Hotels & stays", copy: "Bases for every Baguio pace", icon: BedDouble, image: "/assets/img/destinations/camp-john-hay.jpg" },
+  { kind: "restaurant", label: "Restaurants", copy: "Menus, dining rooms, and local flavor", icon: Utensils, image: "/assets/img/venues/restaurant-warm-3.jpg" },
+  { kind: "hotel", label: "Hotels & stays", copy: "Cozy rooms and booking options", icon: BedDouble, image: "/assets/img/venues/stay-cozy-1.jpg" },
 ];
 
 function CuratedCard({ place, primary = false }: { place: Place; primary?: boolean }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Link href={`/plan?place=${place.id}`} className={`curated-place-card ${primary ? "primary" : ""}`}>
-      <img src={place.image} alt="" loading="lazy" />
-      <span className="curated-shade" />
-      <span className="curated-badge">{primary ? "Editor’s trail" : place.area}</span>
-      <span className="curated-copy"><small><MapPin size={12} /> {place.area}</small><strong>{place.name}</strong><em><Clock3 size={12} /> {place.duration} min · {place.price}</em></span>
-      <span className="curated-action"><ArrowRight size={17} /></span>
-    </Link>
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={`curated-place-card ${primary ? "primary" : ""}`}>
+        <img src={place.image} alt="" loading="lazy" />
+        <span className="curated-shade" />
+        <span className="curated-badge">{primary ? "Editor’s trail" : place.area}</span>
+        <span className="curated-copy"><small><MapPin size={12} /> {place.area}</small><strong>{place.name}</strong><em><Clock3 size={12} /> {place.duration} min · {place.price}</em></span>
+        <span className="curated-action"><ArrowRight size={17} /></span>
+      </button>
+      {open ? <PlaceDetailsModal place={place} onClose={() => setOpen(false)} /> : null}
+    </>
   );
 }
 

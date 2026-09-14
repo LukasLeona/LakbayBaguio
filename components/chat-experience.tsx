@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Ban, Check, CheckCheck, ChevronRight, Flag, Inbox, MapPinned, MessageCircle, MoreHorizontal, Search, Send, ShieldAlert, UserRoundX, X } from "lucide-react";
+import { ArrowLeft, Ban, Check, CheckCheck, ChevronRight, Clock3, Flag, Inbox, MapPinned, MessageCircle, MoreHorizontal, Search, Send, ShieldAlert, Trash2, X } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { TravelerAvatar } from "./traveler-avatar";
 import { ensureAnonymousIdentity, getSupabaseBrowserClient, isCommunityConfigured } from "@/lib/supabase/client";
@@ -22,7 +22,7 @@ type ChatMessage = { id: number; conversation_id: string; sender_id: string; bod
 
 const previewConversations: Conversation[] = [
   { conversation_id: "preview-conversation", partner_id: "preview-1", partner_alias: "MistyHiker27", avatar_seed: 1, distance_band: "Active now", last_message: "I’m heading toward the Botanical Garden next.", last_message_at: new Date(Date.now() - 4 * 60_000).toISOString(), unread_count: 1 },
-  { conversation_id: "preview-conversation-2", partner_id: "preview-2", partner_alias: "PineRobin08", avatar_seed: 5, distance_band: "Offline", last_message: "Thanks for the café tip!", last_message_at: new Date(Date.now() - 3_600_000).toISOString(), unread_count: 0 },
+  { conversation_id: "preview-conversation-2", partner_id: "preview-2", partner_alias: "PineRobin08", avatar_seed: 5, distance_band: "Offline", last_message: "Thanks for the café tip!", last_message_at: new Date(Date.now() - 18 * 60_000).toISOString(), unread_count: 0 },
 ];
 const previewMessages: ChatMessage[] = [
   { id: 1, conversation_id: "preview-conversation", sender_id: "preview-1", body: "Hi! Is Burnham Park crowded right now?", created_at: new Date(Date.now() - 12 * 60_000).toISOString() },
@@ -52,6 +52,7 @@ export function ChatExperience() {
   const [notice, setNotice] = useState(configured ? "" : "Preview mode — connect Supabase for live chat.");
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
 
   const activeConversation = conversations.find((item) => item.conversation_id === activeId) || null;
   const filteredConversations = useMemo(() => conversations.filter((item) => item.partner_alias.toLowerCase().includes(query.toLowerCase().trim())), [conversations, query]);
@@ -101,6 +102,12 @@ export function ChatExperience() {
   }, [configured, refreshLists, userId]);
 
   useEffect(() => {
+    if (!configured) return;
+    const refreshTimer = window.setInterval(() => void refreshLists(), 60_000);
+    return () => window.clearInterval(refreshTimer);
+  }, [configured, refreshLists]);
+
+  useEffect(() => {
     if (!configured || !activeId) return;
     const client = getSupabaseBrowserClient();
     if (!client) return;
@@ -122,7 +129,7 @@ export function ChatExperience() {
   function selectConversation(id: string) {
     setActiveId(id);
     setMobileOpen(true);
-    if (!configured) setMessages(id === "preview-conversation" ? previewMessages : [{ id: 4, conversation_id: id, sender_id: "preview-2", body: "Thanks for the café tip!", created_at: new Date(Date.now() - 3_600_000).toISOString() }]);
+    if (!configured) setMessages(id === "preview-conversation" ? previewMessages : [{ id: 4, conversation_id: id, sender_id: "preview-2", body: "Thanks for the café tip!", created_at: new Date(Date.now() - 18 * 60_000).toISOString() }]);
   }
 
   async function respond(requestId: string, accept: boolean) {
@@ -166,7 +173,7 @@ export function ChatExperience() {
   async function safetyAction(action: "report" | "block" | "end") {
     if (!activeConversation || !activeId) return;
     if (!configured) {
-      setNotice(`${action === "report" ? "Report submitted" : action === "block" ? "Traveler blocked" : "Conversation ended"} in preview mode.`);
+      setNotice(`${action === "report" ? "Report submitted" : action === "block" ? "Traveler blocked" : "Conversation deleted"} in preview mode.`);
       if (action !== "report") { setConversations((current) => current.filter((item) => item.conversation_id !== activeId)); setActiveId(null); setMobileOpen(false); }
       setMenuOpen(false);
       return;
@@ -177,8 +184,9 @@ export function ChatExperience() {
       ? await client.from("reports").insert({ reporter_id: userId, reported_id: activeConversation.partner_id, conversation_id: activeId, reason: "other", details: "Reported from the conversation safety menu." })
       : await client.rpc(action === "block" ? "block_user" : "end_conversation", action === "block" ? { p_user_id: activeConversation.partner_id } : { p_conversation_id: activeId });
     if (result.error) setNotice(result.error.message);
-    else setNotice(action === "report" ? "Report submitted for review." : action === "block" ? "Traveler blocked." : "Conversation ended.");
+    else setNotice(action === "report" ? "Report submitted for review." : action === "block" ? "Traveler blocked." : "Conversation deleted for both travelers.");
     setMenuOpen(false);
+    setConfirmEnd(false);
     if (action !== "report") { setActiveId(null); setMobileOpen(false); await refreshLists(); }
   }
 
@@ -186,6 +194,7 @@ export function ChatExperience() {
     <div className={`chat-shell ${mobileOpen ? "mobile-chat-open" : ""}`}>
       <aside className="chat-sidebar">
         <header><div><span className="eyebrow">Anonymous as</span><h1>{alias}</h1></div><Link href="/nearby" aria-label="Find nearby travelers"><MapPinned /></Link></header>
+        <div className="chat-expiry-note"><Clock3 /><p><strong>Chats disappear after 30 minutes of inactivity.</strong><span>Storage is precious—your developer is broke right now. 😅</span></p></div>
         <label className="chat-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search conversations" /></label>
         {requests.length > 0 && <section className="request-section"><div className="list-label"><span>Chat requests</span><b>{requests.length}</b></div>{requests.map((request) => <article className="request-card" key={request.request_id}><TravelerAvatar alias={request.sender_alias} seed={request.avatar_seed} /><div><strong>{request.sender_alias}</strong><small>Wants to start a chat</small><span><button type="button" onClick={() => respond(request.request_id, true)}><Check size={15} /> Accept</button><button type="button" onClick={() => respond(request.request_id, false)} aria-label="Decline"><X size={15} /></button></span></div></article>)}</section>}
         <section className="conversation-section"><div className="list-label"><span>Messages</span><b>{conversations.reduce((total, item) => total + Number(item.unread_count), 0) || ""}</b></div>{filteredConversations.length ? <div className="conversation-list">{filteredConversations.map((conversation) => <button type="button" key={conversation.conversation_id} className={activeId === conversation.conversation_id ? "active" : ""} onClick={() => selectConversation(conversation.conversation_id)}><span className="avatar-wrap"><TravelerAvatar alias={conversation.partner_alias} seed={conversation.avatar_seed} /><i className={conversation.distance_band === "Active now" ? "online" : ""} /></span><span className="conversation-preview"><strong>{conversation.partner_alias}<time>{relativeTime(conversation.last_message_at)}</time></strong><small>{conversation.last_message || "New conversation"}</small></span>{Number(conversation.unread_count) > 0 && <b>{conversation.unread_count}</b>}<ChevronRight className="conversation-chevron" size={17} /></button>)}</div> : <div className="sidebar-empty"><MessageCircle /><strong>No conversations</strong><p>Find someone on Nearby and send a chat request.</p><Link href="/nearby">Open Nearby</Link></div>}</section>
@@ -194,7 +203,7 @@ export function ChatExperience() {
 
       <section className="chat-room">
         {activeConversation ? <>
-          <header className="chat-room-header"><button className="mobile-back" type="button" onClick={() => setMobileOpen(false)} aria-label="Back to conversations"><ArrowLeft /></button><TravelerAvatar alias={activeConversation.partner_alias} seed={activeConversation.avatar_seed} /><div><strong>{activeConversation.partner_alias}</strong><span><i className={activeConversation.distance_band === "Active now" ? "online" : ""} /> {activeConversation.distance_band}</span></div><div className="chat-menu"><button type="button" onClick={() => setMenuOpen((value) => !value)} aria-label="Conversation options"><MoreHorizontal /></button>{menuOpen && <div className="chat-menu-popover"><button type="button" onClick={() => safetyAction("report")}><Flag /> Report conversation</button><button type="button" onClick={() => safetyAction("block")}><Ban /> Block traveler</button><button type="button" onClick={() => safetyAction("end")}><UserRoundX /> End conversation</button></div>}</div></header>
+          <header className="chat-room-header"><button className="mobile-back" type="button" onClick={() => setMobileOpen(false)} aria-label="Back to conversations"><ArrowLeft /></button><TravelerAvatar alias={activeConversation.partner_alias} seed={activeConversation.avatar_seed} /><div><strong>{activeConversation.partner_alias}</strong><span><i className={activeConversation.distance_band === "Active now" ? "online" : ""} /> {activeConversation.distance_band}</span></div><div className="chat-menu"><button type="button" onClick={() => setMenuOpen((value) => !value)} aria-label="Conversation options"><MoreHorizontal /></button>{menuOpen && <div className="chat-menu-popover"><button type="button" onClick={() => safetyAction("report")}><Flag /> Report conversation</button><button type="button" onClick={() => safetyAction("block")}><Ban /> Block traveler</button><button className="danger" type="button" onClick={() => { setMenuOpen(false); setConfirmEnd(true); }}><Trash2 /> End & delete chat</button></div>}</div></header>
           <div className="chat-safety-strip"><ShieldAlert size={15} /><span>Keep personal details private. Block and report anything unsafe.</span></div>
           <div className="message-list" aria-live="polite">
             <div className="conversation-start"><TravelerAvatar alias={activeConversation.partner_alias} seed={activeConversation.avatar_seed} size="large" /><strong>You matched anonymously</strong><p>Neither traveler can see the other’s exact location.</p></div>
@@ -208,6 +217,7 @@ export function ChatExperience() {
           <form className="message-composer" onSubmit={sendMessage}><textarea value={message} onChange={(event) => setMessage(event.target.value)} maxLength={600} rows={1} placeholder="Write a message…" aria-label="Message" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} /><span>{message.length}/600</span><button type="submit" aria-label="Send message" disabled={!message.trim()}><Send /></button></form>
         </> : <div className="chat-room-empty"><div><Inbox /></div><h2>Your traveler conversations</h2><p>Select a chat, or use Nearby to find someone exploring around you.</p><Link className="button primary" href="/nearby"><MapPinned size={17} /> Find nearby travelers</Link></div>}
       </section>
+      {confirmEnd && activeConversation ? <div className="chat-delete-backdrop" role="presentation"><section className="chat-delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-chat-title"><button className="chat-delete-close" type="button" onClick={() => setConfirmEnd(false)} aria-label="Close"><X /></button><span><Trash2 /></span><h2 id="delete-chat-title">Delete this chat?</h2><p>The conversation with <strong>{activeConversation.partner_alias}</strong> will be permanently deleted for both anonymous travelers.</p><div><button className="button modal-secondary" type="button" onClick={() => setConfirmEnd(false)}>Keep chat</button><button className="button danger-button" type="button" onClick={() => void safetyAction("end")}><Trash2 size={16} /> End & delete</button></div></section></div> : null}
     </div>
   );
 }
