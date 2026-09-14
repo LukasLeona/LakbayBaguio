@@ -14,20 +14,47 @@ create table if not exists public.profiles (
   alias text not null check (
     alias ~ '^(Cloud|Cozy|Foggy|Gentle|Misty|Pine|Quiet|Sage|Sunny|Wandering)(Deer|Finch|Fox|Hiker|Owl|Panda|Robin|Spruce|Taho|Trail)[0-9]{2}$'
   ),
-  avatar_seed integer not null default 0,
+  avatar_seed integer not null default 0 check (avatar_seed between 0 and 7),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+update public.profiles
+set avatar_seed = ((avatar_seed % 8) + 8) % 8
+where avatar_seed not between 0 and 7;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_catalog.pg_constraint
+    where conrelid = 'public.profiles'::regclass
+      and conname = 'profiles_avatar_seed_check'
+  ) then
+    alter table public.profiles
+      add constraint profiles_avatar_seed_check check (avatar_seed between 0 and 7);
+  end if;
+end $$;
 
 create table if not exists public.presence (
   user_id uuid primary key references public.profiles(user_id) on delete cascade,
   location extensions.geography(point, 4326) not null,
   is_discoverable boolean not null default false,
-  last_seen timestamptz not null default now()
+  last_seen timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '90 seconds')
 );
+
+alter table public.presence add column if not exists expires_at timestamptz;
+update public.presence
+set expires_at = now() + interval '90 seconds'
+where expires_at is null;
+alter table public.presence
+  alter column expires_at set default (now() + interval '90 seconds'),
+  alter column expires_at set not null;
 
 create index if not exists presence_location_gix on public.presence using gist (location);
 create index if not exists presence_active_idx on public.presence (last_seen desc) where is_discoverable;
+create index if not exists presence_expiry_idx on public.presence (is_discoverable, expires_at);
 
 create table if not exists public.chat_requests (
   id uuid primary key default gen_random_uuid(),
@@ -35,9 +62,18 @@ create table if not exists public.chat_requests (
   receiver_id uuid not null references public.profiles(user_id) on delete cascade,
   status text not null default 'pending' check (status in ('pending', 'accepted', 'declined')),
   created_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '24 hours'),
   responded_at timestamptz,
   check (sender_id <> receiver_id)
 );
+
+alter table public.chat_requests add column if not exists expires_at timestamptz;
+update public.chat_requests
+set expires_at = created_at + interval '24 hours'
+where expires_at is null;
+alter table public.chat_requests
+  alter column expires_at set default (now() + interval '24 hours'),
+  alter column expires_at set not null;
 
 create unique index if not exists one_pending_request_per_pair
   on public.chat_requests (
@@ -45,6 +81,9 @@ create unique index if not exists one_pending_request_per_pair
     greatest(sender_id::text, receiver_id::text)
   )
   where status = 'pending';
+
+create index if not exists chat_requests_receiver_expiry_idx
+  on public.chat_requests (receiver_id, status, expires_at desc);
 
 create table if not exists public.conversations (
   id uuid primary key default gen_random_uuid(),
@@ -72,6 +111,8 @@ create table if not exists public.messages (
   created_at timestamptz not null default now()
 );
 
+alter table public.messages alter column id set generated always;
+
 create index if not exists messages_conversation_time_idx on public.messages (conversation_id, created_at);
 
 create table if not exists public.blocks (
@@ -93,6 +134,8 @@ create table if not exists public.reports (
   resolved_at timestamptz,
   check (reporter_id <> reported_id)
 );
+
+alter table public.reports alter column id set generated always;
 
 create table if not exists public.restaurant_inquiries (
   id uuid primary key default gen_random_uuid(),
@@ -127,7 +170,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public
+set search_path = ''
 as $$
   select
     exists (
@@ -164,9 +207,6 @@ create policy "Users create their own profile"
   on public.profiles for insert to authenticated with check (user_id = auth.uid());
 
 drop policy if exists "Users update their own profile" on public.profiles;
-create policy "Users update their own profile"
-  on public.profiles for update to authenticated
-  using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 drop policy if exists "Participants read their chat requests" on public.chat_requests;
 create policy "Participants read their chat requests"
@@ -213,6 +253,13 @@ create policy "Users submit their own reports"
     and reported_id <> auth.uid()
     and conversation_id is not null
     and public.can_access_conversation(conversation_id)
+    and exists (
+      select 1
+      from public.conversation_members reported_member
+      where reported_member.conversation_id = reports.conversation_id
+        and reported_member.user_id = reports.reported_id
+        and reported_member.user_id <> auth.uid()
+    )
   );
 
 create or replace function public.upsert_presence(
@@ -223,27 +270,63 @@ create or replace function public.upsert_presence(
 returns void
 language plpgsql
 security definer
-set search_path = public, extensions
+set search_path = ''
 as $$
+declare
+  v_location public.presence.location%type;
+  v_previous_location public.presence.location%type;
+  v_previous_seen timestamptz;
 begin
   if auth.uid() is null then
     raise exception 'Authentication required';
   end if;
-  if p_latitude not between -90 and 90 or p_longitude not between -180 and 180 then
-    raise exception 'Invalid coordinates';
+
+  perform pg_advisory_xact_lock(hashtextextended(auth.uid()::text, 7100));
+
+  if p_discoverable is not true then
+    delete from public.presence where user_id = auth.uid();
+    return;
   end if;
 
-  insert into public.presence (user_id, location, is_discoverable, last_seen)
+  -- A deliberately broad service boundary prevents this Baguio-only feature
+  -- from being used as a general-purpose location tracker.
+  if p_latitude not between 16.20 and 16.60
+    or p_longitude not between 120.40 and 120.80 then
+    raise exception 'Nearby is available only around Baguio';
+  end if;
+
+  v_location := extensions.st_setsrid(
+    extensions.st_makepoint(p_longitude, p_latitude),
+    4326
+  )::extensions.geography;
+
+  select p.location, p.last_seen
+  into v_previous_location, v_previous_seen
+  from public.presence p
+  where p.user_id = auth.uid()
+  for update;
+
+  -- Browser coordinates are not attestable, but rejecting implausible jumps
+  -- makes repeated spoofed-origin triangulation harder for one identity.
+  if found
+    and v_previous_seen > now() - interval '60 seconds'
+    and extensions.st_distance(v_previous_location, v_location) > 2000 then
+    raise exception 'Location changed too quickly. Please try again shortly';
+  end if;
+
+  insert into public.presence (user_id, location, is_discoverable, last_seen, expires_at)
   values (
     auth.uid(),
-    st_setsrid(st_makepoint(p_longitude, p_latitude), 4326)::geography,
-    p_discoverable,
-    now()
+    v_location,
+    true,
+    now(),
+    now() + interval '90 seconds'
   )
   on conflict (user_id) do update set
     location = excluded.location,
-    is_discoverable = excluded.is_discoverable,
-    last_seen = now();
+    is_discoverable = true,
+    last_seen = now(),
+    expires_at = now() + interval '90 seconds';
 end;
 $$;
 
@@ -251,7 +334,7 @@ create or replace function public.set_presence_offline()
 returns void
 language sql
 security definer
-set search_path = public
+set search_path = ''
 as $$
   delete from public.presence where user_id = auth.uid();
 $$;
@@ -272,14 +355,14 @@ returns table (
 language sql
 stable
 security definer
-set search_path = public, extensions
+set search_path = ''
 as $$
   with origin as (
-    select location as point
-    from public.presence
-    where user_id = auth.uid()
-      and is_discoverable
-      and last_seen > now() - interval '2 minutes'
+    select mine.location as point
+    from public.presence mine
+    where mine.user_id = auth.uid()
+      and mine.is_discoverable
+      and mine.expires_at > now()
   ), candidates as (
     select
       p.user_id,
@@ -287,15 +370,17 @@ as $$
       p.avatar_seed,
       pr.last_seen,
       pr.location,
-      st_distance(pr.location, origin.point) as distance_meters
+      extensions.st_distance(pr.location, origin.point) as distance_meters
     from public.presence pr
     join public.profiles p on p.user_id = pr.user_id
     cross join origin
     where auth.uid() is not null
       and pr.user_id <> auth.uid()
       and pr.is_discoverable
-      and pr.last_seen > now() - interval '2 minutes'
-      and st_dwithin(pr.location, origin.point, least(greatest(coalesce(p_radius_meters, 5000), 500), 5000))
+      and pr.expires_at > now()
+      -- Keep the argument for the existing browser contract, but never allow a
+      -- caller to binary-search distance by varying it.
+      and extensions.st_dwithin(pr.location, origin.point, 5000)
       and not exists (
         select 1 from public.blocks b
         where (b.blocker_id = auth.uid() and b.blocked_id = pr.user_id)
@@ -307,16 +392,19 @@ as $$
     candidates.alias,
     candidates.avatar_seed,
     case
-      when distance_meters < 500 then 'Less than 500 m'
-      when distance_meters < 1500 then '0.5–1.5 km'
-      when distance_meters < 3000 then '1.5–3 km'
-      else '3–5 km'
+      when distance_meters < 2000 then 'Within 2 km'
+      else '2–5 km'
     end as distance_band,
-    round(st_y(candidates.location::geometry)::numeric, 2)::double precision as display_latitude,
-    round(st_x(candidates.location::geometry)::numeric, 2)::double precision as display_longitude,
-    candidates.last_seen
+    (
+      round((extensions.st_y(candidates.location::extensions.geometry) / 0.02)::numeric) * 0.02
+    )::double precision as display_latitude,
+    (
+      round((extensions.st_x(candidates.location::extensions.geometry) / 0.02)::numeric) * 0.02
+    )::double precision as display_longitude,
+    date_trunc('minute', candidates.last_seen) as last_seen
   from candidates
-  order by distance_meters
+  -- A stable hourly shuffle avoids leaking exact-distance ordering.
+  order by md5(candidates.user_id::text || date_trunc('hour', now())::text)
   limit 30;
 $$;
 
@@ -324,7 +412,7 @@ create or replace function public.request_chat(p_target_user_id uuid)
 returns uuid
 language plpgsql
 security definer
-set search_path = public, extensions
+set search_path = ''
 as $$
 declare
   v_request_id uuid;
@@ -339,9 +427,9 @@ begin
     where mine.user_id = auth.uid()
       and mine.is_discoverable
       and target.is_discoverable
-      and mine.last_seen > now() - interval '2 minutes'
-      and target.last_seen > now() - interval '2 minutes'
-      and st_dwithin(mine.location, target.location, 5000)
+      and mine.expires_at > now()
+      and target.expires_at > now()
+      and extensions.st_dwithin(mine.location, target.location, 5000)
   ) then
     raise exception 'That traveler is no longer available';
   end if;
@@ -363,7 +451,7 @@ begin
   update public.chat_requests
   set status = 'declined', responded_at = now()
   where status = 'pending'
-    and created_at <= now() - interval '24 hours'
+    and expires_at <= now()
     and ((sender_id = auth.uid() and receiver_id = p_target_user_id)
       or (sender_id = p_target_user_id and receiver_id = auth.uid()));
   if exists (
@@ -379,15 +467,30 @@ begin
   select id into v_request_id
   from public.chat_requests
   where status = 'pending'
+    and expires_at > now()
     and ((sender_id = auth.uid() and receiver_id = p_target_user_id)
       or (sender_id = p_target_user_id and receiver_id = auth.uid()))
   limit 1;
 
   if v_request_id is not null then return v_request_id; end if;
 
-  insert into public.chat_requests (sender_id, receiver_id)
-  values (auth.uid(), p_target_user_id)
-  returning id into v_request_id;
+  begin
+    insert into public.chat_requests (sender_id, receiver_id, expires_at)
+    values (auth.uid(), p_target_user_id, now() + interval '24 hours')
+    returning id into v_request_id;
+  exception when unique_violation then
+    select r.id into v_request_id
+    from public.chat_requests r
+    where r.status = 'pending'
+      and r.expires_at > now()
+      and ((r.sender_id = auth.uid() and r.receiver_id = p_target_user_id)
+        or (r.sender_id = p_target_user_id and r.receiver_id = auth.uid()))
+    limit 1;
+  end;
+
+  if v_request_id is null then
+    raise exception 'Chat request could not be created';
+  end if;
   return v_request_id;
 end;
 $$;
@@ -403,14 +506,14 @@ returns table (
 language sql
 stable
 security definer
-set search_path = public
+set search_path = ''
 as $$
   select r.id, r.sender_id, p.alias, p.avatar_seed, r.created_at
   from public.chat_requests r
   join public.profiles p on p.user_id = r.sender_id
   where r.receiver_id = auth.uid()
     and r.status = 'pending'
-    and r.created_at > now() - interval '24 hours'
+    and r.expires_at > now()
     and not exists (
       select 1 from public.blocks b
       where (b.blocker_id = auth.uid() and b.blocked_id = r.sender_id)
@@ -423,7 +526,7 @@ create or replace function public.respond_to_chat_request(p_request_id uuid, p_a
 returns uuid
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   v_request public.chat_requests%rowtype;
@@ -431,7 +534,10 @@ declare
 begin
   select * into v_request
   from public.chat_requests
-  where id = p_request_id and receiver_id = auth.uid() and status = 'pending'
+  where id = p_request_id
+    and receiver_id = auth.uid()
+    and status = 'pending'
+    and expires_at > now()
   for update;
 
   if not found then raise exception 'Chat request is no longer available'; end if;
@@ -481,7 +587,7 @@ returns table (
 language sql
 stable
 security definer
-set search_path = public, extensions
+set search_path = ''
 as $$
   select
     c.id,
@@ -489,7 +595,10 @@ as $$
     partner_profile.alias,
     partner_profile.avatar_seed,
     case
-      when partner_presence.last_seen is null or partner_presence.last_seen <= now() - interval '2 minutes' then 'Offline'
+      when partner_presence.user_id is null
+        or partner_presence.is_discoverable is not true
+        or partner_presence.expires_at <= now()
+      then 'Offline'
       else 'Active now'
     end,
     last_message.body,
@@ -528,7 +637,7 @@ create or replace function public.mark_conversation_read(p_conversation_id uuid)
 returns void
 language sql
 security definer
-set search_path = public
+set search_path = ''
 as $$
   update public.conversation_members
   set last_read_at = now()
@@ -541,7 +650,7 @@ create or replace function public.block_user(p_user_id uuid)
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 begin
   if auth.uid() is null or p_user_id = auth.uid() then
@@ -564,7 +673,7 @@ create or replace function public.end_conversation(p_conversation_id uuid)
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 begin
   if not public.can_access_conversation(p_conversation_id) then
@@ -581,12 +690,12 @@ create or replace function public.cleanup_stale_presence()
 returns integer
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   deleted_count integer;
 begin
-  delete from public.presence where last_seen < now() - interval '24 hours';
+  delete from public.presence where expires_at <= now();
   get diagnostics deleted_count = row_count;
   return deleted_count;
 end;
@@ -596,9 +705,22 @@ create or replace function public.enforce_message_rate_limit()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  new.sender_id := auth.uid();
+  new.created_at := clock_timestamp();
+  new.body := btrim(new.body);
+
+  if not public.can_access_conversation(new.conversation_id) then
+    raise exception 'Conversation is unavailable';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(auth.uid()::text, 7101));
   if (
     select count(*)
     from public.messages
@@ -616,13 +738,60 @@ create trigger messages_rate_limit
   before insert on public.messages
   for each row execute function public.enforce_message_rate_limit();
 
+create or replace function public.enforce_report_integrity()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  new.reporter_id := auth.uid();
+  new.created_at := clock_timestamp();
+  new.resolved_at := null;
+
+  if new.reported_id = auth.uid()
+    or new.conversation_id is null
+    or not public.can_access_conversation(new.conversation_id)
+    or not exists (
+      select 1
+      from public.conversation_members reported_member
+      where reported_member.conversation_id = new.conversation_id
+        and reported_member.user_id = new.reported_id
+        and reported_member.user_id <> auth.uid()
+    ) then
+    raise exception 'Invalid report target';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(auth.uid()::text, 7102));
+  if (
+    select count(*)
+    from public.reports r
+    where r.reporter_id = auth.uid()
+      and r.created_at > now() - interval '1 day'
+  ) >= 5 then
+    raise exception 'Report rate limit reached';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists reports_integrity on public.reports;
+create trigger reports_integrity
+  before insert on public.reports
+  for each row execute function public.enforce_report_integrity();
+
 revoke all on public.profiles, public.presence, public.chat_requests, public.conversations,
   public.conversation_members, public.messages, public.blocks, public.reports,
   public.restaurant_inquiries from anon, authenticated;
 
 grant all on public.restaurant_inquiries to service_role;
 
-grant select, insert, update on public.profiles to authenticated;
+grant select, insert on public.profiles to authenticated;
 grant select on public.chat_requests, public.conversations, public.conversation_members to authenticated;
 grant select, insert on public.messages to authenticated;
 grant select, delete on public.blocks to authenticated;
@@ -630,19 +799,20 @@ grant insert on public.reports to authenticated;
 grant usage, select on sequence public.messages_id_seq to authenticated;
 grant usage, select on sequence public.reports_id_seq to authenticated;
 
-revoke all on function public.can_access_conversation(uuid) from public;
-revoke all on function public.upsert_presence(double precision, double precision, boolean) from public;
-revoke all on function public.set_presence_offline() from public;
-revoke all on function public.nearby_profiles(integer) from public;
-revoke all on function public.request_chat(uuid) from public;
-revoke all on function public.list_chat_requests() from public;
-revoke all on function public.respond_to_chat_request(uuid, boolean) from public;
-revoke all on function public.list_conversations() from public;
-revoke all on function public.mark_conversation_read(uuid) from public;
-revoke all on function public.block_user(uuid) from public;
-revoke all on function public.end_conversation(uuid) from public;
-revoke all on function public.cleanup_stale_presence() from public;
-revoke all on function public.enforce_message_rate_limit() from public;
+revoke all on function public.can_access_conversation(uuid) from public, anon, authenticated;
+revoke all on function public.upsert_presence(double precision, double precision, boolean) from public, anon, authenticated;
+revoke all on function public.set_presence_offline() from public, anon, authenticated;
+revoke all on function public.nearby_profiles(integer) from public, anon, authenticated;
+revoke all on function public.request_chat(uuid) from public, anon, authenticated;
+revoke all on function public.list_chat_requests() from public, anon, authenticated;
+revoke all on function public.respond_to_chat_request(uuid, boolean) from public, anon, authenticated;
+revoke all on function public.list_conversations() from public, anon, authenticated;
+revoke all on function public.mark_conversation_read(uuid) from public, anon, authenticated;
+revoke all on function public.block_user(uuid) from public, anon, authenticated;
+revoke all on function public.end_conversation(uuid) from public, anon, authenticated;
+revoke all on function public.cleanup_stale_presence() from public, anon, authenticated;
+revoke all on function public.enforce_message_rate_limit() from public, anon, authenticated;
+revoke all on function public.enforce_report_integrity() from public, anon, authenticated;
 
 grant execute on function public.can_access_conversation(uuid) to authenticated;
 grant execute on function public.upsert_presence(double precision, double precision, boolean) to authenticated;
