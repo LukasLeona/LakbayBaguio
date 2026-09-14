@@ -1,54 +1,153 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Compass, MapPin, Route, Store } from "lucide-react";
+import {
+  ArrowRight,
+  BedDouble,
+  CalendarDays,
+  Camera,
+  CloudSun,
+  Coffee,
+  Compass,
+  Footprints,
+  MapPin,
+  Route,
+  Sparkles,
+  Star,
+  Store,
+  Trees,
+  Utensils,
+} from "lucide-react";
 import { HomePendingItinerary } from "@/components/home-pending-itinerary";
 import { Kabsat } from "@/components/kabsat";
 import { PlaceCard } from "@/components/place-card";
-import { featuredRestaurants } from "@/lib/places";
+import { featuredRestaurants, hotels, parks } from "@/lib/places";
+
+const moodCards = [
+  { title: "Pine & quiet", copy: "Forest paths and slow mornings", image: "/assets/img/destinations/camp-john-hay.jpg", icon: Trees, href: "/explore?type=park" },
+  { title: "Culture trail", copy: "Art, heritage, and Cordilleran stories", image: "/assets/img/destinations/tam-awan-village.jpg", icon: Camera, href: "/explore?type=park" },
+  { title: "City appetite", copy: "Local tables and café weather", image: "/assets/img/destinations/ili-likha.jpg", icon: Coffee, href: "/explore?type=restaurant" },
+];
+
+const quickActions = [
+  { label: "Build a route", detail: "Fare & directions", icon: Route, href: "/plan" },
+  { label: "Find a place", detail: "Parks, food & stays", icon: Compass, href: "/explore" },
+  { label: "Meet travelers", detail: "Privacy-first radar", icon: MapPin, href: "/nearby" },
+];
 
 export default function HomePage() {
   return (
-    <main id="main-content">
-      <section className="home-hero">
-        <div className="shell hero-grid">
-          <div className="hero-copy">
-            <span className="eyebrow light"><MapPin size={14} /> Your local Baguio companion</span>
-            <h1>Find your way through the <em>City of Pines.</em></h1>
-            <p>Discover places worth the climb, build a route that fits your pace, and connect with fellow travelers nearby.</p>
-            <div className="hero-actions">
-              <Link href="/plan" className="button sun">Plan my trip <Route size={18} /></Link>
-              <Link href="/explore" className="button glass">Explore Baguio <Compass size={18} /></Link>
+    <main id="main-content" className="home-revamp">
+      <section className="home-hero home-discovery-hero">
+        <div className="shell home-discovery-shell">
+          <div className="home-hero-topline">
+            <div className="traveler-greeting">
+              <span className="traveler-avatar-mini">LB</span>
+              <div><small>Welcome to the highlands</small><strong>Ready to lakbay?</strong></div>
             </div>
-            <div className="hero-trust"><BadgeCheck size={18} /> Built around local context and privacy-first community features.</div>
+            <div className="weather-chip"><CloudSun size={21} /><span><small>Baguio weather</small><strong>15°C · Cool</strong></span></div>
           </div>
 
-          <div className="hero-collage" aria-hidden="true">
-            <div className="hero-photo primary-photo"><img src="/assets/img/destinations/burnham-park.jpg" alt="" /></div>
-            <div className="hero-photo secondary-photo"><img src="/assets/img/destinations/botanical-garden.jpg" alt="" /></div>
-            <div className="weather-card"><span>Today in Baguio</span><strong>Cool &amp; misty</strong><small>Bring a light layer</small></div>
-            <div className="hero-stamp">Est. 2025<br /><strong>LAKBAY</strong></div>
+          <div className="home-story-card">
+            <img src="/assets/img/destinations/burnham-park.jpg" alt="Burnham Park lake surrounded by pine trees" />
+            <div className="home-story-shade" />
+            <div className="home-story-copy">
+              <span className="eyebrow light"><MapPin size={14} /> Baguio, Philippines</span>
+              <h1>Make room for <em>mountain moments.</em></h1>
+              <p>Choose the places you love. Lakbay arranges the route, directions, estimated fare, and time around your trip.</p>
+              <div className="story-activity-row" aria-label="Popular Baguio experiences">
+                <span><Footprints size={14} /> Walk</span>
+                <span><Utensils size={14} /> Eat</span>
+                <span><Camera size={14} /> Discover</span>
+              </div>
+              <div className="hero-actions">
+                <Link href="/plan" className="button lime">Start planning <ArrowRight size={18} /></Link>
+                <Link href="/explore" className="button story-glass">Explore first <Compass size={18} /></Link>
+              </div>
+            </div>
+            <div className="story-fact-card"><span>Today’s local pick</span><strong>Burnham to Session Road</strong><small><Footprints size={13} /> Easy city-center walk</small></div>
+          </div>
+
+          <div className="home-hero-shortcuts">
+            {quickActions.map(({ label, detail, icon: Icon, href }, index) => (
+              <Link href={href} key={label}><span className="shortcut-index">0{index + 1}</span><span className="shortcut-icon"><Icon size={20} /></span><span><strong>{label}</strong><small>{detail}</small></span><ArrowRight size={18} /></Link>
+            ))}
           </div>
         </div>
-        <div className="mountain-line" />
       </section>
 
-      <section className="section section-overlap">
+      <section className="section home-pending-section">
         <div className="shell">
-          <div className="section-heading split">
-            <div><span className="eyebrow">Pick up where you left off</span><h2>Your pending itinerary</h2></div>
-            <Link href="/plan" className="text-link">Open planner <ArrowRight size={16} /></Link>
+          <div className="section-heading split compact-heading">
+            <div><span className="eyebrow"><CalendarDays size={14} /> Continue your journey</span><h2>Your pending itinerary</h2></div>
+            <Link href="/plan" className="round-text-link" aria-label="Open planner"><ArrowRight size={19} /></Link>
           </div>
           <HomePendingItinerary />
         </div>
       </section>
 
-      <section className="section restaurants-section">
+      <section className="section home-popular-section">
         <div className="shell">
-          <div className="section-heading split">
-            <div><span className="eyebrow">Eat like you belong here</span><h2>Discover local restaurants</h2><p>From mountain comfort food to creative city cafés.</p></div>
-            <Link href="/explore?type=restaurant" className="text-link">See all restaurants <ArrowRight size={16} /></Link>
+          <div className="section-heading split compact-heading">
+            <div><span className="eyebrow"><Sparkles size={14} /> Popular right now</span><h2>Baguio favorites for first-timers</h2><p>Classic stops, fresh air, and the views people come back for.</p></div>
+            <Link href="/explore" className="text-link">View every place <ArrowRight size={16} /></Link>
+          </div>
+          <div className="home-feature-rail">
+            {parks.slice(0, 4).map((place, index) => (
+              <Link href={`/plan?place=${place.id}`} className={`home-feature-card feature-${index + 1}`} key={place.id}>
+                <img src={place.image} alt="" loading="lazy" />
+                <span className="feature-shade" />
+                <span className="feature-number">0{index + 1}</span>
+                <span className="feature-copy"><small>{place.area}</small><strong>{place.name}</strong><em>{place.duration} min · {place.price}</em></span>
+                <span className="feature-arrow"><ArrowRight size={17} /></span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section mood-section">
+        <div className="shell">
+          <div className="section-heading center-heading"><span className="eyebrow">Choose your Baguio mood</span><h2>What kind of day are you after?</h2><p>Start with a feeling. We’ll help turn it into a route.</p></div>
+          <div className="mood-card-grid">
+            {moodCards.map(({ title, copy, image, icon: Icon, href }) => (
+              <Link href={href} className="mood-card" key={title}>
+                <img src={image} alt="" loading="lazy" /><span className="mood-shade" />
+                <span className="mood-icon"><Icon size={20} /></span>
+                <span className="mood-copy"><strong>{title}</strong><small>{copy}</small></span>
+                <ArrowRight size={20} />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section restaurants-section home-food-section">
+        <div className="shell">
+          <div className="section-heading split compact-heading">
+            <div><span className="eyebrow"><Utensils size={14} /> Eat like you belong here</span><h2>Tables worth finding</h2><p>Local flavors, creative rooms, and café stops for cool afternoons.</p></div>
+            <Link href="/explore?type=restaurant" className="text-link">All restaurants <ArrowRight size={16} /></Link>
           </div>
           <div className="place-grid home-place-grid">
             {featuredRestaurants.map((restaurant) => <PlaceCard key={restaurant.id} place={restaurant} compact />)}
+          </div>
+        </div>
+      </section>
+
+      <section className="section home-stays-section">
+        <div className="shell stays-layout">
+          <div className="stays-intro">
+            <span className="eyebrow"><BedDouble size={14} /> Stay close to the story</span>
+            <h2>A good base changes the whole trip.</h2>
+            <p>Pick a stay near the neighborhoods and places you want to spend time in.</p>
+            <Link href="/explore?type=hotel" className="button dark">Browse stays <ArrowRight size={17} /></Link>
+          </div>
+          <div className="stay-card-stack">
+            {hotels.slice(0, 3).map((hotel, index) => (
+              <Link href={`/plan?place=${hotel.id}`} className="stay-mini-card" key={hotel.id}>
+                <img src={hotel.image} alt="" loading="lazy" />
+                <span><small>{hotel.area}</small><strong>{hotel.name}</strong><em><Star size={12} fill="currentColor" /> {hotel.price}</em></span>
+                <b>0{index + 1}</b>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -63,17 +162,7 @@ export default function HomePage() {
             <span className="eyebrow">Restaurant owners</span>
             <h2>Put your table on the traveler’s map.</h2>
             <p>Tell us what makes your restaurant special. We’ll review your details for a possible feature in Lakbay Baguio—no automatic or paid placement.</p>
-            <Link href="/partner" className="button primary">Inquire about a feature <ArrowRight size={17} /></Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="section quick-paths">
-        <div className="shell">
-          <div className="quick-path-grid">
-            <Link href="/explore"><span>01</span><div><strong>Explore</strong><small>Parks, food &amp; stays</small></div><ArrowRight /></Link>
-            <Link href="/plan"><span>02</span><div><strong>Plan</strong><small>Generate a smart route</small></div><ArrowRight /></Link>
-            <Link href="/nearby"><span>03</span><div><strong>Nearby</strong><small>Meet travelers safely</small></div><ArrowRight /></Link>
+            <Link href="/partner" className="button lime">Inquire about a feature <ArrowRight size={17} /></Link>
           </div>
         </div>
       </section>

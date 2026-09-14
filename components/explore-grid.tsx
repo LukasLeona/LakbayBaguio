@@ -1,11 +1,12 @@
 "use client";
 
-import { Search, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, BedDouble, Clock3, Compass, MapPin, Search, SlidersHorizontal, Trees, Utensils } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { PlaceCard } from "./place-card";
 import { places } from "@/lib/places";
-import type { PlaceKind } from "@/lib/types";
+import type { Place, PlaceKind } from "@/lib/types";
 
 const tabs: { value: "all" | PlaceKind; label: string; icon: string }[] = [
   { value: "all", label: "All", icon: "✦" },
@@ -13,6 +14,30 @@ const tabs: { value: "all" | PlaceKind; label: string; icon: string }[] = [
   { value: "restaurant", label: "Restaurants", icon: "🍜" },
   { value: "hotel", label: "Hotels", icon: "🛎️" },
 ];
+
+const featuredIds = ["mines-view-park", "bencab-museum", "strawberry-farm"];
+const featuredPlaces = featuredIds.flatMap((id) => {
+  const place = places.find((item) => item.id === id);
+  return place ? [place] : [];
+});
+
+const categoryCards: { kind: PlaceKind; label: string; copy: string; icon: typeof Trees; image: string }[] = [
+  { kind: "park", label: "Parks & landmarks", copy: "Fresh air, views, and heritage", icon: Trees, image: "/assets/img/destinations/wright-park.jpg" },
+  { kind: "restaurant", label: "Restaurants", copy: "Local plates and creative cafés", icon: Utensils, image: "/assets/img/destinations/ili-likha.jpg" },
+  { kind: "hotel", label: "Hotels & stays", copy: "Bases for every Baguio pace", icon: BedDouble, image: "/assets/img/destinations/camp-john-hay.jpg" },
+];
+
+function CuratedCard({ place, primary = false }: { place: Place; primary?: boolean }) {
+  return (
+    <Link href={`/plan?place=${place.id}`} className={`curated-place-card ${primary ? "primary" : ""}`}>
+      <img src={place.image} alt="" loading="lazy" />
+      <span className="curated-shade" />
+      <span className="curated-badge">{primary ? "Editor’s trail" : place.area}</span>
+      <span className="curated-copy"><small><MapPin size={12} /> {place.area}</small><strong>{place.name}</strong><em><Clock3 size={12} /> {place.duration} min · {place.price}</em></span>
+      <span className="curated-action"><ArrowRight size={17} /></span>
+    </Link>
+  );
+}
 
 export function ExploreGrid() {
   const searchParams = useSearchParams();
@@ -29,27 +54,60 @@ export function ExploreGrid() {
     return matchesKind && matchesArea && haystack.includes(query.toLowerCase().trim());
   }), [area, kind, query]);
 
+  function chooseKind(nextKind: PlaceKind) {
+    setKind(nextKind);
+    setQuery("");
+    document.querySelector(".explore-filter-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <>
-      <div className="explore-toolbar">
-        <div className="explore-tabs" role="tablist" aria-label="Place type">
-          {tabs.map((tab) => (
-            <button key={tab.value} type="button" role="tab" aria-selected={kind === tab.value} className={kind === tab.value ? "active" : ""} onClick={() => setKind(tab.value)}>
-              <span>{tab.icon}</span>{tab.label}
+      <section className="explore-curated-section">
+        <div className="explore-section-heading"><div><span className="eyebrow"><Compass size={14} /> Start with a classic</span><h2>Popular, with good reason.</h2></div><p>Three different sides of the highlands—from a sunrise lookout to art and farm country.</p></div>
+        <div className="curated-place-grid">
+          {featuredPlaces.map((place, index) => <CuratedCard place={place} primary={index === 0} key={place.id} />)}
+        </div>
+      </section>
+
+      <section className="explore-category-section">
+        <div className="explore-section-heading compact"><div><span className="eyebrow">Browse your way</span><h2>What are you looking for?</h2></div></div>
+        <div className="explore-category-grid">
+          {categoryCards.map(({ kind: itemKind, label, copy, icon: Icon, image }) => (
+            <button type="button" onClick={() => chooseKind(itemKind)} className="explore-category-card" key={itemKind}>
+              <img src={image} alt="" loading="lazy" /><span className="category-shade" />
+              <span className="category-icon"><Icon size={19} /></span><span className="category-copy"><strong>{label}</strong><small>{copy}</small></span><ArrowRight size={19} />
             </button>
           ))}
         </div>
-        <div className="explore-controls">
-          <label className="search-field"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search places or experiences" /></label>
-          <label className="select-field"><SlidersHorizontal size={17} /><select value={area} onChange={(event) => setArea(event.target.value)} aria-label="Filter by area"><option value="all">All areas</option>{areas.map((item) => <option key={item}>{item}</option>)}</select></label>
+      </section>
+
+      <section className="explore-filter-panel" id="all-places">
+        <div className="explore-filter-title"><div><span className="eyebrow">The complete guide</span><h2>Find your next stop</h2></div><span className="place-count"><strong>{filtered.length}</strong> places</span></div>
+        <div className="explore-toolbar">
+          <div className="explore-tabs" role="tablist" aria-label="Place type">
+            {tabs.map((tab) => (
+              <button key={tab.value} type="button" role="tab" aria-selected={kind === tab.value} className={kind === tab.value ? "active" : ""} onClick={() => setKind(tab.value)}>
+                <span>{tab.icon}</span>{tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="explore-controls">
+            <label className="search-field"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search places or experiences" /></label>
+            <label className="select-field"><SlidersHorizontal size={17} /><select value={area} onChange={(event) => setArea(event.target.value)} aria-label="Filter by area"><option value="all">All areas</option>{areas.map((item) => <option key={item}>{item}</option>)}</select></label>
+          </div>
         </div>
-      </div>
-      <div className="result-summary"><strong>{filtered.length}</strong> places ready to explore</div>
+      </section>
+
       {filtered.length ? (
         <div className="place-grid explore-place-grid">{filtered.map((place) => <PlaceCard key={place.id} place={place} />)}</div>
       ) : (
         <div className="empty-state"><span>🍃</span><h2>No matches yet</h2><p>Try another search or remove an area filter.</p></div>
       )}
+
+      <section className="explore-route-cta">
+        <div><span className="eyebrow light">Found a few favorites?</span><h2>Turn them into a practical Baguio day.</h2><p>Lakbay organizes your selected stops with timing, directions, and estimated transport fares.</p></div>
+        <Link href="/plan" className="button lime">Create my itinerary <ArrowRight size={18} /></Link>
+      </section>
     </>
   );
 }
