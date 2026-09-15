@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Planner } from "@/components/planner";
 
-export const metadata: Metadata = { title: "Plan" };
+export const metadata: Metadata = { title: "Itinerary" };
 
 export default function PlanPage() {
   return (

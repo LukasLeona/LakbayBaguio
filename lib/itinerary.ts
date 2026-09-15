@@ -1,6 +1,7 @@
 import type { Place, SavedItinerary } from "./types";
 
 export const ITINERARY_STORAGE_KEY = "lakbay-baguio.pending-itinerary.v2";
+export const ITINERARY_CHANGE_EVENT = "lakbay-baguio:itinerary-change";
 
 const START = { lat: 16.4117, lng: 120.598 };
 

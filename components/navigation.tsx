@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarCheck2, House, MessageSquare, Radar, Route, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ITINERARY_CHANGE_EVENT, ITINERARY_STORAGE_KEY } from "@/lib/itinerary";
 
 const navItems = [
   { href: "/", label: "Home", icon: House },
   { href: "/explore", label: "Explore", icon: Search },
-  { href: "/plan", label: "Plan", icon: CalendarCheck2 },
+  { href: "/plan", label: "Itinerary", icon: CalendarCheck2 },
   { href: "/nearby", label: "Nearby", icon: Radar },
   { href: "/chats", label: "Chats", icon: MessageSquare },
 ];
@@ -16,9 +18,42 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
+function hasStoredItinerary() {
+  try {
+    const raw = localStorage.getItem(ITINERARY_STORAGE_KEY);
+    if (!raw) return false;
+    const candidate = JSON.parse(raw) as { days?: unknown; numberOfDays?: unknown; stops?: unknown };
+    return (Array.isArray(candidate.days) && typeof candidate.numberOfDays === "number")
+      || (Array.isArray(candidate.stops) && typeof candidate.days === "number");
+  } catch {
+    return false;
+  }
+}
+
+function usePendingItinerary(pathname: string) {
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    const update = () => setPending(hasStoredItinerary());
+    const onStorage = (event: StorageEvent) => {
+      if (!event.key || event.key === ITINERARY_STORAGE_KEY) update();
+    };
+    update();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(ITINERARY_CHANGE_EVENT, update);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(ITINERARY_CHANGE_EVENT, update);
+    };
+  }, [pathname]);
+
+  return pending;
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
   const isPlanPage = pathname.startsWith("/plan");
+  const hasPending = usePendingItinerary(pathname);
 
   return (
     <header className={`site-header ${isPlanPage ? "plan-context" : ""}`}>
@@ -32,16 +67,15 @@ export function SiteHeader() {
         </Link>
 
         <nav className="desktop-nav" aria-label="Main navigation">
-          {navItems.map(({ href, label }) => (
-            <Link key={href} href={href} className={isActive(pathname, href) ? "active" : ""}>
-              {label}
-            </Link>
-          ))}
+          {navItems.map(({ href, label }) => {
+            const destination = href === "/plan" && hasPending ? "/plan/itinerary" : href;
+            return <Link key={href} href={destination} className={isActive(pathname, href) ? "active" : ""} title={href === "/plan" && hasPending ? "View your pending itinerary" : undefined}>{label}{href === "/plan" && hasPending ? <i className="desktop-pending-dot" aria-hidden="true" /> : null}</Link>;
+          })}
         </nav>
 
         {!isPlanPage ? (
           <Link href="/plan" className="header-action">
-            Plan a trip
+            Build itinerary
             <Route size={17} aria-hidden="true" />
           </Link>
         ) : null}
@@ -52,15 +86,18 @@ export function SiteHeader() {
 
 export function BottomNavigation() {
   const pathname = usePathname();
+  const hasPending = usePendingItinerary(pathname);
 
   return (
     <nav className="bottom-nav" aria-label="Mobile navigation">
       {navItems.map(({ href, label, icon: Icon }) => {
         const active = isActive(pathname, href);
+        const destination = href === "/plan" && hasPending ? "/plan/itinerary" : href;
         return (
-          <Link key={href} href={href} className={active ? "active" : ""} aria-current={active ? "page" : undefined}>
+          <Link key={href} href={destination} className={active ? "active" : ""} aria-current={active ? "page" : undefined} aria-label={href === "/plan" && hasPending ? "Itinerary, pending trip available" : label}>
             <span className="bottom-icon">
               <Icon size={19} strokeWidth={2} aria-hidden="true" />
+              {href === "/plan" && hasPending ? <i className="nav-pending-dot" aria-hidden="true" /> : null}
             </span>
             <span>{label}</span>
           </Link>

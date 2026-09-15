@@ -40,7 +40,7 @@ import type {
   TransportMode,
   TravelPreference,
 } from "@/lib/planner-types";
-import { ITINERARY_STORAGE_KEY } from "@/lib/itinerary";
+import { ITINERARY_CHANGE_EVENT, ITINERARY_STORAGE_KEY } from "@/lib/itinerary";
 import { getPlace } from "@/lib/places";
 
 const DRAFT_STORAGE_KEY = "lakbay-baguio-planner";
@@ -371,6 +371,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       try {
         localStorage.setItem(ITINERARY_STORAGE_KEY, JSON.stringify(next));
         setSaved(true);
+        window.dispatchEvent(new Event(ITINERARY_CHANGE_EVENT));
       } catch {
         setSaved(false);
       }
@@ -384,6 +385,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     try {
       localStorage.setItem(ITINERARY_STORAGE_KEY, JSON.stringify(result));
       setSaved(true);
+      window.dispatchEvent(new Event(ITINERARY_CHANGE_EVENT));
       setToast("Itinerary saved as your pending trip.");
     } catch { setToast("This browser could not save the itinerary locally."); }
   }
@@ -441,7 +443,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           <details className="fare-assumptions"><summary>Adjust planning fare assumptions</summary><div><label><span>Jeepney minimum</span><input type="number" min="0" step="1" value={fareSettings.jeepMinimum} onChange={(event) => updateFare("jeepMinimum", event.target.value)} /></label><label><span>Base distance (km)</span><input type="number" min="0" step="0.5" value={fareSettings.jeepBaseKm} onChange={(event) => updateFare("jeepBaseKm", event.target.value)} /></label><label><span>Added per km</span><input type="number" min="0" step="0.1" value={fareSettings.jeepPerKm} onChange={(event) => updateFare("jeepPerKm", event.target.value)} /></label><label><span>Taxi flag-down</span><input type="number" min="0" step="1" value={fareSettings.taxiFlag} onChange={(event) => updateFare("taxiFlag", event.target.value)} /></label><label><span>Taxi per km</span><input type="number" min="0" step="1" value={fareSettings.taxiPerKm} onChange={(event) => updateFare("taxiPerKm", event.target.value)} /></label></div><p>Editable estimates only. Verify current fares with the driver or dispatcher.</p></details>
 
           {error ? <p className="planner-error" role="alert">{error}</p> : null}
-          <button className="generate-plan-button" type="submit" disabled={generating} aria-busy={generating}><span><small>{generating ? "Mapping time, fare, and directions" : "Ready when you are"}</small><strong>{generating ? "Building your Baguio route…" : "Generate my Baguio plan"}</strong></span>{generating ? <LoaderCircle className="spin" size={22} /> : <ChevronRight size={22} />}</button>
+          <button className="generate-plan-button" type="submit" disabled={generating} aria-busy={generating}><span><small>{generating ? "Mapping time, fare, and directions" : "Ready when you are"}</small><strong>{generating ? "Building your Baguio route…" : "Generate my itinerary"}</strong></span>{generating ? <LoaderCircle className="spin" size={22} /> : <ChevronRight size={22} />}</button>
           <p className="planner-estimate-note">Routes are planning suggestions. Confirm opening hours, fares, admission rules, weather, and loading areas locally.</p>
         </section>
         </form>

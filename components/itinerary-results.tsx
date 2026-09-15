@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import {
   AlertTriangle,
   BusFront,
+  CalendarDays,
   Car,
   Check,
   Clock3,
@@ -97,23 +97,13 @@ export function ItineraryResults({
             {itinerary.date ? ` beginning ${formatTripDate(itinerary.date)}` : ""}.
           </p>
         </div>
-        <div className="generated-plan-actions" aria-label="Itinerary actions">
-          <button type="button" className="result-action" onClick={onEdit}><Pencil size={16} /> Edit choices</button>
-          <button type="button" className="result-action" onClick={copyPlan}>
-            {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copied" : "Copy plan"}
-          </button>
-          <button type="button" className="result-action strong" onClick={() => window.print()}><Printer size={16} /> Print / Save PDF</button>
-          <button type="button" className={`result-action save ${saved ? "saved" : ""}`} onClick={onSave}>
-            {saved ? <Check size={16} /> : <Save size={16} />} {saved ? "Saved to Home" : "Save as pending"}
-          </button>
-        </div>
       </header>
 
       <div className="trip-metrics" aria-label="Itinerary summary">
-        <article><span>Travel days</span><strong>{itinerary.numberOfDays}</strong></article>
-        <article><span>Scheduled stops</span><strong>{itinerary.totals.scheduledStops}</strong></article>
-        <article><span>Estimated travel</span><strong>{formatDuration(itinerary.totals.travelMinutes)}</strong></article>
-        <article><span>Estimated transport</span><strong>{formatCurrency(itinerary.totals.fare)}</strong></article>
+        <article><i><CalendarDays /></i><div><span>Travel days</span><strong>{itinerary.numberOfDays}</strong><small>{itinerary.numberOfDays === 1 ? "day planned" : "days planned"}</small></div></article>
+        <article><i><MapPin /></i><div><span>Scheduled stops</span><strong>{itinerary.totals.scheduledStops}</strong><small>places arranged</small></div></article>
+        <article><i><Clock3 /></i><div><span>Estimated travel</span><strong>{formatDuration(itinerary.totals.travelMinutes)}</strong><small>between stops</small></div></article>
+        <article><i><WalletCards /></i><div><span>Estimated transport</span><strong>{formatCurrency(itinerary.totals.fare)}</strong><small>planning estimate</small></div></article>
       </div>
 
       <div className="itinerary-day-tabs" role="tablist" aria-label="Choose itinerary day">
@@ -126,8 +116,8 @@ export function ItineraryResults({
             className={item.index === activeDay ? "active" : ""}
             onClick={() => onActiveDayChange(item.index)}
           >
-            Day {item.index + 1}
-            {itinerary.date ? ` · ${formatDayDate(itinerary.date, item.index)}` : ""}
+            <span>Day {item.index + 1}</span>
+            <strong>{itinerary.date ? formatDayDate(itinerary.date, item.index) : `Route ${item.index + 1}`}</strong>
             <small>{item.items.length} {item.items.length === 1 ? "stop" : "stops"}</small>
           </button>
         ))}
@@ -229,6 +219,16 @@ export function ItineraryResults({
       </div>
 
       <div className="planning-disclaimer"><WalletCards size={17} /><p><strong>Planning note:</strong> {itinerary.disclaimer}</p></div>
+      <footer className="itinerary-action-dock" aria-label="Itinerary actions">
+        <div>
+          <button type="button" className="result-action icon-only" onClick={onEdit} aria-label="Edit itinerary choices" title="Edit choices"><Pencil /></button>
+          <button type="button" className="result-action icon-only" onClick={copyPlan} aria-label={copied ? "Itinerary copied" : "Copy itinerary"} title={copied ? "Copied" : "Copy itinerary"}>{copied ? <Check /> : <Copy />}</button>
+          <button type="button" className="result-action icon-only strong" onClick={() => window.print()} aria-label="Print or save itinerary as PDF" title="Print / Save PDF"><Printer /></button>
+        </div>
+        <button type="button" className={`result-action save ${saved ? "saved" : ""}`} onClick={onSave}>
+          {saved ? <Check /> : <Save />} <span>{saved ? "Saved to Home" : "Save to Home"}</span>
+        </button>
+      </footer>
       <section className="print-itinerary" aria-hidden="true">
         <header>
           <h1>{itinerary.title}</h1>
@@ -250,7 +250,6 @@ export function ItineraryResults({
         ))}
         <footer>{itinerary.disclaimer}</footer>
       </section>
-      {saved ? <div className="saved-home-link"><Check size={16} /> Pending itinerary saved. <Link href="/">View it on Home</Link></div> : null}
     </section>
   );
 }
