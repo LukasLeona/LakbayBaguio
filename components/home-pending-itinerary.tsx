@@ -95,7 +95,7 @@ export function HomePendingItinerary() {
           {trip.stops.length > 3 && <span>+{trip.stops.length - 3} more</span>}
         </div>
       </div>
-      <Link href="/plan" className="button dark">View itinerary <ArrowRight size={17} /></Link>
+      <Link href="/plan/itinerary" className="button dark">View itinerary <ArrowRight size={17} /></Link>
     </article>
   );
 }

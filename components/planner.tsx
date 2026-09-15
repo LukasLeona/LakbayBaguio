@@ -10,7 +10,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ItineraryResults } from "@/components/itinerary-results";
 import {
@@ -144,7 +144,12 @@ function scoreAutoPick(destination: PlannerDestination, theme: AutoPickTheme) {
   return score;
 }
 
-export function Planner() {
+type PlannerProps = {
+  initialView?: "editor" | "itinerary";
+};
+
+export function Planner({ initialView = "editor" }: PlannerProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const requestedPlaceId = searchParams.get("place");
   const requestedPlannerPlace = requestedPlaceId ? getPlannerDestinationById(requestedPlaceId) : undefined;
@@ -277,6 +282,11 @@ export function Planner() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  useEffect(() => {
+    if (!restored || initialView !== "itinerary" || result) return;
+    router.replace("/plan");
+  }, [initialView, restored, result, router]);
+
   function scrollToStep(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -358,9 +368,14 @@ export function Planner() {
       const next = generateItinerary(request);
       setResult(next);
       setActiveDay(0);
-      setSaved(false);
+      try {
+        localStorage.setItem(ITINERARY_STORAGE_KEY, JSON.stringify(next));
+        setSaved(true);
+      } catch {
+        setSaved(false);
+      }
       setGenerating(false);
-      window.setTimeout(() => document.getElementById("itinerary-result")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+      router.push("/plan/itinerary");
     }, 900);
   }
 
@@ -374,17 +389,18 @@ export function Planner() {
   }
 
   return (
-    <div className="trip-planner">
-      <nav className="planner-progress" aria-label="Planner steps">
+    <div className={`trip-planner ${initialView === "itinerary" ? "results-mode" : "editor-mode"}`}>
+      {initialView === "editor" ? <>
+        <nav className="planner-progress" aria-label="Planner steps">
         <span className="progress-line" aria-hidden="true"><i style={{ width: activeStep === 1 ? "0%" : activeStep === 2 ? "50%" : "100%" }} /></span>
         {([[1, "Trip details", "Dates and schedule", "trip-details"], [2, "Destinations", "Pick or auto-choose", "destinations"], [3, "Preferences", "Choose your pace", "preferences"]] as const).map(([step, label, hint, id]) => (
           <button key={step} type="button" className={`${activeStep === step ? "active" : ""} ${step < activeStep ? "complete" : ""}`} aria-current={activeStep === step ? "step" : undefined} onClick={() => scrollToStep(String(id))}>
             <span>{step < activeStep ? <Check size={14} /> : `0${step}`}</span><span><strong>{label}</strong><small>{hint}</small></span>
           </button>
         ))}
-      </nav>
+        </nav>
 
-      <form className="planner-form" onSubmit={buildPlan} noValidate>
+        <form className="planner-form" onSubmit={buildPlan} noValidate>
         <section className="planner-form-section" id="trip-details" data-planner-step="1">
           <header className="planner-step-heading"><span>01</span><div><h1>Begin your trip</h1><p>Tell us where, when, and how long your Baguio trip will be.</p></div></header>
 
@@ -428,9 +444,11 @@ export function Planner() {
           <button className="generate-plan-button" type="submit" disabled={generating} aria-busy={generating}><span><small>{generating ? "Mapping time, fare, and directions" : "Ready when you are"}</small><strong>{generating ? "Building your Baguio route…" : "Generate my Baguio plan"}</strong></span>{generating ? <LoaderCircle className="spin" size={22} /> : <ChevronRight size={22} />}</button>
           <p className="planner-estimate-note">Routes are planning suggestions. Confirm opening hours, fares, admission rules, weather, and loading areas locally.</p>
         </section>
-      </form>
+        </form>
+      </> : null}
 
-      {result ? <ItineraryResults itinerary={result} activeDay={activeDay} saved={saved} onActiveDayChange={setActiveDay} onEdit={() => scrollToStep("trip-details")} onSave={savePlan} /> : null}
+      {initialView === "itinerary" && restored && result ? <ItineraryResults itinerary={result} activeDay={activeDay} saved={saved} onActiveDayChange={setActiveDay} onEdit={() => router.push("/plan")} onSave={savePlan} /> : null}
+      {initialView === "itinerary" && !restored ? <div className="loading-card itinerary-loading">Opening your itinerary…</div> : null}
       {toast ? <div className="planner-toast" role="status">{toast}</div> : null}
     </div>
   );
