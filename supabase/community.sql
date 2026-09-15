@@ -56,6 +56,17 @@ create index if not exists presence_location_gix on public.presence using gist (
 create index if not exists presence_active_idx on public.presence (last_seen desc) where is_discoverable;
 create index if not exists presence_expiry_idx on public.presence (is_discoverable, expires_at);
 
+create table if not exists public.community_settings (
+  key text primary key,
+  enforce_baguio_geofence boolean not null default true,
+  updated_at timestamptz not null default now(),
+  constraint community_settings_known_key check (key in ('nearby'))
+);
+
+insert into public.community_settings (key, enforce_baguio_geofence)
+values ('nearby', false)
+on conflict (key) do nothing;
+
 create table if not exists public.chat_requests (
   id uuid primary key default gen_random_uuid(),
   sender_id uuid not null references public.profiles(user_id) on delete cascade,
@@ -157,6 +168,7 @@ create index if not exists restaurant_inquiries_email_created_idx
 
 alter table public.profiles enable row level security;
 alter table public.presence enable row level security;
+alter table public.community_settings enable row level security;
 alter table public.chat_requests enable row level security;
 alter table public.conversations enable row level security;
 alter table public.conversation_members enable row level security;
@@ -276,6 +288,7 @@ declare
   v_location public.presence.location%type;
   v_previous_location public.presence.location%type;
   v_previous_seen timestamptz;
+  v_enforce_baguio_geofence boolean;
 begin
   if auth.uid() is null then
     raise exception 'Authentication required';
@@ -288,10 +301,23 @@ begin
     return;
   end if;
 
-  -- A deliberately broad service boundary prevents this Baguio-only feature
-  -- from being used as a general-purpose location tracker.
-  if p_latitude not between 16.20 and 16.60
-    or p_longitude not between 120.40 and 120.80 then
+  if p_latitude not between -90 and 90
+    or p_longitude not between -180 and 180 then
+    raise exception 'Invalid coordinates';
+  end if;
+
+  select coalesce(
+    (select settings.enforce_baguio_geofence
+      from public.community_settings settings
+      where settings.key = 'nearby'),
+    true
+  ) into v_enforce_baguio_geofence;
+
+  -- Keep the server-side boundary available for public launch while allowing
+  -- deliberate off-site testing through the protected setting above.
+  if v_enforce_baguio_geofence
+    and (p_latitude not between 16.20 and 16.60
+      or p_longitude not between 120.40 and 120.80) then
     raise exception 'Nearby is available only around Baguio';
   end if;
 
@@ -804,11 +830,12 @@ create trigger reports_integrity
   before insert on public.reports
   for each row execute function public.enforce_report_integrity();
 
-revoke all on public.profiles, public.presence, public.chat_requests, public.conversations,
+revoke all on public.profiles, public.presence, public.community_settings, public.chat_requests, public.conversations,
   public.conversation_members, public.messages, public.blocks, public.reports,
   public.restaurant_inquiries from anon, authenticated;
 
 grant all on public.restaurant_inquiries to service_role;
+grant all on public.community_settings to service_role;
 
 grant select, insert on public.profiles to authenticated;
 grant select on public.chat_requests, public.conversations, public.conversation_members to authenticated;
