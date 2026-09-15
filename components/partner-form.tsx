@@ -3,6 +3,7 @@
 import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, Send, X } from "lucide-react";
 import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { TurnstileWidget, turnstileEnabled } from "./turnstile-widget";
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
@@ -12,6 +13,7 @@ export function PartnerForm() {
   const [state, setState] = useState<FormState>("idle");
   const [message, setMessage] = useState("");
   const [step, setStep] = useState(1);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   function continueToPlace() {
     const form = formRef.current;
@@ -29,10 +31,15 @@ export function PartnerForm() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (turnstileEnabled && !turnstileToken) {
+      setState("error");
+      setMessage("Please complete the security check before sending.");
+      return;
+    }
     setState("submitting");
     setMessage("");
     const form = event.currentTarget;
-    const body = Object.fromEntries(new FormData(form).entries());
+    const body = { ...Object.fromEntries(new FormData(form).entries()), turnstileToken };
     try {
       const response = await fetch("/api/restaurant-inquiries", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const result = await response.json();
@@ -55,7 +62,7 @@ export function PartnerForm() {
         <h2>Salamat!</h2>
         <p>{message}</p>
         <div>
-          <button className="button secondary" type="button" onClick={() => { setState("idle"); setStep(1); }}>Send another</button>
+          <button className="button secondary" type="button" onClick={() => { setState("idle"); setStep(1); setTurnstileToken(""); }}>Send another</button>
           <button className="button primary" type="button" onClick={() => router.push("/")}>Done</button>
         </div>
       </div>
@@ -83,6 +90,7 @@ export function PartnerForm() {
         <label className="honeypot" aria-hidden="true"><span>Leave this blank</span><input name="websiteUrl" tabIndex={-1} autoComplete="off" /></label>
         <label><span>Why should travelers discover you? *</span><textarea name="message" required minLength={20} maxLength={1100} rows={4} placeholder="Share your story, services, price range, opening days, and what makes the experience special." /></label>
         <label className="check-field"><input name="consent" type="checkbox" value="yes" required /><span>I confirm these details are accurate and agree to be contacted about this inquiry.</span></label>
+        <TurnstileWidget action="business_inquiry" onToken={setTurnstileToken} />
         {message && <p className={`form-message ${state}`} role="alert">{message}</p>}
         <div className="partner-form-actions"><button className="button secondary" type="button" onClick={() => setStep(1)}><ArrowLeft /> Back</button><button className="button primary submit-button" type="submit" disabled={state === "submitting"}>{state === "submitting" ? <LoaderCircle className="spin" /> : <Send />}{state === "submitting" ? "Sending…" : "Send inquiry"}</button></div>
       </div>

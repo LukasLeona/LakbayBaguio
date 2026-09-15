@@ -24,10 +24,10 @@ function randomAlias() {
   return `${adjective}${noun}${number}`;
 }
 
-export async function ensureAnonymousIdentity(client: SupabaseClient): Promise<{ user: User; alias: string; avatarSeed: number }> {
+export async function ensureAnonymousIdentity(client: SupabaseClient, captchaToken?: string): Promise<{ user: User; alias: string; avatarSeed: number }> {
   let { data: { user } } = await client.auth.getUser();
   if (!user) {
-    const { data, error } = await client.auth.signInAnonymously();
+    const { data, error } = await client.auth.signInAnonymously({ options: captchaToken ? { captchaToken } : undefined });
     if (error || !data.user) throw error || new Error("Anonymous sign-in failed.");
     user = data.user;
   }

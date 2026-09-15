@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { TurnstileWidget, turnstileEnabled } from "./turnstile-widget";
 
 type UtilityView = "menu" | "privacy" | "help" | "contact";
 type ContactState = "idle" | "sending" | "success" | "error";
@@ -56,6 +57,7 @@ export function UtilityMenu() {
   const [view, setView] = useState<UtilityView>("menu");
   const [contactState, setContactState] = useState<ContactState>("idle");
   const [contactMessage, setContactMessage] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   useEffect(() => {
     setOpen(false);
@@ -82,6 +84,7 @@ export function UtilityMenu() {
       setView("menu");
       setContactState("idle");
       setContactMessage("");
+      setTurnstileToken("");
     }, 180);
   }
 
@@ -89,16 +92,22 @@ export function UtilityMenu() {
     setView(nextView);
     setContactState("idle");
     setContactMessage("");
+    setTurnstileToken("");
   }
 
   async function submitContact(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
+    if (turnstileEnabled && !turnstileToken) {
+      setContactState("error");
+      setContactMessage("Please complete the security check before sending.");
+      return;
+    }
     setContactState("sending");
     setContactMessage("");
 
     try {
-      const body = Object.fromEntries(new FormData(form).entries());
+      const body = { ...Object.fromEntries(new FormData(form).entries()), turnstileToken };
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -233,6 +242,7 @@ export function UtilityMenu() {
                     <label><span>What is this about?</span><select name="topic" required defaultValue=""><option value="" disabled>Choose a topic</option><option>Trip planning help</option><option>Nearby or chat safety</option><option>Correct a place listing</option><option>Privacy request</option><option>Something else</option></select></label>
                     <label><span>Your message</span><textarea name="message" required minLength={10} maxLength={1200} rows={4} placeholder="Tell us what happened or what you need…" /></label>
                     <label className="honeypot" aria-hidden="true"><span>Leave this blank</span><input name="websiteUrl" tabIndex={-1} autoComplete="off" /></label>
+                    <TurnstileWidget action="contact" onToken={setTurnstileToken} />
                     {contactMessage ? <p className="form-message error" role="alert">{contactMessage}</p> : null}
                     <button className="button primary full" type="submit" disabled={contactState === "sending"}>{contactState === "sending" ? <LoaderCircle className="spin" /> : <Send />}{contactState === "sending" ? "Sending…" : "Send message"}</button>
                     <small>Sent securely through the same contact channel used on lukasleona.com.</small>

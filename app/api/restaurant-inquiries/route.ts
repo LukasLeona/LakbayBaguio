@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sendEmailNotification } from "@/lib/email-notifications";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { isTurnstileServerEnabled, requestIpAddress, verifyTurnstileToken } from "@/lib/turnstile";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -17,6 +18,10 @@ export async function POST(request: Request) {
   }
 
   if (value(body.websiteUrl, 200)) return NextResponse.json({ ok: true });
+
+  if (isTurnstileServerEnabled() && !await verifyTurnstileToken(value(body.turnstileToken, 2048), requestIpAddress(request))) {
+    return NextResponse.json({ error: "Please complete the security check and try again." }, { status: 403 });
+  }
 
   const restaurantName = value(body.restaurantName, 100);
   const businessType = value(body.businessType, 40) || "Restaurant / café";

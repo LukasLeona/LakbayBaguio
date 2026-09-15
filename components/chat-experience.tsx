@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Ban, Check, CheckCheck, ChevronRight, Clock3, Flag, Inbox, MapPinned, MessageCircle, MoreHorizontal, Search, Send, ShieldAlert, Trash2, X } from "lucide-react";
+import { ArrowLeft, Ban, CheckCheck, ChevronRight, Clock3, Flag, Inbox, MapPinned, MessageCircle, MoreHorizontal, Search, Send, ShieldAlert, Trash2, X } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { TravelerAvatar } from "./traveler-avatar";
 import { ensureAnonymousIdentity, getSupabaseBrowserClient, isCommunityConfigured } from "@/lib/supabase/client";
+import { CHAT_READ_EVENT, useChatNotifications } from "./chat-notifications";
+import { TurnstileWidget, turnstileEnabled } from "./turnstile-widget";
 
 type Conversation = {
   conversation_id: string;
@@ -17,7 +19,6 @@ type Conversation = {
   unread_count: number;
 };
 
-type ChatRequest = { request_id: string; sender_id: string; sender_alias: string; avatar_seed: number; created_at: string };
 type ChatMessage = { id: number; conversation_id: string; sender_id: string; body: string; created_at: string };
 
 const previewConversations: Conversation[] = [
@@ -41,10 +42,10 @@ function relativeTime(value: string | null) {
 
 export function ChatExperience() {
   const configured = isCommunityConfigured();
+  const { refreshUnread } = useChatNotifications();
   const [userId, setUserId] = useState(configured ? "" : "me");
   const [alias, setAlias] = useState(configured ? "Anonymous traveler" : "PreviewPine31");
   const [conversations, setConversations] = useState<Conversation[]>(configured ? [] : previewConversations);
-  const [requests, setRequests] = useState<ChatRequest[]>(configured ? [] : [{ request_id: "request-1", sender_id: "preview-3", sender_alias: "CozyTaho54", avatar_seed: 2, created_at: new Date().toISOString() }]);
   const [activeId, setActiveId] = useState<string | null>(configured ? null : "preview-conversation");
   const [messages, setMessages] = useState<ChatMessage[]>(configured ? [] : previewMessages);
   const [message, setMessage] = useState("");
@@ -53,21 +54,20 @@ export function ChatExperience() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [needsCaptcha, setNeedsCaptcha] = useState(false);
 
   const activeConversation = conversations.find((item) => item.conversation_id === activeId) || null;
   const filteredConversations = useMemo(() => conversations.filter((item) => item.partner_alias.toLowerCase().includes(query.toLowerCase().trim())), [conversations, query]);
 
   const refreshLists = useCallback(async () => {
     const client = getSupabaseBrowserClient();
-    if (!client) return;
-    const [{ data: conversationData, error: conversationError }, { data: requestData, error: requestError }] = await Promise.all([
-      client.rpc("list_conversations"),
-      client.rpc("list_chat_requests"),
-    ]);
+    if (!client) return [] as Conversation[];
+    const { data: conversationData, error: conversationError } = await client.rpc("list_conversations");
     if (conversationError) throw conversationError;
-    if (requestError) throw requestError;
-    setConversations((conversationData || []) as Conversation[]);
-    setRequests((requestData || []) as ChatRequest[]);
+    const nextConversations = (conversationData || []) as Conversation[];
+    setConversations(nextConversations);
+    return nextConversations;
   }, []);
 
   useEffect(() => {
@@ -77,25 +77,35 @@ export function ChatExperience() {
       const client = getSupabaseBrowserClient();
       if (!client) return;
       try {
-        const identity = await ensureAnonymousIdentity(client);
+        const { data: authData } = await client.auth.getUser();
+        if (!authData.user && turnstileEnabled && !captchaToken) {
+          if (!cancelled) setNeedsCaptcha(true);
+          return;
+        }
+        const identity = await ensureAnonymousIdentity(client, captchaToken || undefined);
         if (cancelled) return;
+        setNeedsCaptcha(false);
         setUserId(identity.user.id);
         setAlias(identity.alias);
-        await refreshLists();
+        const nextConversations = await refreshLists();
+        const requestedConversation = new URLSearchParams(window.location.search).get("conversation");
+        if (requestedConversation && nextConversations.some((item) => item.conversation_id === requestedConversation)) {
+          setActiveId(requestedConversation);
+          setMobileOpen(true);
+        }
       } catch {
         if (!cancelled) setNotice("Chat could not connect. Check the Supabase configuration and anonymous sign-in setting.");
       }
     };
     void initialize();
     return () => { cancelled = true; };
-  }, [configured, refreshLists]);
+  }, [captchaToken, configured, refreshLists]);
 
   useEffect(() => {
     if (!configured || !userId) return;
     const client = getSupabaseBrowserClient();
     if (!client) return;
     const channel = client.channel(`inbox-${userId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "chat_requests", filter: `receiver_id=eq.${userId}` }, () => void refreshLists())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => void refreshLists())
       .subscribe();
     return () => { void client.removeChannel(channel); };
@@ -116,41 +126,25 @@ export function ChatExperience() {
       const { data, error } = await client.from("messages").select("id, conversation_id, sender_id, body, created_at").eq("conversation_id", activeId).order("created_at", { ascending: true }).limit(200);
       if (!cancelled && !error) setMessages((data || []) as ChatMessage[]);
       await client.rpc("mark_conversation_read", { p_conversation_id: activeId });
+      window.dispatchEvent(new Event(CHAT_READ_EVENT));
+      await refreshUnread();
     };
     void load();
     const channel = client.channel(`conversation-${activeId}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${activeId}` }, (payload) => {
       const incoming = payload.new as ChatMessage;
       setMessages((current) => current.some((item) => item.id === incoming.id) ? current : [...current, incoming]);
-      void client.rpc("mark_conversation_read", { p_conversation_id: activeId });
+      void client.rpc("mark_conversation_read", { p_conversation_id: activeId }).then(() => {
+        window.dispatchEvent(new Event(CHAT_READ_EVENT));
+        void refreshUnread();
+      });
     }).subscribe();
     return () => { cancelled = true; void client.removeChannel(channel); };
-  }, [activeId, configured]);
+  }, [activeId, configured, refreshUnread]);
 
   function selectConversation(id: string) {
     setActiveId(id);
     setMobileOpen(true);
     if (!configured) setMessages(id === "preview-conversation" ? previewMessages : [{ id: 4, conversation_id: id, sender_id: "preview-2", body: "Thanks for the café tip!", created_at: new Date(Date.now() - 18 * 60_000).toISOString() }]);
-  }
-
-  async function respond(requestId: string, accept: boolean) {
-    if (!configured) {
-      const request = requests.find((item) => item.request_id === requestId);
-      setRequests((current) => current.filter((item) => item.request_id !== requestId));
-      if (accept && request) {
-        const conversation: Conversation = { conversation_id: `preview-${request.sender_id}`, partner_id: request.sender_id, partner_alias: request.sender_alias, avatar_seed: request.avatar_seed, distance_band: "Active now", last_message: null, last_message_at: null, unread_count: 0 };
-        setConversations((current) => [conversation, ...current]);
-        setActiveId(conversation.conversation_id);
-        setMessages([]);
-        setMobileOpen(true);
-      }
-      return;
-    }
-    const client = getSupabaseBrowserClient();
-    if (!client) return;
-    const { data, error } = await client.rpc("respond_to_chat_request", { p_request_id: requestId, p_accept: accept });
-    if (error) { setNotice(error.message); return; }
-    await refreshLists();
-    if (accept && data) { setActiveId(data as string); setMobileOpen(true); }
   }
 
   async function sendMessage(event: FormEvent) {
@@ -195,9 +189,9 @@ export function ChatExperience() {
       <aside className="chat-sidebar">
         <header><div><span className="eyebrow">Anonymous as</span><h1>{alias}</h1></div><Link href="/nearby" aria-label="Find nearby travelers"><MapPinned /></Link></header>
         <div className="chat-expiry-note"><Clock3 /><p><strong>Chats disappear after 30 minutes of inactivity.</strong><span>Storage is precious—your developer is broke right now. 😅</span></p></div>
+        {needsCaptcha ? <div className="chat-captcha"><strong>One quick safety check</strong><p>This keeps anonymous chat friendlier for real travelers.</p><TurnstileWidget action="anonymous_chat" onToken={setCaptchaToken} /></div> : null}
         <label className="chat-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search conversations" /></label>
-        {requests.length > 0 && <section className="request-section"><div className="list-label"><span>Chat requests</span><b>{requests.length}</b></div>{requests.map((request) => <article className="request-card" key={request.request_id}><TravelerAvatar alias={request.sender_alias} seed={request.avatar_seed} /><div><strong>{request.sender_alias}</strong><small>Wants to start a chat</small><span><button type="button" onClick={() => respond(request.request_id, true)}><Check size={15} /> Accept</button><button type="button" onClick={() => respond(request.request_id, false)} aria-label="Decline"><X size={15} /></button></span></div></article>)}</section>}
-        <section className="conversation-section"><div className="list-label"><span>Messages</span><b>{conversations.reduce((total, item) => total + Number(item.unread_count), 0) || ""}</b></div>{filteredConversations.length ? <div className="conversation-list">{filteredConversations.map((conversation) => <button type="button" key={conversation.conversation_id} className={activeId === conversation.conversation_id ? "active" : ""} onClick={() => selectConversation(conversation.conversation_id)}><span className="avatar-wrap"><TravelerAvatar alias={conversation.partner_alias} seed={conversation.avatar_seed} /><i className={conversation.distance_band === "Active now" ? "online" : ""} /></span><span className="conversation-preview"><strong>{conversation.partner_alias}<time>{relativeTime(conversation.last_message_at)}</time></strong><small>{conversation.last_message || "New conversation"}</small></span>{Number(conversation.unread_count) > 0 && <b>{conversation.unread_count}</b>}<ChevronRight className="conversation-chevron" size={17} /></button>)}</div> : <div className="sidebar-empty"><MessageCircle /><strong>No conversations</strong><p>Find someone on Nearby and send a chat request.</p><Link href="/nearby">Open Nearby</Link></div>}</section>
+        <section className="conversation-section"><div className="list-label"><span>Messages</span><b>{conversations.reduce((total, item) => total + Number(item.unread_count), 0) || ""}</b></div>{filteredConversations.length ? <div className="conversation-list">{filteredConversations.map((conversation) => <button type="button" key={conversation.conversation_id} className={activeId === conversation.conversation_id ? "active" : ""} onClick={() => selectConversation(conversation.conversation_id)}><span className="avatar-wrap"><TravelerAvatar alias={conversation.partner_alias} seed={conversation.avatar_seed} /><i className={conversation.distance_band === "Active now" ? "online" : ""} /></span><span className="conversation-preview"><strong>{conversation.partner_alias}<time>{relativeTime(conversation.last_message_at)}</time></strong><small>{conversation.last_message || "New conversation"}</small></span>{Number(conversation.unread_count) > 0 && <b>{conversation.unread_count}</b>}<ChevronRight className="conversation-chevron" size={17} /></button>)}</div> : <div className="sidebar-empty"><MessageCircle /><strong>No conversations</strong><p>Find someone on Nearby and start chatting instantly.</p><Link href="/nearby">Open Nearby</Link></div>}</section>
         {notice && <p className="chat-notice">{notice}</p>}
       </aside>
 

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import { BottomNavigation, SiteHeader } from "@/components/navigation";
 import { UtilityMenu } from "@/components/utility-menu";
+import { ChatNotificationsProvider } from "@/components/chat-notifications";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 
@@ -28,11 +29,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body className={poppins.variable}>
-        <a className="skip-link" href="#main-content">Skip to content</a>
-        <SiteHeader />
-        <UtilityMenu />
-        {children}
-        <BottomNavigation />
+        <ChatNotificationsProvider>
+          <a className="skip-link" href="#main-content">Skip to content</a>
+          <SiteHeader />
+          <UtilityMenu />
+          {children}
+          <BottomNavigation />
+        </ChatNotificationsProvider>
       </body>
     </html>
   );

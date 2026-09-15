@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { CalendarCheck2, House, MessageSquare, Radar, Route, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ITINERARY_CHANGE_EVENT, ITINERARY_STORAGE_KEY } from "@/lib/itinerary";
+import { UnreadBadge, useChatNotifications } from "./chat-notifications";
 
 const navItems = [
   { href: "/", label: "Home", icon: House },
@@ -54,6 +55,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const isPlanPage = pathname.startsWith("/plan");
   const hasPending = usePendingItinerary(pathname);
+  const { unreadCount } = useChatNotifications();
 
   return (
     <header className={`site-header ${isPlanPage ? "plan-context" : ""}`}>
@@ -69,7 +71,7 @@ export function SiteHeader() {
         <nav className="desktop-nav" aria-label="Main navigation">
           {navItems.map(({ href, label }) => {
             const destination = href === "/plan" && hasPending ? "/plan/itinerary" : href;
-            return <Link key={href} href={destination} className={isActive(pathname, href) ? "active" : ""} title={href === "/plan" && hasPending ? "View your pending itinerary" : undefined}>{label}{href === "/plan" && hasPending ? <i className="desktop-pending-dot" aria-hidden="true" /> : null}</Link>;
+            return <Link key={href} href={destination} className={isActive(pathname, href) ? "active" : ""} title={href === "/plan" && hasPending ? "View your pending itinerary" : undefined}>{label}{href === "/plan" && hasPending ? <i className="desktop-pending-dot" aria-hidden="true" /> : null}{href === "/chats" && unreadCount > 0 ? <UnreadBadge className="desktop-unread-badge" /> : null}</Link>;
           })}
         </nav>
 
@@ -87,6 +89,7 @@ export function SiteHeader() {
 export function BottomNavigation() {
   const pathname = usePathname();
   const hasPending = usePendingItinerary(pathname);
+  const { unreadCount } = useChatNotifications();
 
   return (
     <nav className="bottom-nav" aria-label="Mobile navigation">
@@ -94,10 +97,11 @@ export function BottomNavigation() {
         const active = isActive(pathname, href);
         const destination = href === "/plan" && hasPending ? "/plan/itinerary" : href;
         return (
-          <Link key={href} href={destination} className={active ? "active" : ""} aria-current={active ? "page" : undefined} aria-label={href === "/plan" && hasPending ? "Itinerary, pending trip available" : label}>
+          <Link key={href} href={destination} className={active ? "active" : ""} aria-current={active ? "page" : undefined} aria-label={href === "/plan" && hasPending ? "Itinerary, pending trip available" : href === "/chats" && unreadCount ? `Chats, ${unreadCount} unread messages` : label}>
             <span className="bottom-icon">
               <Icon size={19} strokeWidth={2} aria-hidden="true" />
               {href === "/plan" && hasPending ? <i className="nav-pending-dot" aria-hidden="true" /> : null}
+              {href === "/chats" ? <UnreadBadge /> : null}
             </span>
             <span>{label}</span>
           </Link>
