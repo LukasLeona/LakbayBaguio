@@ -1,13 +1,31 @@
 "use client";
 
-import { CheckCircle2, LoaderCircle, Send } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, Send, X } from "lucide-react";
+import { FormEvent, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
 export function PartnerForm() {
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [state, setState] = useState<FormState>("idle");
   const [message, setMessage] = useState("");
+  const [step, setStep] = useState(1);
+
+  function continueToPlace() {
+    const form = formRef.current;
+    if (!form) return;
+    const fields = Array.from(form.querySelectorAll<HTMLElement>("[data-form-step='1'] input, [data-form-step='1'] select"));
+    const invalidField = fields.find((field) => "checkValidity" in field && !(field as HTMLInputElement).checkValidity());
+    if (invalidField) {
+      (invalidField as HTMLInputElement).reportValidity();
+      return;
+    }
+    setMessage("");
+    setState("idle");
+    setStep(2);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -20,7 +38,7 @@ export function PartnerForm() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "We could not submit your inquiry.");
       setState("success");
-      setMessage("Your inquiry is in. We’ll review it and contact you using the details provided.");
+      setMessage("Your inquiry is in Luke’s inbox and saved for review. We’ll contact you using the details provided.");
       form.reset();
     } catch (error) {
       setState("error");
@@ -29,27 +47,46 @@ export function PartnerForm() {
   }
 
   if (state === "success") {
-    return <div className="form-success"><CheckCircle2 size={48} /><h2>Salamat!</h2><p>{message}</p><button className="button secondary" type="button" onClick={() => setState("idle")}>Send another inquiry</button></div>;
+    return (
+      <div className="form-success" role="status">
+        <button className="form-success-close" type="button" onClick={() => router.push("/")} aria-label="Close inquiry"><X /></button>
+        <CheckCircle2 size={48} />
+        <span>Inquiry delivered</span>
+        <h2>Salamat!</h2>
+        <p>{message}</p>
+        <div>
+          <button className="button secondary" type="button" onClick={() => { setState("idle"); setStep(1); }}>Send another</button>
+          <button className="button primary" type="button" onClick={() => router.push("/")}>Done</button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <form className="partner-form" onSubmit={submit}>
-      <div className="form-row">
-        <label><span>Restaurant name *</span><input name="restaurantName" required minLength={2} maxLength={100} autoComplete="organization" placeholder="Your restaurant" /></label>
-        <label><span>Contact person *</span><input name="contactName" required minLength={2} maxLength={80} autoComplete="name" placeholder="Full name" /></label>
+    <form ref={formRef} className="partner-form" onSubmit={submit}>
+      <div className="partner-form-progress" aria-label={`Step ${step} of 2`}><span className={step >= 1 ? "active" : ""}>1</span><i className={step === 2 ? "active" : ""} /><span className={step === 2 ? "active" : ""}>2</span><strong>{step === 1 ? "Business & contact" : "Place details"}</strong></div>
+
+      <div className={`partner-form-step ${step === 1 ? "active" : ""}`} data-form-step="1" aria-hidden={step !== 1}>
+        <label><span>Business type *</span><select name="businessType" required defaultValue="Restaurant / café"><option>Restaurant / café</option><option>Hotel / stay</option><option>Tour / activity</option><option>Local shop</option><option>Other local business</option></select></label>
+        <label><span>Business name *</span><input name="restaurantName" required minLength={2} maxLength={100} autoComplete="organization" placeholder="Your place in Baguio" /></label>
+        <div className="form-row">
+          <label><span>Contact person *</span><input name="contactName" required minLength={2} maxLength={80} autoComplete="name" placeholder="Full name" /></label>
+          <label><span>Phone number</span><input name="phone" type="tel" maxLength={30} autoComplete="tel" placeholder="09xx xxx xxxx" /></label>
+        </div>
+        <label><span>Email address *</span><input name="email" type="email" required maxLength={160} autoComplete="email" placeholder="you@business.com" /></label>
+        <button className="button primary full partner-next" type="button" onClick={continueToPlace}>Continue <ArrowRight /></button>
       </div>
-      <div className="form-row">
-        <label><span>Email address *</span><input name="email" type="email" required maxLength={160} autoComplete="email" placeholder="you@restaurant.com" /></label>
-        <label><span>Phone number</span><input name="phone" type="tel" maxLength={30} autoComplete="tel" placeholder="09xx xxx xxxx" /></label>
+
+      <div className={`partner-form-step ${step === 2 ? "active" : ""}`} data-form-step="2" aria-hidden={step !== 2}>
+        <label><span>Business address *</span><input name="address" required minLength={5} maxLength={240} autoComplete="street-address" placeholder="Street, barangay, Baguio City" /></label>
+        <label><span>Website or social page</span><input name="socialUrl" type="url" maxLength={300} placeholder="https://" /></label>
+        <label className="honeypot" aria-hidden="true"><span>Leave this blank</span><input name="websiteUrl" tabIndex={-1} autoComplete="off" /></label>
+        <label><span>Why should travelers discover you? *</span><textarea name="message" required minLength={20} maxLength={1100} rows={4} placeholder="Share your story, services, price range, opening days, and what makes the experience special." /></label>
+        <label className="check-field"><input name="consent" type="checkbox" value="yes" required /><span>I confirm these details are accurate and agree to be contacted about this inquiry.</span></label>
+        {message && <p className={`form-message ${state}`} role="alert">{message}</p>}
+        <div className="partner-form-actions"><button className="button secondary" type="button" onClick={() => setStep(1)}><ArrowLeft /> Back</button><button className="button primary submit-button" type="submit" disabled={state === "submitting"}>{state === "submitting" ? <LoaderCircle className="spin" /> : <Send />}{state === "submitting" ? "Sending…" : "Send inquiry"}</button></div>
       </div>
-      <label><span>Restaurant address *</span><input name="address" required minLength={5} maxLength={240} autoComplete="street-address" placeholder="Street, barangay, Baguio City" /></label>
-      <label><span>Website or social page</span><input name="socialUrl" type="url" maxLength={300} placeholder="https://" /></label>
-      <label className="honeypot" aria-hidden="true"><span>Leave this blank</span><input name="websiteUrl" tabIndex={-1} autoComplete="off" /></label>
-      <label><span>What should travelers know? *</span><textarea name="message" required minLength={20} maxLength={1200} rows={5} placeholder="Tell us about your food, story, price range, opening days, and what makes the experience special." /></label>
-      <label className="check-field"><input name="consent" type="checkbox" value="yes" required /><span>I confirm these business details are accurate and agree to be contacted about this inquiry.</span></label>
-      {message && <p className={`form-message ${state}`} role="alert">{message}</p>}
-      <button className="button primary submit-button" type="submit" disabled={state === "submitting"}>{state === "submitting" ? <LoaderCircle className="spin" /> : <Send size={18} />}{state === "submitting" ? "Sending…" : "Send inquiry"}</button>
-      <p className="form-disclaimer">Submission does not guarantee a listing. Features are reviewed for relevance, accuracy, and traveler value.</p>
+      <p className="form-disclaimer">Private review only. Submission does not guarantee a listing or paid placement.</p>
     </form>
   );
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sendEmailNotification } from "@/lib/email-notifications";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
   if (value(body.websiteUrl, 200)) return NextResponse.json({ ok: true });
 
   const restaurantName = value(body.restaurantName, 100);
+  const businessType = value(body.businessType, 40) || "Restaurant / café";
   const contactName = value(body.contactName, 80);
   const email = value(body.email, 160).toLowerCase();
   const phone = value(body.phone, 30);
@@ -53,7 +55,32 @@ export async function POST(request: Request) {
   if (countError) return NextResponse.json({ error: "We could not validate your inquiry. Please try again later." }, { status: 500 });
   if ((count || 0) >= 3) return NextResponse.json({ error: "Too many recent inquiries. Please wait before trying again." }, { status: 429 });
 
-  const { error } = await supabase.from("restaurant_inquiries").insert({ restaurant_name: restaurantName, contact_name: contactName, email, phone: phone || null, address, social_url: socialUrl || null, message, consented_at: new Date().toISOString() });
+  const storedMessage = `[${businessType}] ${message}`.slice(0, 1200);
+  const { error } = await supabase.from("restaurant_inquiries").insert({ restaurant_name: restaurantName, contact_name: contactName, email, phone: phone || null, address, social_url: socialUrl || null, message: storedMessage, consented_at: new Date().toISOString() });
   if (error) return NextResponse.json({ error: "We could not save your inquiry. Please try again later." }, { status: 500 });
+
+  try {
+    await sendEmailNotification({
+      name: `${contactName} — ${restaurantName}`,
+      email,
+      subject: phone || `Lakbay ${businessType} inquiry`,
+      comments: [
+        `New Lakbay Baguio business inquiry`,
+        `Business: ${restaurantName}`,
+        `Type: ${businessType}`,
+        `Contact: ${contactName}`,
+        `Email: ${email}`,
+        `Phone: ${phone || "Not provided"}`,
+        `Address: ${address}`,
+        `Website / social: ${socialUrl || "Not provided"}`,
+        "",
+        message,
+      ].join("\n"),
+    });
+  } catch (notificationError) {
+    console.error("Restaurant inquiry notification error", notificationError);
+    return NextResponse.json({ error: "Your inquiry was saved, but the email notification failed. Please try again shortly." }, { status: 502 });
+  }
+
   return NextResponse.json({ ok: true }, { status: 201 });
 }

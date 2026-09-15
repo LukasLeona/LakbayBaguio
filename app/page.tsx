@@ -152,9 +152,9 @@ export default function HomePage() {
             <span className="owner-badge">For local businesses</span>
           </div>
           <div className="owner-copy">
-            <span className="eyebrow">Restaurant owners</span>
-            <h2>Put your table on the traveler’s map.</h2>
-            <p>Tell us what makes your restaurant special. We’ll review your details for a possible feature in Lakbay Baguio—no automatic or paid placement.</p>
+            <span className="eyebrow">Baguio business owners</span>
+            <h2>Put your place on the traveler’s map.</h2>
+            <p>Restaurant, cozy stay, tour, or local shop—tell us what makes it special. We’ll review your details for a possible Lakbay feature, with no automatic or paid placement.</p>
             <Link href="/partner" className="button lime">Inquire about a feature <ArrowRight size={17} /></Link>
           </div>
         </div>
