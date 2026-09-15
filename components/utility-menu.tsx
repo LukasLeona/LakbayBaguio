@@ -10,6 +10,7 @@ import {
   Menu,
   Send,
   ShieldCheck,
+  Sparkles,
   X,
 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
@@ -115,6 +116,9 @@ export function UtilityMenu() {
 
   return (
     <div className="mobile-utility">
+      <div className="utility-topline">
+        <span><Sparkles aria-hidden="true" /> Your Baguio Buddy</span>
+      </div>
       <button
         className={`utility-trigger ${open ? "open" : ""}`}
         type="button"
