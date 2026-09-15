@@ -77,5 +77,5 @@ export function NearbyMap({ travelers, ownLocation }: { travelers: MapTraveler[]
     return () => { map.off("load", renderMarkers); };
   }, [ownLocation, travelers]);
 
-  return <><div className="nearby-map" ref={container} aria-label="Map of approximate nearby traveler locations" /><div className="map-fallback-labels" aria-hidden="true"><strong>Baguio City</strong><span className="burnham">Burnham Park</span><span className="session">Session Road</span><span className="botanical">Botanical Garden</span></div></>;
+  return <div className="nearby-map" ref={container} aria-label="Map of approximate nearby traveler locations" />;
 }
