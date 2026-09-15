@@ -322,7 +322,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     setSelectedIds(chosen.map((destination) => destination.id));
     setError("");
     setSaved(false);
-    setToast(`Lakbay selected ${chosen.length} places for your ${numberOfDays}-day trip.`);
+    setToast(`Baguio Buddy selected ${chosen.length} places for your ${numberOfDays}-day trip.`);
   }
 
   function toggleMode(mode: TransportMode) {
@@ -421,11 +421,11 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
         </section>
 
         <section className="planner-form-section" id="destinations" data-planner-step="2">
-          <header className="planner-step-heading destination-heading"><span>02</span><div><h2>Choose your destinations</h2><p>Pick the places you actually want. Lakbay will arrange only those selections into a practical route.</p></div><div className="selected-count"><strong>{selectedIds.length}</strong><small>selected</small></div></header>
+          <header className="planner-step-heading destination-heading"><span>02</span><div><h2>Choose your destinations</h2><p>Pick the places you actually want. Baguio Buddy will arrange only those selections into a practical route.</p></div><div className="selected-count"><strong>{selectedIds.length}</strong><small>selected</small></div></header>
 
           <div className="selected-destination-drawer"><header><div><strong>Your selected places</strong><small>{selectedIds.length >= 2 ? `${selectedIds.length} places ready to arrange.` : "Choose at least two destinations."}</small></div><button type="button" onClick={() => { setSelectedIds([]); setSaved(false); }}>Clear all</button></header><div className="selected-chip-row">{selectedDestinations.length ? selectedDestinations.map((destination) => <button type="button" key={destination.id} onClick={() => toggleDestination(destination.id)} aria-label={`Remove ${destination.name}`}>{destination.name}<X size={12} /></button>) : <span>No destinations selected yet.</span>}</div></div>
 
-          <div className="destination-tools"><label className="planner-search"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a place, activity, or area…" /></label><label className="auto-pick-select"><span>Auto-pick theme</span><select value={autoPickTheme} onChange={(event) => setAutoPickTheme(event.target.value as AutoPickTheme)}>{AUTO_PICK_THEMES.map((theme) => <option key={theme.value} value={theme.value}>{theme.label}</option>)}</select></label><button type="button" className="auto-pick-button" onClick={autoChoose}><Sparkles size={16} /> Let Lakbay choose</button></div>
+          <div className="destination-tools"><label className="planner-search"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a place, activity, or area…" /></label><label className="auto-pick-select"><span>Auto-pick theme</span><select value={autoPickTheme} onChange={(event) => setAutoPickTheme(event.target.value as AutoPickTheme)}>{AUTO_PICK_THEMES.map((theme) => <option key={theme.value} value={theme.value}>{theme.label}</option>)}</select></label><button type="button" className="auto-pick-button" onClick={autoChoose}><Sparkles size={16} /> Let Buddy choose</button></div>
 
           <div className="destination-filters" aria-label="Filter destinations">{PLANNER_CATEGORY_ORDER.map((category) => <button type="button" className={filter === category ? "active" : ""} key={category} onClick={() => setFilter(category)}>{category}</button>)}</div>
 

@@ -1,4 +1,4 @@
--- Lakbay Baguio anonymous nearby chat
+-- Baguio Buddy anonymous nearby chat
 -- Run this entire file in the Supabase SQL editor, then enable Anonymous Sign-Ins.
 -- Exact coordinates are stored only in the protected presence table. The public
 -- API returns distance bands plus coordinates rounded to a coarse map cell.

@@ -13,9 +13,9 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Lakbay Baguio", template: "%s · Lakbay Baguio" },
+  title: { default: "Baguio Buddy", template: "%s · Baguio Buddy" },
   description: "Discover Baguio, build an itinerary, and meet nearby travelers with privacy-first controls.",
-  icons: { icon: "/assets/img/favicon.svg" },
+  icons: { icon: "/assets/img/favicon.svg?v=baguio-buddy" },
 };
 
 export const viewport: Viewport = {

@@ -63,9 +63,9 @@ export async function POST(request: Request) {
     await sendEmailNotification({
       name: `${contactName} — ${restaurantName}`,
       email,
-      subject: phone || `Lakbay ${businessType} inquiry`,
+      subject: phone || `Baguio Buddy ${businessType} inquiry`,
       comments: [
-        `New Lakbay Baguio business inquiry`,
+        `New Baguio Buddy business inquiry`,
         `Business: ${restaurantName}`,
         `Type: ${businessType}`,
         `Contact: ${contactName}`,

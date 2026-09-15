@@ -1,9 +1,35 @@
 <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="128" height="128" rx="32" fill="#EEEFE0"/>
-  <path d="M17 96C34 76 49 65 63 54C78 42 94 26 113 17V103H17V96Z" fill="#D1D8BE"/>
-  <path d="M24 99C41 82 55 76 69 65C84 54 98 40 114 28" stroke="#819A91" stroke-width="7" stroke-linecap="round"/>
-  <path d="M62 52C48 52 38 62 38 75C38 93 62 115 62 115C62 115 86 93 86 75C86 62 76 52 62 52Z" fill="#819A91"/>
-  <circle cx="62" cy="75" r="8" fill="#EEEFE0"/>
-  <path d="M21 38L34 14L47 38H39L50 55H18L29 38H21Z" fill="#819A91"/>
-  <path d="M91 62L101 43L111 62H105L114 77H88L97 62H91Z" fill="#819A91"/>
+  <title>Baguio Buddy</title>
+  <desc>A location pin filled with pine trees, clouds, and the hills of Baguio.</desc>
+  <defs>
+    <linearGradient id="pin" x1="24" y1="9" x2="101" y2="119" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2D6A52"/>
+      <stop offset="1" stop-color="#083A2D"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="64" y1="18" x2="64" y2="85" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#CDE8A8"/>
+      <stop offset="1" stop-color="#6E9D73"/>
+    </linearGradient>
+    <clipPath id="scene"><circle cx="64" cy="54" r="42"/></clipPath>
+  </defs>
+  <path d="M64 3C32.5 3 10 25.4 10 56.2c0 36.5 38.1 65.1 54 71.8 15.9-6.7 54-35.3 54-71.8C118 25.4 95.5 3 64 3Z" fill="url(#pin)"/>
+  <path d="M64 8C35.4 8 16 28 16 55.8c0 31 31.2 56.8 48 65 16.8-8.2 48-34 48-65C112 28 92.6 8 64 8Z" stroke="#A9D97B" stroke-width="5"/>
+  <g clip-path="url(#scene)">
+    <circle cx="64" cy="54" r="42" fill="url(#sky)"/>
+    <path d="M23 41C31 25 46 15 64 13c18 2 33 12 41 28-14-10-26-15-41-15S37 31 23 41Z" fill="#173F32" fill-opacity=".32"/>
+    <path d="M18 57C32 39 47 30 64 29s32 8 46 26v28H18V57Z" fill="#1F5843" fill-opacity=".38"/>
+    <g fill="#E6EBCB">
+      <path d="M26 40c2.4-4.5 8.6-5.3 12-1.8 3.6-2.6 9.2-.7 10 3.7H25c0-.7.4-1.4 1-1.9Z"/>
+      <path d="M84 34c2.1-4.2 7.9-5.1 11-1.7 3.8-2.7 9.1-.7 10 3.6H83c0-.7.4-1.4 1-1.9Z"/>
+    </g>
+    <path d="M15 85C34 67 47 66 64 78c15-13 31-17 52-2v31H15V85Z" fill="#7DA96F"/>
+    <path d="M13 96c21-17 39-18 56-5 16-12 31-13 51 0v25H13V96Z" fill="#B5D477"/>
+    <path d="M12 105c22-11 42-10 58 0 18-11 33-10 51-1v22H12v-21Z" fill="#E8C77D"/>
+    <path d="M64 28v69" stroke="#705940" stroke-width="5" stroke-linecap="round"/>
+    <path d="M64 27 50 45h8L43 61h12L38 81h52L73 61h12L70 45h8L64 27Z" fill="#234E3A"/>
+    <path d="M64 33 55 47h7L50 61h10L47 76h34L68 61h10L66 47h7L64 33Z" fill="#527B51"/>
+    <path d="M36 62v27M92 59v31" stroke="#705940" stroke-width="3" stroke-linecap="round"/>
+    <path d="M36 50 25 66h7L21 82h30L40 66h7L36 50ZM92 47 81 64h7L77 81h30L96 64h7L92 47Z" fill="#2E6147"/>
+  </g>
+  <circle cx="64" cy="54" r="42" stroke="#D8E8B6" stroke-width="3"/>
 </svg>

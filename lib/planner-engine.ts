@@ -1,5 +1,5 @@
 /**
- * Deterministic itinerary planning for Lakbay Baguio.
+ * Deterministic itinerary planning for Baguio Buddy.
  *
  * This module intentionally contains no browser state, network calls, or UI logic.
  * The route, fare, and schedule guidance it returns is a planning estimate and

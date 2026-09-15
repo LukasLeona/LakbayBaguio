@@ -1,6 +1,6 @@
-# Lakbay Baguio
+# Baguio Buddy
 
-Lakbay Baguio is now a mobile-first Next.js application with five independent product areas:
+Baguio Buddy is a mobile-first Next.js application with five independent product areas:
 
 - **Home** — brand story, pending itinerary, restaurant discovery, restaurant-owner inquiry, and Kabsat
 - **Explore** — searchable parks and attractions, restaurants, and hotels

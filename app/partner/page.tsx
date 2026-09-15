@@ -13,7 +13,7 @@ export default function PartnerPage() {
           <Link href="/" className="back-link"><ArrowLeft size={16} /> Back home</Link>
           <span className="eyebrow light">For Baguio local businesses</span>
           <h1>Put your place on the traveler’s map.</h1>
-          <p>Restaurants, cozy stays, tours, and local shops can share their story for a thoughtful Lakbay feature review.</p>
+          <p>Restaurants, cozy stays, tours, and local shops can share their story for a thoughtful Baguio Buddy feature review.</p>
           <ul>
             <li><MapPin /><span><strong>Local discovery</strong>Reach visitors who are already planning where to eat.</span></li>
             <li><BadgeCheck /><span><strong>Reviewed information</strong>We check details before anything is featured.</span></li>

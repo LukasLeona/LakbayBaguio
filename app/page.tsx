@@ -39,7 +39,7 @@ export default function HomePage() {
         <div className="shell home-discovery-shell">
           <div className="home-hero-topline">
             <div className="traveler-greeting">
-              <span className="traveler-avatar-mini">LB</span>
+              <span className="traveler-avatar-mini">BB</span>
               <div><small>Welcome to the highlands</small><strong>Ready to lakbay?</strong></div>
             </div>
             <div className="weather-chip"><CloudSun size={21} /><span><small>Baguio weather</small><strong>15°C · Cool</strong></span></div>
@@ -51,7 +51,7 @@ export default function HomePage() {
             <div className="home-story-copy">
               <span className="eyebrow light"><MapPin size={14} /> Baguio, Philippines</span>
               <h1>Make room for <em>mountain moments.</em></h1>
-              <p>Choose the places you love. Lakbay arranges the route, directions, estimated fare, and time around your trip.</p>
+              <p>Choose the places you love. Baguio Buddy arranges the route, directions, estimated fare, and time around your trip.</p>
               <div className="story-activity-row" aria-label="Popular Baguio experiences">
                 <span><Footprints size={14} /> Walk</span>
                 <span><Utensils size={14} /> Eat</span>
@@ -154,7 +154,7 @@ export default function HomePage() {
           <div className="owner-copy">
             <span className="eyebrow">Baguio business owners</span>
             <h2>Put your place on the traveler’s map.</h2>
-            <p>Restaurant, cozy stay, tour, or local shop—tell us what makes it special. We’ll review your details for a possible Lakbay feature, with no automatic or paid placement.</p>
+            <p>Restaurant, cozy stay, tour, or local shop—tell us what makes it special. We’ll review your details for a possible Baguio Buddy feature, with no automatic or paid placement.</p>
             <Link href="/partner" className="button lime">Inquire about a feature <ArrowRight size={17} /></Link>
           </div>
         </div>

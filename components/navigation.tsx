@@ -58,11 +58,11 @@ export function SiteHeader() {
   return (
     <header className={`site-header ${isPlanPage ? "plan-context" : ""}`}>
       <div className="shell header-inner">
-        <Link href="/" className="brand" aria-label="Lakbay Baguio home">
+        <Link href="/" className="brand" aria-label="Baguio Buddy home">
           <img src="/assets/img/favicon.svg" alt="" width="38" height="38" />
           <span>
-            <strong>Lakbay</strong>
-            <small>Baguio</small>
+            <strong>Baguio</strong>
+            <small>Buddy</small>
           </span>
         </Link>
 

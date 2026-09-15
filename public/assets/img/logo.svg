@@ -1,12 +1,31 @@
 <svg width="530" height="145" viewBox="0 0 530 145" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="4" y="4" width="137" height="137" rx="35" fill="#EEEFE0" stroke="#819A91" stroke-width="8"/>
-  <path d="M24 99C43 76 58 66 74 54C91 41 107 27 126 20V107H24V99Z" fill="#D1D8BE"/>
-  <path d="M32 102C50 84 64 78 79 67C95 55 109 42 127 32" stroke="#819A91" stroke-width="7" stroke-linecap="round"/>
-  <circle cx="75" cy="69" r="10" fill="#819A91"/>
-  <path d="M75 60C64 60 56 68 56 78C56 92 75 110 75 110C75 110 94 92 94 78C94 68 86 60 75 60Z" fill="#819A91"/>
-  <circle cx="75" cy="78" r="6" fill="#EEEFE0"/>
-  <path d="M34 42L47 18L60 42H52L63 59H31L42 42H34Z" fill="#819A91"/>
-  <path d="M106 67L116 48L126 67H120L129 82H103L112 67H106Z" fill="#819A91"/>
-  <text x="166" y="69" fill="#263A33" font-family="Poppins, Arial, sans-serif" font-size="55" font-weight="800" letter-spacing="-2">Lakbay</text>
-  <text x="166" y="122" fill="#819A91" font-family="Poppins, Arial, sans-serif" font-size="55" font-weight="800" letter-spacing="-2">Baguio</text>
+  <title>Baguio Buddy</title>
+  <desc>Baguio Buddy wordmark with a scenic Baguio location-pin emblem.</desc>
+  <defs>
+    <linearGradient id="pin" x1="32" y1="8" x2="111" y2="136" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2D6A52"/>
+      <stop offset="1" stop-color="#083A2D"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="72" y1="20" x2="72" y2="97" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#CDE8A8"/>
+      <stop offset="1" stop-color="#6E9D73"/>
+    </linearGradient>
+    <clipPath id="scene"><circle cx="72" cy="61" r="45"/></clipPath>
+  </defs>
+  <path d="M72 3C38.4 3 15 27 15 59.3c0 38.3 40.2 68.3 57 75.4 16.8-7.1 57-37.1 57-75.4C129 27 105.6 3 72 3Z" fill="url(#pin)"/>
+  <path d="M72 9C42.2 9 21 30 21 59c0 32.4 33.1 59.2 51 68 17.9-8.8 51-35.6 51-68C123 30 101.8 9 72 9Z" stroke="#A9D97B" stroke-width="5"/>
+  <g clip-path="url(#scene)">
+    <circle cx="72" cy="61" r="45" fill="url(#sky)"/>
+    <path d="M26 48C37 28 51 19 72 17c20 2 35 12 45 31-16-10-29-15-45-15S42 38 26 48Z" fill="#173F32" fill-opacity=".33"/>
+    <g fill="#E6EBCB"><path d="M33 44c3-5 9-6 13-2 4-3 10-1 11 4H32c0-.8.4-1.4 1-2Z"/><path d="M91 38c2-5 8-6 12-2 4-3 10-1 11 4H90c0-.8.4-1.4 1-2Z"/></g>
+    <path d="M22 93c20-19 34-20 51-7 17-14 35-18 57-2v29H22V93Z" fill="#7DA96F"/>
+    <path d="M20 105c23-17 42-18 60-5 16-12 34-13 55-1v26H20v-20Z" fill="#B5D477"/>
+    <path d="M18 116c25-11 45-10 63 1 19-11 37-10 57 0v22H18v-23Z" fill="#E8C77D"/>
+    <path d="M72 34v73" stroke="#705940" stroke-width="5" stroke-linecap="round"/>
+    <path d="m72 30-15 19h9L50 66h13L45 88h55L81 66h13L78 49h9L72 30Z" fill="#234E3A"/>
+    <path d="m72 37-10 15h8L57 67h10L53 83h38L77 67h10L74 52h8L72 37Z" fill="#527B51"/>
+  </g>
+  <circle cx="72" cy="61" r="45" stroke="#D8E8B6" stroke-width="3"/>
+  <text x="157" y="68" fill="#083A2D" font-family="Poppins, Arial, sans-serif" font-size="50" font-weight="800" letter-spacing="-2">Baguio</text>
+  <text x="157" y="119" fill="#527B51" font-family="Poppins, Arial, sans-serif" font-size="50" font-weight="800" letter-spacing="-2">Buddy</text>
 </svg>

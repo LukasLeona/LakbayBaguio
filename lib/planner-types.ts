@@ -1,4 +1,4 @@
-/** Shared, serializable types for the Lakbay Baguio itinerary planner. */
+/** Shared, serializable types for the Baguio Buddy itinerary planner. */
 
 export type PlannerArea =
   | "City Center"

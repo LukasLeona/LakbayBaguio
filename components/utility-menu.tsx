@@ -10,9 +10,9 @@ import {
   Menu,
   Send,
   ShieldCheck,
-  Sparkles,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -22,7 +22,7 @@ type ContactState = "idle" | "sending" | "success" | "error";
 const faqs = [
   {
     question: "How does the itinerary generator work?",
-    answer: "Choose your starting point, dates, pace, destinations, and transport preferences. Lakbay arranges them into a practical Baguio route with estimated travel time, fares, directions, and suggested activities.",
+    answer: "Choose your starting point, dates, pace, destinations, and transport preferences. Baguio Buddy arranges them into a practical route with estimated travel time, fares, directions, and suggested activities.",
   },
   {
     question: "Are fares and travel times guaranteed?",
@@ -34,11 +34,11 @@ const faqs = [
   },
   {
     question: "Why can I only use Nearby in Baguio?",
-    answer: "Lakbay Nearby is intentionally limited to the Baguio area so matches stay relevant to travelers using the city guide and its safety controls.",
+    answer: "Baguio Buddy Nearby is intentionally limited to the Baguio area so matches stay relevant to travelers using the city guide and its safety controls.",
   },
   {
     question: "How do anonymous chats work?",
-    answer: "Lakbay creates a random travel name instead of asking for a public profile. Either traveler can report, block, or end a conversation. Chats are automatically removed after 30 minutes of inactivity.",
+    answer: "Baguio Buddy creates a random travel name instead of asking for a public profile. Either traveler can report, block, or end a conversation. Chats are automatically removed after 30 minutes of inactivity.",
   },
   {
     question: "How do I add or remove a destination?",
@@ -117,14 +117,17 @@ export function UtilityMenu() {
   return (
     <div className="mobile-utility">
       <div className="utility-topline">
-        <span><Sparkles aria-hidden="true" /> Your Baguio Buddy</span>
+        <Link href="/" className="utility-brand" aria-label="Baguio Buddy home">
+          <img src="/assets/img/favicon.svg" alt="" width="34" height="34" />
+          <span><small>Your</small><strong>Baguio Buddy</strong></span>
+        </Link>
       </div>
       <button
         className={`utility-trigger ${open ? "open" : ""}`}
         type="button"
         aria-label={open ? "Close menu" : "Open menu"}
         aria-expanded={open}
-        aria-controls="lakbay-utility-sheet"
+        aria-controls="baguio-buddy-utility-sheet"
         onClick={() => open ? closeMenu() : setOpen(true)}
       >
         {open ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
@@ -134,13 +137,13 @@ export function UtilityMenu() {
         <div className="utility-backdrop" role="presentation" onMouseDown={(event) => {
           if (event.target === event.currentTarget) closeMenu();
         }}>
-          <section id="lakbay-utility-sheet" className={`utility-sheet view-${view}`} role="dialog" aria-modal="true" aria-label="Lakbay Baguio information menu">
+          <section id="baguio-buddy-utility-sheet" className={`utility-sheet view-${view}`} role="dialog" aria-modal="true" aria-label="Baguio Buddy information menu">
             <header className="utility-sheet-header">
               {view !== "menu" ? (
                 <button type="button" onClick={() => showView("menu")} aria-label="Back to menu"><ArrowLeft /></button>
-              ) : <span className="utility-mark">LB</span>}
+              ) : <span className="utility-mark">BB</span>}
               <div>
-                <small>{view === "menu" ? "Lakbay Baguio" : "Traveler information"}</small>
+                <small>{view === "menu" ? "Baguio Buddy" : "Traveler information"}</small>
                 <strong>{view === "menu" ? "More for your trip" : view === "privacy" ? "Privacy policy" : view === "help" ? "Help & FAQs" : "Contact us"}</strong>
               </div>
             </header>
@@ -150,7 +153,7 @@ export function UtilityMenu() {
                 <div className="utility-welcome">
                   <span>Good to know</span>
                   <h2>Travel with the details in your pocket.</h2>
-                  <p>Privacy, practical answers, and a direct line to the person building Lakbay.</p>
+                  <p>Privacy, practical answers, and a direct line to the person building Baguio Buddy.</p>
                 </div>
                 <nav aria-label="Information links">
                   <button type="button" onClick={() => showView("privacy")}><span><ShieldCheck /><i><strong>Privacy policy</strong><small>How location, chats, and inquiries are handled</small></i></span><ChevronRight /></button>
@@ -167,7 +170,7 @@ export function UtilityMenu() {
             {view === "privacy" ? (
               <article className="utility-scroll privacy-copy">
                 <p className="policy-date">Effective September 15, 2026</p>
-                <p>Lakbay Baguio is an independent travel-planning application operated by Luke Mark Leona. This notice explains what information the app processes, why it is needed, and the choices available to you.</p>
+                <p>Baguio Buddy is an independent travel-planning application operated by Luke Mark Leona. This notice explains what information the app processes, why it is needed, and the choices available to you.</p>
 
                 <h2>1. Information we process</h2>
                 <p><strong>Trip information.</strong> Destinations, dates, starting point, pace, transport preferences, and saved itinerary details you choose to provide.</p>
@@ -176,7 +179,7 @@ export function UtilityMenu() {
                 <p><strong>Technical information.</strong> Hosting and security providers may process routine request information such as IP address, device/browser details, timestamps, and error logs.</p>
 
                 <h2>2. Why we use it</h2>
-                <p>We process information to generate itineraries, provide temporary nearby discovery and chat, answer questions, review local-business submissions, keep the service secure, investigate abuse, and improve reliability. Depending on the activity, the basis is your consent, providing the service you requested, legal obligations, or Lakbay’s legitimate interest in operating a safe service.</p>
+                <p>We process information to generate itineraries, provide temporary nearby discovery and chat, answer questions, review local-business submissions, keep the service secure, investigate abuse, and improve reliability. Depending on the activity, the basis is your consent, providing the service you requested, legal obligations, or Baguio Buddy’s legitimate interest in operating a safe service.</p>
 
                 <h2>3. Location and Nearby</h2>
                 <p>Location access begins only after you choose to activate radar. It is used to confirm that Nearby is being used around Baguio and to find travelers within the chosen area. You can turn radar off at any time. The app is not an emergency or tracking service; never rely on it for personal safety.</p>
@@ -184,8 +187,8 @@ export function UtilityMenu() {
                 <h2>4. Retention</h2>
                 <p>Nearby presence expires shortly after the last active heartbeat or when you go offline. Pending chat requests expire after 24 hours. Conversations are removed after 30 minutes of inactivity, and ending a chat deletes it for both travelers. Business and contact inquiries are kept only as long as reasonably needed for review, response, records, security, or legal requirements.</p>
 
-                <h2>5. Services that help run Lakbay</h2>
-                <p>Information may be processed by Supabase for application data and anonymous authentication, Vercel for hosting, and EmailJS for delivering inquiry messages. Map tiles or links may involve MapLibre, OpenStreetMap, or Google Maps. These providers process information under their own terms and privacy notices. Lakbay does not sell personal information.</p>
+                <h2>5. Services that help run Baguio Buddy</h2>
+                <p>Information may be processed by Supabase for application data and anonymous authentication, Vercel for hosting, and EmailJS for delivering inquiry messages. Map tiles or links may involve MapLibre, OpenStreetMap, or Google Maps. These providers process information under their own terms and privacy notices. Baguio Buddy does not sell personal information.</p>
 
                 <h2>6. Safety, choices, and your rights</h2>
                 <p>Reasonable technical and organizational safeguards are used, but no internet service can promise absolute security. You can deny location permission, go offline, end chats, or avoid submitting optional details. Subject to applicable law, you may ask to access, correct, object to, erase, or obtain a copy of your personal information, and you may lodge a complaint with the Philippine National Privacy Commission.</p>
@@ -194,7 +197,7 @@ export function UtilityMenu() {
                 <p>Nearby and anonymous chat are not intended for children under 18. If you believe a child submitted personal information, contact us so it can be reviewed and removed.</p>
 
                 <h2>8. Updates and contact</h2>
-                <p>This notice may change as Lakbay’s features or legal obligations change. Material updates will be reflected by a new effective date. Privacy requests may be sent to <a href="mailto:lukemarkleona9@gmail.com">lukemarkleona9@gmail.com</a>.</p>
+                <p>This notice may change as Baguio Buddy’s features or legal obligations change. Material updates will be reflected by a new effective date. Privacy requests may be sent to <a href="mailto:lukemarkleona9@gmail.com">lukemarkleona9@gmail.com</a>.</p>
                 <p className="policy-note">This notice is intended to be clear and practical and is not a substitute for independent legal advice.</p>
               </article>
             ) : null}

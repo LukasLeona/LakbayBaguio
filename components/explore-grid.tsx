@@ -109,7 +109,7 @@ export function ExploreGrid() {
       )}
 
       <section className="explore-route-cta">
-        <div><span className="eyebrow light">Found a few favorites?</span><h2>Turn them into a practical Baguio day.</h2><p>Lakbay organizes your selected stops with timing, directions, and estimated transport fares.</p></div>
+        <div><span className="eyebrow light">Found a few favorites?</span><h2>Turn them into a practical Baguio day.</h2><p>Baguio Buddy organizes your selected stops with timing, directions, and estimated transport fares.</p></div>
         <Link href="/plan" className="button lime">Create my itinerary <ArrowRight size={18} /></Link>
       </section>
     </>

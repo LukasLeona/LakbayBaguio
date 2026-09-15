@@ -30,12 +30,12 @@ export async function POST(request: Request) {
     await sendEmailNotification({
       name,
       email,
-      subject: `Lakbay Baguio — ${topic}`,
-      comments: [`New Lakbay Baguio contact message`, `Topic: ${topic}`, `From: ${name} <${email}>`, "", message].join("\n"),
+      subject: `Baguio Buddy — ${topic}`,
+      comments: [`New Baguio Buddy contact message`, `Topic: ${topic}`, `From: ${name} <${email}>`, "", message].join("\n"),
     });
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
-    console.error("Lakbay contact notification error", error);
+    console.error("Baguio Buddy contact notification error", error);
     return NextResponse.json({ error: "We could not send your message right now. Please try again shortly." }, { status: 502 });
   }
 }

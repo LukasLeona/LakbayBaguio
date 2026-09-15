@@ -1,5 +1,5 @@
 /**
- * Typed migration of the original Lakbay Baguio planning dataset.
+ * Typed migration of the original Baguio Buddy planning dataset.
  *
  * Coordinates, schedules, fares, and public-transport guidance are planning aids.
  * Travelers should confirm current hours, admission rules, fares, and loading areas.
