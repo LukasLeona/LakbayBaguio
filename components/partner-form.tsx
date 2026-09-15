@@ -3,6 +3,7 @@
 import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, Send, X } from "lucide-react";
 import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BusinessInquiryEmail, sendBusinessInquiryEmail } from "@/lib/emailjs-browser";
 import { TurnstileWidget, turnstileEnabled } from "./turnstile-widget";
 
 type FormState = "idle" | "submitting" | "success" | "error";
@@ -39,13 +40,33 @@ export function PartnerForm() {
     setState("submitting");
     setMessage("");
     const form = event.currentTarget;
-    const body = { ...Object.fromEntries(new FormData(form).entries()), turnstileToken };
+    const fields = Object.fromEntries(new FormData(form).entries());
+    const body = { ...fields, turnstileToken };
     try {
       const response = await fetch("/api/restaurant-inquiries", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "We could not submit your inquiry.");
+      if (result.saved !== true) throw new Error("Your inquiry was not saved. Please clear any browser autofill and try again.");
+
+      const inquiry: BusinessInquiryEmail = {
+        businessType: String(fields.businessType || "Restaurant / café"),
+        restaurantName: String(fields.restaurantName || ""),
+        contactName: String(fields.contactName || ""),
+        email: String(fields.email || ""),
+        phone: String(fields.phone || ""),
+        address: String(fields.address || ""),
+        socialUrl: String(fields.socialUrl || ""),
+        message: String(fields.message || ""),
+      };
+
+      try {
+        await sendBusinessInquiryEmail(inquiry);
+        setMessage("Your inquiry is in Luke’s inbox and saved for review. We’ll contact you using the details provided.");
+      } catch (notificationError) {
+        console.error("Business inquiry email notification failed", notificationError);
+        setMessage("Your inquiry was saved for review, but the email alert could not be sent. You don’t need to submit it again.");
+      }
       setState("success");
-      setMessage(result.warning || "Your inquiry is in Luke’s inbox and saved for review. We’ll contact you using the details provided.");
       form.reset();
     } catch (error) {
       setState("error");

@@ -92,9 +92,10 @@ Restaurant owners use `/partner`. The form posts to `/api/restaurant-inquiries`,
 - uses a honeypot for simple bot traffic
 - limits repeated submissions from the same email
 - writes with a server-only Supabase client
+- sends the owner notification from the browser with the dedicated `Baguio Buddy Inquiry` EmailJS template only after the protected Supabase save succeeds
 - makes no promise of automatic or paid placement
 
-No inquiry data is stored when Supabase is not configured; the UI returns a clear setup message instead.
+No inquiry data is stored when Supabase is not configured; the UI returns a clear setup message instead. If EmailJS cannot accept the notification, the saved inquiry remains in Supabase and the UI reports that the email alert failed without encouraging a duplicate submission.
 
 ## Project map
 

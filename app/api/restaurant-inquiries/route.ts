@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { sendEmailNotification } from "@/lib/email-notifications";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isTurnstileServerEnabled, requestIpAddress, verifyTurnstileToken } from "@/lib/turnstile";
 
@@ -64,33 +63,5 @@ export async function POST(request: Request) {
   const { error } = await supabase.from("restaurant_inquiries").insert({ restaurant_name: restaurantName, contact_name: contactName, email, phone: phone || null, address, social_url: socialUrl || null, message: storedMessage, consented_at: new Date().toISOString() });
   if (error) return NextResponse.json({ error: "We could not save your inquiry. Please try again later." }, { status: 500 });
 
-  try {
-    await sendEmailNotification({
-      name: `${contactName} — ${restaurantName}`,
-      email,
-      subject: phone || `Baguio Buddy ${businessType} inquiry`,
-      comments: [
-        `New Baguio Buddy business inquiry`,
-        `Business: ${restaurantName}`,
-        `Type: ${businessType}`,
-        `Contact: ${contactName}`,
-        `Email: ${email}`,
-        `Phone: ${phone || "Not provided"}`,
-        `Address: ${address}`,
-        `Website / social: ${socialUrl || "Not provided"}`,
-        "",
-        message,
-      ].join("\n"),
-    });
-  } catch (notificationError) {
-    console.error("Restaurant inquiry notification error", notificationError);
-    return NextResponse.json({
-      ok: true,
-      saved: true,
-      notificationSent: false,
-      warning: "Your inquiry was saved safely. Email notification is delayed, but there is no need to submit again.",
-    }, { status: 202 });
-  }
-
-  return NextResponse.json({ ok: true, saved: true, notificationSent: true }, { status: 201 });
+  return NextResponse.json({ ok: true, saved: true }, { status: 201 });
 }
