@@ -84,8 +84,13 @@ export async function POST(request: Request) {
     });
   } catch (notificationError) {
     console.error("Restaurant inquiry notification error", notificationError);
-    return NextResponse.json({ error: "Your inquiry was saved, but the email notification failed. Please try again shortly." }, { status: 502 });
+    return NextResponse.json({
+      ok: true,
+      saved: true,
+      notificationSent: false,
+      warning: "Your inquiry was saved safely. Email notification is delayed, but there is no need to submit again.",
+    }, { status: 202 });
   }
 
-  return NextResponse.json({ ok: true }, { status: 201 });
+  return NextResponse.json({ ok: true, saved: true, notificationSent: true }, { status: 201 });
 }

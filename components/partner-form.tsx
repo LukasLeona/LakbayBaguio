@@ -45,7 +45,7 @@ export function PartnerForm() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "We could not submit your inquiry.");
       setState("success");
-      setMessage("Your inquiry is in Luke’s inbox and saved for review. We’ll contact you using the details provided.");
+      setMessage(result.warning || "Your inquiry is in Luke’s inbox and saved for review. We’ll contact you using the details provided.");
       form.reset();
     } catch (error) {
       setState("error");
@@ -58,7 +58,7 @@ export function PartnerForm() {
       <div className="form-success" role="status">
         <button className="form-success-close" type="button" onClick={() => router.push("/")} aria-label="Close inquiry"><X /></button>
         <CheckCircle2 size={48} />
-        <span>Inquiry delivered</span>
+        <span>Inquiry received</span>
         <h2>Salamat!</h2>
         <p>{message}</p>
         <div>

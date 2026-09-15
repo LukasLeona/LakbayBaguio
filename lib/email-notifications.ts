@@ -4,6 +4,7 @@ const EMAILJS_ENDPOINT = "https://api.emailjs.com/api/v1.0/email/send";
 const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || "service_2ter3tn";
 const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || "template_52y6bwx";
 const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || "96_UPP64ognZ8mIif";
+const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY || "";
 
 type NotificationInput = {
   name: string;
@@ -20,6 +21,7 @@ export async function sendEmailNotification(input: NotificationInput) {
       service_id: EMAILJS_SERVICE_ID,
       template_id: EMAILJS_TEMPLATE_ID,
       user_id: EMAILJS_PUBLIC_KEY,
+      accessToken: EMAILJS_PRIVATE_KEY || undefined,
       template_params: {
         name: input.name,
         email: input.email,
