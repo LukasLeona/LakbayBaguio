@@ -79,7 +79,7 @@ The SQL installs PostGIS and creates:
 - Presence is discoverable only while fresh and is refreshed by an active page heartbeat.
 - The user chooses a 15, 30, or 60 minute visibility window and can go offline immediately.
 - Discovery is limited to roughly 5 km and excludes blocked users.
-- The Baguio-area client geofence is temporarily disabled for testing. Set `NEXT_PUBLIC_ENFORCE_BAGUIO_GEOFENCE=true` to restore it before launch.
+- Nearby is limited to the Baguio area in both the browser and the database.
 - Starting a conversation requires an accepted request.
 
 This is a safer baseline, not a substitute for a formal privacy and abuse review before public launch. Production should also add server-side moderation operations, retention/deletion policies, monitoring, and scheduled stale-presence cleanup.

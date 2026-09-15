@@ -17,7 +17,6 @@ const previewTravelers: Traveler[] = [
 ];
 
 const BAGUIO_CENTER = { lat: 16.4023, lng: 120.596 };
-const ENFORCE_BAGUIO_GEOFENCE = process.env.NEXT_PUBLIC_ENFORCE_BAGUIO_GEOFENCE === "true";
 
 function distanceFromBaguioMeters(location: { lat: number; lng: number }) {
   const radians = (value: number) => value * Math.PI / 180;
@@ -99,7 +98,7 @@ export function NearbyExperience() {
     setStatus("Getting your location…");
     navigator.geolocation.getCurrentPosition(async (position) => {
       const location = { lat: position.coords.latitude, lng: position.coords.longitude };
-      if (ENFORCE_BAGUIO_GEOFENCE && distanceFromBaguioMeters(location) > 15_000) {
+      if (distanceFromBaguioMeters(location) > 15_000) {
         setOutsideBaguio(true);
         setStatus("Nearby is available only while you’re in Baguio City.");
         setBusy(false);

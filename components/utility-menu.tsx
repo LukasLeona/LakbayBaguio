@@ -30,11 +30,11 @@ const faqs = [
   },
   {
     question: "Does Nearby reveal my exact location?",
-    answer: "No exact coordinate is shown to another traveler. Nearby uses your location to find people within the selected radius and returns only a rounded map area and distance band. You can go offline at any time.",
+    answer: "No exact coordinate is shown to another traveler. Nearby uses your location to check that you are in Baguio and returns only a rounded map area and distance band. You can go offline at any time.",
   },
   {
-    question: "Can I test Nearby outside Baguio?",
-    answer: "Yes. The Baguio-only location restriction is temporarily disabled while radar and chat are being tested. It can be restored before public launch.",
+    question: "Why can I only use Nearby in Baguio?",
+    answer: "Baguio Buddy Nearby is intentionally limited to the Baguio area so matches stay relevant to travelers using the city guide and its safety controls.",
   },
   {
     question: "How do anonymous chats work?",
@@ -182,7 +182,7 @@ export function UtilityMenu() {
                 <p>We process information to generate itineraries, provide temporary nearby discovery and chat, answer questions, review local-business submissions, keep the service secure, investigate abuse, and improve reliability. Depending on the activity, the basis is your consent, providing the service you requested, legal obligations, or Baguio Buddy’s legitimate interest in operating a safe service.</p>
 
                 <h2>3. Location and Nearby</h2>
-                <p>Location access begins only after you choose to activate radar. It is used to find travelers within the chosen area. When the Baguio-only restriction is enabled, it also confirms that Nearby is being used around Baguio. You can turn radar off at any time. The app is not an emergency or tracking service; never rely on it for personal safety.</p>
+                <p>Location access begins only after you choose to activate radar. It is used to confirm that Nearby is being used around Baguio and to find travelers within the chosen area. You can turn radar off at any time. The app is not an emergency or tracking service; never rely on it for personal safety.</p>
 
                 <h2>4. Retention</h2>
                 <p>Nearby presence expires shortly after the last active heartbeat or when you go offline. Pending chat requests expire after 24 hours. Conversations are removed after 30 minutes of inactivity, and ending a chat deletes it for both travelers. Business and contact inquiries are kept only as long as reasonably needed for review, response, records, security, or legal requirements.</p>

@@ -64,7 +64,7 @@ create table if not exists public.community_settings (
 );
 
 insert into public.community_settings (key, enforce_baguio_geofence)
-values ('nearby', false)
+values ('nearby', true)
 on conflict (key) do nothing;
 
 create table if not exists public.chat_requests (
