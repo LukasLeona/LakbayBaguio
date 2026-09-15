@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Clock3, LocateFixed, LockKeyhole, MapPin, MessageCircle, Navigation, Radio, ShieldCheck, Sparkles, Users, WifiOff, X } from "lucide-react";
+import { Check, Clock3, LocateFixed, LockKeyhole, MapPin, MessageCircle, Navigation, Radio, ShieldCheck, Users, WifiOff, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NearbyMap, type MapTraveler } from "./nearby-map";
 import { TravelerAvatar } from "./traveler-avatar";
@@ -151,8 +151,6 @@ export function NearbyExperience() {
 
       <aside className="nearby-panel">
         <header className="nearby-profile"><TravelerAvatar alias={alias} seed={3} size="large" /><div><span>Your anonymous name</span><strong>{alias}</strong></div><Link href="/chats" aria-label="Open chats"><MessageCircle /></Link></header>
-
-        <div className="encounter-note"><Sparkles /><p><strong>Baguio is packed—but still no organic encounter?</strong> Maybe they’re hiding on your radar. 👀</p></div>
 
         <div className="visibility-card">
           <div className="visibility-heading"><div className="radar-icon"><Radio /></div><div><strong>{visible ? "Radar is active" : "Turn on traveler radar"}</strong><span>{status}</span></div></div>
