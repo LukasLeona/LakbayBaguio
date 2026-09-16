@@ -92,6 +92,23 @@ export function ItineraryResults({
     window.setTimeout(() => setCopied(false), 1800);
   }
 
+  function printPlan() {
+    const previousTitle = document.title;
+    let fallbackTimer = 0;
+    const cleanup = () => {
+      document.title = previousTitle;
+      document.body.classList.remove("printing-itinerary");
+      window.removeEventListener("afterprint", cleanup);
+      if (fallbackTimer) window.clearTimeout(fallbackTimer);
+    };
+
+    document.title = `${itinerary.title} - Baguio Buddy`;
+    document.body.classList.add("printing-itinerary");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    fallbackTimer = window.setTimeout(cleanup, 120_000);
+    window.requestAnimationFrame(() => window.setTimeout(() => window.print(), 80));
+  }
+
   return (
     <section className="generated-plan" id="itinerary-result" aria-labelledby="generated-plan-title">
       <header className="generated-plan-header">
@@ -230,12 +247,13 @@ export function ItineraryResults({
           {variant === "owned" ? <button type="button" className="result-action icon-only" onClick={onEdit} aria-label="Edit itinerary choices" title="Edit choices"><Pencil /></button> : null}
           <button type="button" className="result-action icon-only" onClick={copyPlan} aria-label={copied ? "Itinerary copied" : "Copy itinerary"} title={copied ? "Copied" : "Copy itinerary"}>{copied ? <Check /> : <Copy />}</button>
           {variant === "owned" ? <button type="button" className="result-action icon-only share" onClick={() => setShareOpen(true)} aria-label="Share itinerary" title="Share itinerary"><Share2 /></button> : null}
-          <button type="button" className="result-action icon-only strong" onClick={() => window.print()} aria-label="Print or save itinerary as PDF" title="Print / Save PDF"><Printer /></button>
+          <button type="button" className="result-action icon-only strong" onClick={printPlan} aria-label="Print or save itinerary as PDF" title="Print / Save PDF"><Printer /></button>
         </div>
         {variant === "owned" ? <button type="button" className={`result-action save ${saved ? "saved" : ""}`} onClick={onSave}>{saved ? <Check /> : <Save />} <span>{saved ? "Saved to Home" : "Save to Home"}</span></button> : <Link href="/" className="result-action save saved"><Check /> <span>Saved on Home</span></Link>}
       </footer>
       <section className="print-itinerary" aria-hidden="true">
         <header>
+          <div className="print-brand"><img src="/assets/img/favicon.svg" alt="" /><strong>Baguio Buddy</strong><span>{variant === "shared" ? "Shared route" : "Personal itinerary"}</span></div>
           <h1>{itinerary.title}</h1>
           <p>Starting point: {itinerary.start.name}</p>
           <p>{itinerary.date ? `Trip date: ${formatTripDate(itinerary.date)} · ` : ""}{itinerary.totals.scheduledStops} stops · {formatDuration(itinerary.totals.travelMinutes)} travel · {formatCurrency(itinerary.totals.fare)} transport</p>
@@ -247,8 +265,10 @@ export function ItineraryResults({
             {printDay.items.map((stop) => (
               <section key={stop.destination.id}>
                 <h3>{stop.number}. {minutesToTime(stop.arrivalMinutes)} — {stop.destination.name}</h3>
-                <p>{transportLabel(stop.transport.mode)} from {stop.from.name} · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
+                <p className="print-place-meta">{stop.destination.area} · {stop.destination.category} · Visit {formatDuration(stop.destination.duration)}</p>
+                <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {stop.from.name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
                 <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
+                <p className="print-map-link"><a href={stop.transport.legMapUrl}>Open this leg in Google Maps</a></p>
               </section>
             ))}
           </article>

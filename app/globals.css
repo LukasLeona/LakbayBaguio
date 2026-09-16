@@ -877,24 +877,35 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .visit-time { align-self: start; }
 }
 
+@page { size: A4 portrait; margin: 12mm 11mm 14mm; }
+
 @media print {
-  .site-header, .bottom-nav, .planner-progress, .planner-form, .generated-plan-header, .trip-metrics, .generated-results-grid, .itinerary-day-tabs, .route-map-panel, .planning-disclaimer, .itinerary-action-dock, .planner-toast { display: none !important; }
-  body { padding: 0 !important; background: white !important; }
-  .planner-section { padding: 0; }
-  .planner-shell { width: 100%; }
-  .generated-plan { margin: 0; }
-  .print-itinerary { display: block; color: #142f2a; font-size: 10pt; }
-  .print-itinerary > header { padding-bottom: 14px; border-bottom: 2px solid #789b8f; }
-  .print-itinerary h1 { margin: 0 0 6px; font-size: 23pt; }
-  .print-itinerary header p { margin: 2px 0; }
-  .print-itinerary > article { break-before: page; }
-  .print-itinerary > article:first-of-type { break-before: auto; }
-  .print-itinerary article > h2 { margin: 18px 0 10px; padding-bottom: 5px; border-bottom: 1px solid #b8cbb9; }
-  .print-itinerary article > section { break-inside: avoid; margin: 0 0 14px; }
-  .print-itinerary h3 { margin: 0 0 4px; font-size: 11pt; }
-  .print-itinerary section p, .print-itinerary section ol { margin-block: 4px; }
-  .print-itinerary .print-notice { padding: 6px 8px; background: #fff0bd; }
-  .print-itinerary footer { margin-top: 16px; padding-top: 8px; border-top: 1px solid #b8cbb9; font-size: 8pt; }
+  html, body { width: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; color: #102d25 !important; background: white !important; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .skip-link, .site-header, .mobile-utility, .bottom-nav, .planner-progress, .planner-form, .generated-plan > :not(.print-itinerary), .shared-itinerary-banner, .planner-toast, .share-dialog-backdrop { display: none !important; }
+  main, .plan-page, .itinerary-page, .planner-section, .planner-shell, .trip-planner, .shared-itinerary-view, .generated-plan { width: 100% !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+  .print-itinerary { display: block !important; color: #102d25; font-family: var(--font-poppins), Arial, sans-serif; font-size: 8.5pt; line-height: 1.45; }
+  .print-itinerary > header { padding: 0 0 9mm; border-bottom: 2px solid #6f988a; }
+  .print-brand { display: flex; align-items: center; gap: 7px; margin-bottom: 8mm; color: #0a392c; }
+  .print-brand img { width: 28px; height: 28px; }
+  .print-brand strong { font-size: 10pt; }
+  .print-brand span { margin-left: auto; padding: 4px 8px; border: 1px solid #c8d8cf; border-radius: 999px; color: #53776c; font-size: 7pt; font-weight: 700; text-transform: uppercase; }
+  .print-itinerary h1 { margin: 0 0 4px; font-size: 23pt; line-height: 1.12; letter-spacing: -.5pt; }
+  .print-itinerary > header p { margin: 2px 0; color: #496a61; font-size: 8pt; }
+  .print-itinerary > article { break-before: page; page-break-before: always; }
+  .print-itinerary > article:first-of-type { break-before: auto; page-break-before: auto; }
+  .print-itinerary article > h2 { margin: 0 0 7mm; padding: 8mm 0 3mm; border-bottom: 1px solid #b8cbb9; color: #0a392c; font-size: 15pt; line-height: 1.2; }
+  .print-itinerary article > section { break-inside: avoid; page-break-inside: avoid; margin: 0 0 6mm; padding: 0 0 5mm 5mm; border-bottom: 1px solid #e2e9e4; border-left: 3px solid #a6bc24; }
+  .print-itinerary h3 { margin: 0 0 2px; color: #102d25; font-size: 10.5pt; line-height: 1.35; }
+  .print-itinerary section p, .print-itinerary section ol { margin-block: 3px; }
+  .print-itinerary .print-place-meta { color: #607970; font-size: 7.5pt; }
+  .print-itinerary .print-leg { margin-top: 7px; }
+  .print-itinerary ol { padding-left: 18px; }
+  .print-itinerary li { margin-bottom: 2px; }
+  .print-itinerary .print-map-link { margin-top: 6px; font-size: 7.5pt; font-weight: 700; }
+  .print-itinerary .print-map-link a { color: #25574b; text-decoration: underline; }
+  .print-itinerary .print-notice { break-inside: avoid; margin: 0 0 4mm; padding: 7px 9px; border-left: 3px solid #e4b333; background: #fff0bd !important; font-size: 8pt; }
+  .print-itinerary footer { break-inside: avoid; margin-top: 8mm; padding-top: 4mm; border-top: 1px solid #b8cbb9; color: #607970; font-size: 7pt; }
 }
 
 /* Mobile-first travel app visual refresh */
@@ -2120,4 +2131,29 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .share-link-block button { min-width: 46px; }
   .itinerary-action-dock .icon-only { width: 39px; height: 39px; min-height: 39px; }
   .itinerary-action-dock .save { min-height: 39px; font-size: .54rem; }
+}
+
+@media screen {
+  .home-itinerary-stack { display: grid; gap: 12px; }
+  .shared-home-trip { position: relative; display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 15px; overflow: hidden; padding: 17px 54px 17px 18px; border: 1px solid rgba(8,44,34,.1); border-radius: 23px; background: linear-gradient(118deg, #edf5e9, #fffdf5 65%); box-shadow: var(--shadow-sm); }
+  .shared-home-trip::after { content: ""; position: absolute; z-index: 0; right: -35px; top: -60px; width: 170px; height: 170px; border: 26px solid rgba(166,188,36,.11); border-radius: 50%; }
+  .shared-home-trip > * { position: relative; z-index: 1; }
+  .shared-home-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 17px; color: var(--pine-950); background: var(--lime); }
+  .shared-home-icon svg { width: 22px; }
+  .shared-home-trip > div { min-width: 0; }
+  .shared-home-trip .eyebrow { color: var(--pine-700); }
+  .shared-home-trip h3 { overflow: hidden; margin: 3px 0 4px; font-size: 1.05rem; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+  .shared-home-trip p { display: flex; align-items: center; gap: 5px; margin: 0; color: var(--muted); font-size: .6rem; }
+  .shared-home-trip p > span { width: 3px; height: 3px; margin-inline: 2px; border-radius: 50%; background: var(--sage-300); }
+  .shared-home-trip .button { min-height: 43px; padding-inline: 14px; border-color: var(--pine-950); color: white; background: var(--pine-950); font-size: .61rem; }
+  .shared-home-dismiss { position: absolute; z-index: 2; top: 10px; right: 10px; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 50%; color: var(--pine-700); background: rgba(255,255,255,.72); cursor: pointer; }
+  .shared-home-dismiss svg { width: 15px; }
+}
+
+@media screen and (max-width: 760px) {
+  .shared-home-trip { grid-template-columns: 44px minmax(0, 1fr); gap: 11px; padding: 14px 42px 14px 14px; border-radius: 20px; }
+  .shared-home-icon { width: 44px; height: 44px; border-radius: 14px; }
+  .shared-home-trip h3 { font-size: .82rem; }
+  .shared-home-trip .button { grid-column: 1 / -1; width: 100%; min-height: 40px; }
+  .shared-home-dismiss { top: 8px; right: 8px; }
 }

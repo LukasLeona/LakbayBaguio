@@ -184,7 +184,7 @@ export function UtilityMenu() {
                 <p>Baguio Buddy is an independent travel-planning application operated by Luke Mark Leona. This notice explains what information the app processes, why it is needed, and the choices available to you.</p>
 
                 <h2>1. Information we process</h2>
-                <p><strong>Trip information.</strong> Destinations, dates, starting point, pace, transport preferences, and saved itinerary details you choose to provide.</p>
+                <p><strong>Trip information.</strong> Destinations, dates, starting point, pace, transport preferences, and saved itinerary details you choose to provide. If you create a share link, a read-only copy of that itinerary is stored so people with the private link can open it.</p>
                 <p><strong>Nearby and anonymous chat.</strong> A random anonymous identifier and alias, approximate device location while radar is active, chat requests, messages, blocks, and safety reports. Your precise coordinate is held in a protected presence record; another traveler receives only a coarse map area and distance band.</p>
                 <p><strong>Contact and business inquiries.</strong> Your name, email address, business details, contact number if supplied, and message.</p>
                 <p><strong>Suggestions and votes.</strong> Suggestion text and one private anonymous account identifier used to prevent duplicate votes. The identifier is never displayed with your suggestion.</p>
@@ -197,7 +197,7 @@ export function UtilityMenu() {
                 <p>Location access begins only after you choose to activate radar. It is used to confirm that Nearby is being used around Baguio and to find travelers within the chosen area. You can turn radar off at any time. The app is not an emergency or tracking service; never rely on it for personal safety.</p>
 
                 <h2>4. Retention</h2>
-                <p>Nearby presence expires shortly after the last active heartbeat or when you go offline. Pending chat requests expire after 24 hours. Conversations are removed after 30 minutes of inactivity, and ending a chat deletes it for both travelers. Business and contact inquiries are kept only as long as reasonably needed for review, response, records, security, or legal requirements.</p>
+                <p>Nearby presence expires shortly after the last active heartbeat or when you go offline. Pending chat requests expire after 24 hours. Conversations are removed after 30 minutes of inactivity, and ending a chat deletes it for both travelers. Shared itinerary links expire after 90 days. Business and contact inquiries are kept only as long as reasonably needed for review, response, records, security, or legal requirements.</p>
 
                 <h2>5. Services that help run Baguio Buddy</h2>
                 <p>Information may be processed by Supabase for application data and anonymous authentication, Vercel for hosting, and EmailJS for delivering inquiry messages. Map tiles or links may involve MapLibre, OpenStreetMap, or Google Maps. These providers process information under their own terms and privacy notices. Baguio Buddy does not sell personal information.</p>

@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CalendarDays, MapPin, Sparkles } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin, Share2, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ITINERARY_STORAGE_KEY } from "@/lib/itinerary";
+import { ITINERARY_CHANGE_EVENT, ITINERARY_STORAGE_KEY } from "@/lib/itinerary";
+import {
+  readSharedItineraryPreview,
+  SHARED_ITINERARY_CHANGE_EVENT,
+  SHARED_ITINERARY_STORAGE_KEY,
+  sharedItineraryPath,
+  type SharedItineraryPreview,
+} from "@/lib/shared-itinerary";
 
 type PendingTripPreview = {
   title: string;
@@ -55,18 +62,37 @@ function readPendingTrip(value: string): PendingTripPreview | null {
 
 export function HomePendingItinerary() {
   const [trip, setTrip] = useState<PendingTripPreview | null>(null);
+  const [sharedTrip, setSharedTrip] = useState<SharedItineraryPreview | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(ITINERARY_STORAGE_KEY);
-      if (stored) setTrip(readPendingTrip(stored));
-    } catch {
-      localStorage.removeItem(ITINERARY_STORAGE_KEY);
-    }
+    const update = () => {
+      try {
+        const stored = localStorage.getItem(ITINERARY_STORAGE_KEY);
+        setTrip(stored ? readPendingTrip(stored) : null);
+        setSharedTrip(readSharedItineraryPreview());
+      } catch {
+        setTrip(null);
+        setSharedTrip(null);
+      }
+    };
+    update();
+    window.addEventListener("storage", update);
+    window.addEventListener(ITINERARY_CHANGE_EVENT, update);
+    window.addEventListener(SHARED_ITINERARY_CHANGE_EVENT, update);
+    return () => {
+      window.removeEventListener("storage", update);
+      window.removeEventListener(ITINERARY_CHANGE_EVENT, update);
+      window.removeEventListener(SHARED_ITINERARY_CHANGE_EVENT, update);
+    };
   }, []);
 
-  if (!trip) {
-    return (
+  function dismissSharedTrip() {
+    try { localStorage.removeItem(SHARED_ITINERARY_STORAGE_KEY); } catch { /* Storage may be unavailable in private browsing. */ }
+    setSharedTrip(null);
+    window.dispatchEvent(new Event(SHARED_ITINERARY_CHANGE_EVENT));
+  }
+
+  const pendingContent = !trip ? (
       <div className="pending-empty">
         <div className="empty-icon"><Sparkles size={24} /></div>
         <div>
@@ -76,10 +102,7 @@ export function HomePendingItinerary() {
         </div>
         <Link href="/plan" className="button primary">Build my itinerary <ArrowRight size={17} /></Link>
       </div>
-    );
-  }
-
-  return (
+  ) : (
     <article className="pending-trip">
       <div className="pending-copy">
         <span className="status-pill"><span /> Pending trip</span>
@@ -97,5 +120,23 @@ export function HomePendingItinerary() {
       </div>
       <Link href="/plan/itinerary" className="button dark">View itinerary <ArrowRight size={17} /></Link>
     </article>
+  );
+
+  return (
+    <div className="home-itinerary-stack">
+      {sharedTrip ? (
+        <article className="shared-home-trip">
+          <span className="shared-home-icon"><Share2 /></span>
+          <div>
+            <span className="eyebrow">Shared with you</span>
+            <h3>{sharedTrip.title}</h3>
+            <p><CalendarDays size={14} /> {sharedTrip.dayCount} {sharedTrip.dayCount === 1 ? "day" : "days"}<span /> <MapPin size={14} /> {sharedTrip.stopCount} stops</p>
+          </div>
+          <Link href={sharedItineraryPath(sharedTrip.token)} className="button secondary">Open shared route <ArrowRight size={16} /></Link>
+          <button type="button" className="shared-home-dismiss" onClick={dismissSharedTrip} aria-label="Dismiss shared itinerary"><X /></button>
+        </article>
+      ) : null}
+      {pendingContent}
+    </div>
   );
 }

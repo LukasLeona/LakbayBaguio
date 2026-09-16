@@ -4,7 +4,7 @@ Baguio Buddy is a mobile-first Next.js application with six independent product 
 
 - **Home** — brand story, pending itinerary, restaurant discovery, restaurant-owner inquiry, and Kabsat
 - **Explore** — searchable parks and attractions, restaurants, and hotels
-- **Plan** — an itinerary generator that clusters stops and saves a pending trip locally
+- **Plan** — an itinerary generator that clusters stops, saves a pending trip locally, prints an A4-ready route, and creates read-only QR/link shares
 - **Nearby** — time-limited traveler discovery with a privacy-safe MapLibre map
 - **Chats** — direct anonymous conversations, real-time messages, unread counts, and safety actions
 - **Suggestions** — an anonymous community idea board with categories, upvotes, and duplicate-vote protection
@@ -73,6 +73,13 @@ The SQL installs PostGIS and creates:
 - blocks, reports, chat ending, and basic request/message rate limits
 - restaurant inquiries readable only through the server-side service role
 - anonymous suggestions and one-vote-per-account upvotes exposed through privacy-safe RPCs
+- private, read-only itinerary shares that expire after 90 days and use rate-limited RPCs
+
+## Itinerary sharing and printing
+
+Generated itineraries can be copied, printed or saved as a PDF, and shared from the itinerary action bar. Sharing creates a private token through Supabase; the QR code is generated locally in the browser and the shared page never includes the creator's anonymous account ID. Opening a shared route remembers only a small preview on that browser so Home can offer a convenient “Shared with you” card. The recipient can dismiss that card at any time.
+
+The print view contains every day, stop, fare estimate, travel instruction, and Google Maps leg. It uses an A4-friendly layout on desktop and mobile print dialogs while leaving the interactive controls out of the PDF.
 
 ## Nearby privacy model
 

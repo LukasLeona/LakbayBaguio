@@ -46,6 +46,11 @@ export function ItineraryShareDialog({ itinerary, open, onClose }: { itinerary: 
       setTurnstileToken("");
     } catch (shareError) {
       const message = shareError instanceof Error ? shareError.message : "The share link could not be created.";
+      if (turnstileEnabled && message.toLowerCase().includes("captcha")) {
+        setTurnstileToken("");
+        setStage("security");
+        return;
+      }
       setError(message.includes("Share limit reached") ? "You’ve created several links this hour. Please try again a little later." : message);
       setStage("error");
     }
@@ -57,19 +62,14 @@ export function ItineraryShareDialog({ itinerary, open, onClose }: { itinerary: 
 
   useEffect(() => {
     if (!open || shareUrl) return;
-    let active = true;
     const client = getSupabaseBrowserClient();
     if (!client) {
       setError("Sharing is not configured yet. Please try again later.");
       setStage("error");
       return;
     }
-    void client.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      if (!data.session && turnstileEnabled) setStage("security");
-      else void createShare();
-    });
-    return () => { active = false; };
+    if (turnstileEnabled) setStage("security");
+    else void createShare();
   }, [createShare, open, shareUrl]);
 
   useEffect(() => {

@@ -37,8 +37,11 @@ begin
     raise exception 'Invalid itinerary';
   end if;
 
-  if jsonb_typeof(p_itinerary -> 'days') <> 'array'
-    or jsonb_array_length(p_itinerary -> 'days') not between 1 and 5
+  if jsonb_typeof(p_itinerary -> 'days') <> 'array' then
+    raise exception 'Invalid itinerary payload';
+  end if;
+
+  if jsonb_array_length(p_itinerary -> 'days') not between 1 and 5
     or char_length(coalesce(p_itinerary ->> 'title', '')) not between 3 and 120
     or char_length(coalesce(p_itinerary ->> 'id', '')) not between 3 and 100
     or pg_column_size(p_itinerary) > 262144 then
