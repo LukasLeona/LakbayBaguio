@@ -1800,3 +1800,89 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .partner-form-wrap { padding-top: 14px; }
   .partner-form-wrap > p { display: none; }
 }
+
+/* Feature inquiry: spacious desktop card, readable scrolling mobile flow. */
+.form-success { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ink); text-align: center; }
+.success-mark { width: 66px; height: 66px; display: grid; place-items: center; border: 1px solid rgba(8,44,34,.1); border-radius: 22px; color: var(--pine-950); background: linear-gradient(135deg, var(--lime), #edf3d5); box-shadow: 0 12px 28px rgba(91,111,29,.16); }
+.form-success > span { margin-top: 15px; color: var(--pine-700); font-size: .61rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.form-success h2 { max-width: 430px; margin: 8px 0; font-size: clamp(2rem, 3.1vw, 2.7rem); line-height: 1.02; letter-spacing: -.045em; }
+.form-success > p { max-width: 420px; margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.6; }
+.form-success-note { width: min(100%, 430px); display: grid; grid-template-columns: 38px 1fr; align-items: start; gap: 10px; margin-top: 22px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 18px; text-align: left; background: #f4f7ed; }
+.form-success-note > svg { width: 38px; height: 38px; padding: 10px; border-radius: 13px; color: var(--pine-950); background: var(--lime); }
+.form-success-note strong, .form-success-note span { display: block; }
+.form-success-note strong { color: var(--pine-950); font-size: .71rem; }
+.form-success-note span { margin-top: 3px; color: var(--muted); font-size: .62rem; font-weight: 500; letter-spacing: 0; line-height: 1.45; text-transform: none; }
+.form-success-actions { display: flex; gap: 9px; margin-top: 18px; }
+.form-success-actions .button { min-width: 130px; }
+
+@media screen and (min-width: 761px) {
+  .partner-layout { align-items: stretch; }
+  .partner-intro, .partner-form-wrap { min-height: 680px; }
+  .partner-form-wrap { display: flex; flex-direction: column; }
+  .partner-form-wrap > .partner-form, .partner-form-wrap > .form-success { flex: 1; }
+  .partner-form { min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+  .partner-form-progress { margin-top: 10px; }
+  .partner-form-step.active { margin-block: auto; }
+  .partner-form .form-disclaimer { margin-top: auto; }
+  .form-success { min-height: 0; padding: 24px 0 8px; }
+  .form-success-close { top: 4px; right: 0; }
+}
+
+@media screen and (max-width: 760px) {
+  .partner-page { height: auto; min-height: 0; margin: 0; padding: 8px 0 calc(100px + env(safe-area-inset-bottom)); overflow: visible; }
+  .partner-layout { width: calc(100% - 18px); height: auto; display: grid; grid-template-rows: none; gap: 14px; padding: 0; overflow: visible; }
+  .partner-intro { height: auto; min-height: 210px; justify-content: end; padding: 23px 21px; border-radius: 29px; background-position: center 44%; }
+  .partner-intro .eyebrow { margin-top: 0; font-size: .57rem; }
+  .partner-intro h1 { max-width: 320px; margin: 5px 0 9px; font-size: 2rem; line-height: 1.01; }
+  .partner-intro > p { display: block; max-width: 325px; font-size: .69rem; line-height: 1.48; }
+  .partner-form-wrap { min-height: 0; height: auto; display: block; margin: 0; padding: 23px 18px 18px; overflow: visible; border-radius: 29px; }
+  .partner-form-wrap > .eyebrow { margin-bottom: 5px; font-size: .55rem; }
+  .partner-form-wrap > h2 { font-size: 1.65rem; line-height: 1.04; }
+  .partner-form-wrap > p { display: block; margin: 6px 0 15px; font-size: .65rem; line-height: 1.48; }
+  .partner-form { min-height: 0; display: grid; gap: 13px; }
+  .partner-form-progress { grid-template-columns: 28px 1fr 28px 1.25fr; gap: 7px; margin: 0 0 3px; }
+  .partner-form-progress > span { width: 28px; height: 28px; font-size: .61rem; }
+  .partner-form-progress > strong { font-size: .62rem; }
+  .partner-form-step.active { min-height: 0; display: grid; align-content: normal; gap: 12px; margin: 0; }
+  .partner-form-step label:not(.check-field) { gap: 6px; }
+  .partner-form-step label > span { font-size: .66rem; }
+  .partner-form input:not([type="checkbox"]), .partner-form textarea, .partner-form select { min-height: 48px; height: auto; padding: 10px 12px; border-radius: 14px; font-size: .76rem; }
+  .partner-form textarea { min-height: 112px; resize: vertical; }
+  .partner-form .form-row { grid-template-columns: 1fr 1fr; gap: 9px; }
+  .partner-form .check-field { gap: 8px; }
+  .partner-form .check-field span { font-size: .61rem; line-height: 1.45; }
+  .partner-form-step .button { min-height: 48px; font-size: .72rem; }
+  .partner-form .form-disclaimer { margin: 0; font-size: .55rem; line-height: 1.4; }
+  .partner-form .form-message { padding: 9px 10px; font-size: .61rem; line-height: 1.45; }
+  .form-success { min-height: 430px; padding: 31px 4px 8px; justify-content: center; overflow: visible; }
+  .success-mark { width: 58px; height: 58px; border-radius: 19px; }
+  .success-mark svg { width: 28px; }
+  .form-success > span { margin-top: 14px; font-size: .55rem; }
+  .form-success h2 { margin: 8px 0; font-size: 2.02rem; }
+  .form-success > p { max-width: 310px; font-size: .71rem; }
+  .form-success-note { grid-template-columns: 35px 1fr; gap: 9px; margin-top: 18px; padding: 12px; border-radius: 17px; }
+  .form-success-note > svg { width: 35px; height: 35px; padding: 9px; border-radius: 12px; }
+  .form-success-note strong { font-size: .66rem; }
+  .form-success-note span { font-size: .58rem; }
+  .form-success-actions { width: 100%; display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 16px; }
+  .form-success-actions .button { width: 100%; min-width: 0; min-height: 46px; font-size: .7rem; }
+  .form-success-close { top: 0; right: 0; width: 36px; height: 36px; }
+
+  .home-revamp .owner-section { padding-top: 32px; padding-bottom: 42px; }
+  .home-revamp .owner-card { min-height: 0; grid-template-columns: 1fr; border-radius: 29px; background: var(--pine-950); }
+  .home-revamp .owner-visual { min-height: 174px; place-items: center; background: linear-gradient(180deg, rgba(7,41,31,.1), rgba(7,41,31,.68)), url("/assets/img/destinations/baguio-city-market.jpg") center 57%/cover; }
+  .home-revamp .store-icon { width: 58px; height: 58px; border-radius: 19px; background: rgba(255,253,245,.17); }
+  .home-revamp .store-icon svg { width: 25px; }
+  .home-revamp .owner-badge { top: 14px; bottom: auto; left: 14px; padding: 7px 10px; font-size: .53rem; }
+  .home-revamp .owner-copy { display: block; padding: 24px 20px 20px; }
+  .home-revamp .owner-copy .eyebrow { color: var(--lime); font-size: .58rem; }
+  .home-revamp .owner-copy h2 { margin-top: 7px; font-size: 1.82rem; line-height: 1.05; }
+  .home-revamp .owner-copy p { margin: 11px 0 17px; color: rgba(255,255,255,.7); font-size: .7rem; line-height: 1.56; }
+  .home-revamp .owner-copy .button { min-height: 49px; width: 100%; border-radius: 16px; font-size: .7rem; }
+}
+
+@media screen and (max-width: 380px) {
+  .partner-form .form-row { grid-template-columns: 1fr; }
+  .partner-intro { min-height: 194px; }
+  .partner-intro > p { display: none; }
+}

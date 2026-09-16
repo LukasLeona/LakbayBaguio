@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, Send, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, MailCheck, Send, X } from "lucide-react";
 import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BusinessInquiryEmail, sendBusinessInquiryEmail } from "@/lib/emailjs-browser";
@@ -78,11 +78,15 @@ export function PartnerForm() {
     return (
       <div className="form-success" role="status">
         <button className="form-success-close" type="button" onClick={() => router.push("/")} aria-label="Close inquiry"><X /></button>
-        <CheckCircle2 size={48} />
+        <div className="success-mark"><CheckCircle2 size={31} /></div>
         <span>Inquiry received</span>
-        <h2>Salamat!</h2>
+        <h2>Salamat, we got it.</h2>
         <p>{message}</p>
-        <div>
+        <div className="form-success-note">
+          <MailCheck />
+          <div><strong>What happens next</strong><span>We’ll review your details first, then follow up using the contact information you shared.</span></div>
+        </div>
+        <div className="form-success-actions">
           <button className="button secondary" type="button" onClick={() => { setState("idle"); setStep(1); setTurnstileToken(""); }}>Send another</button>
           <button className="button primary" type="button" onClick={() => router.push("/")}>Done</button>
         </div>
