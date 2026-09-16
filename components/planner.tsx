@@ -42,6 +42,7 @@ import type {
 } from "@/lib/planner-types";
 import { ITINERARY_CHANGE_EVENT, ITINERARY_STORAGE_KEY } from "@/lib/itinerary";
 import { getPlace } from "@/lib/places";
+import { isPlannedItinerary } from "@/lib/shared-itinerary";
 
 const DRAFT_STORAGE_KEY = "lakbay-baguio-planner";
 
@@ -107,12 +108,6 @@ function isTransportMode(value: unknown): value is TransportMode {
 
 function isAutoPickTheme(value: unknown): value is AutoPickTheme {
   return AUTO_PICK_THEMES.some((theme) => theme.value === value);
-}
-
-function isPlannedItinerary(value: unknown): value is PlannedItinerary {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<PlannedItinerary>;
-  return Boolean(candidate.start && Array.isArray(candidate.days) && candidate.totals && Array.isArray(candidate.selectedDestinationIds));
 }
 
 function matchesCategory(destination: PlannerDestination, filter: PlannerCategoryFilter) {
