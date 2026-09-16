@@ -17,9 +17,12 @@ import {
   Printer,
   Route,
   Save,
+  Share2,
   WalletCards,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
+import { ItineraryShareDialog } from "@/components/itinerary-share-dialog";
 import {
   formatCurrency,
   formatDayDate,
@@ -38,8 +41,9 @@ type ItineraryResultsProps = {
   activeDay: number;
   saved: boolean;
   onActiveDayChange: (day: number) => void;
-  onEdit: () => void;
-  onSave: () => void;
+  onEdit?: () => void;
+  onSave?: () => void;
+  variant?: "owned" | "shared";
 };
 
 function TransportIcon({ mode }: { mode: TransportMode }) {
@@ -63,8 +67,10 @@ export function ItineraryResults({
   onActiveDayChange,
   onEdit,
   onSave,
+  variant = "owned",
 }: ItineraryResultsProps) {
   const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const day = itinerary.days[activeDay] ?? itinerary.days[0];
   const firstStop = day?.items[0];
 
@@ -90,7 +96,7 @@ export function ItineraryResults({
     <section className="generated-plan" id="itinerary-result" aria-labelledby="generated-plan-title">
       <header className="generated-plan-header">
         <div>
-          <span className="result-kicker"><i /> Your generated plan</span>
+          <span className="result-kicker"><i /> {variant === "shared" ? "Itinerary shared with you" : "Your generated plan"}</span>
           <h1 id="generated-plan-title">{itinerary.title}</h1>
           <p>
             {itinerary.totals.scheduledStops} scheduled stops from {itinerary.start.name}
@@ -221,13 +227,12 @@ export function ItineraryResults({
       <div className="planning-disclaimer"><WalletCards size={17} /><p><strong>Planning note:</strong> {itinerary.disclaimer}</p></div>
       <footer className="itinerary-action-dock" aria-label="Itinerary actions">
         <div>
-          <button type="button" className="result-action icon-only" onClick={onEdit} aria-label="Edit itinerary choices" title="Edit choices"><Pencil /></button>
+          {variant === "owned" ? <button type="button" className="result-action icon-only" onClick={onEdit} aria-label="Edit itinerary choices" title="Edit choices"><Pencil /></button> : null}
           <button type="button" className="result-action icon-only" onClick={copyPlan} aria-label={copied ? "Itinerary copied" : "Copy itinerary"} title={copied ? "Copied" : "Copy itinerary"}>{copied ? <Check /> : <Copy />}</button>
+          {variant === "owned" ? <button type="button" className="result-action icon-only share" onClick={() => setShareOpen(true)} aria-label="Share itinerary" title="Share itinerary"><Share2 /></button> : null}
           <button type="button" className="result-action icon-only strong" onClick={() => window.print()} aria-label="Print or save itinerary as PDF" title="Print / Save PDF"><Printer /></button>
         </div>
-        <button type="button" className={`result-action save ${saved ? "saved" : ""}`} onClick={onSave}>
-          {saved ? <Check /> : <Save />} <span>{saved ? "Saved to Home" : "Save to Home"}</span>
-        </button>
+        {variant === "owned" ? <button type="button" className={`result-action save ${saved ? "saved" : ""}`} onClick={onSave}>{saved ? <Check /> : <Save />} <span>{saved ? "Saved to Home" : "Save to Home"}</span></button> : <Link href="/" className="result-action save saved"><Check /> <span>Saved on Home</span></Link>}
       </footer>
       <section className="print-itinerary" aria-hidden="true">
         <header>
@@ -250,6 +255,7 @@ export function ItineraryResults({
         ))}
         <footer>{itinerary.disclaimer}</footer>
       </section>
+      {variant === "owned" ? <ItineraryShareDialog itinerary={itinerary} open={shareOpen} onClose={() => setShareOpen(false)} /> : null}
     </section>
   );
 }
