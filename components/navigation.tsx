@@ -2,17 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarCheck2, House, MessageSquare, Radar, Route, Search } from "lucide-react";
+import { CalendarCheck2, House, Lightbulb, MessageSquare, Radar, Route, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ITINERARY_CHANGE_EVENT, ITINERARY_STORAGE_KEY } from "@/lib/itinerary";
 import { UnreadBadge, useChatNotifications } from "./chat-notifications";
 
-const navItems = [
+const mobileNavItems = [
   { href: "/", label: "Home", icon: House },
   { href: "/explore", label: "Explore", icon: Search },
   { href: "/plan", label: "Itinerary", icon: CalendarCheck2 },
   { href: "/nearby", label: "Nearby", icon: Radar },
   { href: "/chats", label: "Chats", icon: MessageSquare },
+];
+
+const desktopNavItems = [
+  ...mobileNavItems.slice(0, 4),
+  { href: "/suggestions", label: "Suggestions", icon: Lightbulb },
+  mobileNavItems[4],
 ];
 
 function isActive(pathname: string, href: string) {
@@ -69,7 +75,7 @@ export function SiteHeader() {
         </Link>
 
         <nav className="desktop-nav" aria-label="Main navigation">
-          {navItems.map(({ href, label }) => {
+          {desktopNavItems.map(({ href, label }) => {
             const destination = href === "/plan" && hasPending ? "/plan/itinerary" : href;
             return <Link key={href} href={destination} className={isActive(pathname, href) ? "active" : ""} title={href === "/plan" && hasPending ? "View your pending itinerary" : undefined}>{label}{href === "/plan" && hasPending ? <i className="desktop-pending-dot" aria-hidden="true" /> : null}{href === "/chats" && unreadCount > 0 ? <UnreadBadge className="desktop-unread-badge" /> : null}</Link>;
           })}
@@ -93,7 +99,7 @@ export function BottomNavigation() {
 
   return (
     <nav className="bottom-nav" aria-label="Mobile navigation">
-      {navItems.map(({ href, label, icon: Icon }) => {
+      {mobileNavItems.map(({ href, label, icon: Icon }) => {
         const active = isActive(pathname, href);
         const destination = href === "/plan" && hasPending ? "/plan/itinerary" : href;
         return (

@@ -6,6 +6,7 @@ import {
   ChevronRight,
   CircleHelp,
   LoaderCircle,
+  Lightbulb,
   Mail,
   Menu,
   Send,
@@ -165,6 +166,7 @@ export function UtilityMenu() {
                   <p>Privacy, practical answers, and a direct line to the person building Baguio Buddy.</p>
                 </div>
                 <nav aria-label="Information links">
+                  <Link href="/suggestions"><span><Lightbulb /><i><strong>Suggestions</strong><small>Share an idea or upvote what travelers want</small></i></span><ChevronRight /></Link>
                   <button type="button" onClick={() => showView("privacy")}><span><ShieldCheck /><i><strong>Privacy policy</strong><small>How location, chats, and inquiries are handled</small></i></span><ChevronRight /></button>
                   <button type="button" onClick={() => showView("help")}><span><CircleHelp /><i><strong>Help & FAQs</strong><small>Quick answers for planning and Nearby</small></i></span><ChevronRight /></button>
                 </nav>
@@ -178,13 +180,14 @@ export function UtilityMenu() {
 
             {view === "privacy" ? (
               <article className="utility-scroll privacy-copy">
-                <p className="policy-date">Effective September 15, 2026</p>
+                <p className="policy-date">Effective September 16, 2026</p>
                 <p>Baguio Buddy is an independent travel-planning application operated by Luke Mark Leona. This notice explains what information the app processes, why it is needed, and the choices available to you.</p>
 
                 <h2>1. Information we process</h2>
                 <p><strong>Trip information.</strong> Destinations, dates, starting point, pace, transport preferences, and saved itinerary details you choose to provide.</p>
                 <p><strong>Nearby and anonymous chat.</strong> A random anonymous identifier and alias, approximate device location while radar is active, chat requests, messages, blocks, and safety reports. Your precise coordinate is held in a protected presence record; another traveler receives only a coarse map area and distance band.</p>
                 <p><strong>Contact and business inquiries.</strong> Your name, email address, business details, contact number if supplied, and message.</p>
+                <p><strong>Suggestions and votes.</strong> Suggestion text and one private anonymous account identifier used to prevent duplicate votes. The identifier is never displayed with your suggestion.</p>
                 <p><strong>Technical information.</strong> Hosting and security providers may process routine request information such as IP address, device/browser details, timestamps, and error logs.</p>
 
                 <h2>2. Why we use it</h2>

@@ -1,12 +1,13 @@
 # Baguio Buddy
 
-Baguio Buddy is a mobile-first Next.js application with five independent product areas:
+Baguio Buddy is a mobile-first Next.js application with six independent product areas:
 
 - **Home** — brand story, pending itinerary, restaurant discovery, restaurant-owner inquiry, and Kabsat
 - **Explore** — searchable parks and attractions, restaurants, and hotels
 - **Plan** — an itinerary generator that clusters stops and saves a pending trip locally
 - **Nearby** — time-limited traveler discovery with a privacy-safe MapLibre map
-- **Chats** — anonymous requests, conversations, real-time messages, unread counts, and safety actions
+- **Chats** — direct anonymous conversations, real-time messages, unread counts, and safety actions
+- **Suggestions** — an anonymous community idea board with categories, upvotes, and duplicate-vote protection
 
 The original static `index.html`, `assets/`, and `v2/` folders remain in the repository as migration references. The Next.js application in `app/`, `components/`, and `lib/` is the new entry point.
 
@@ -58,8 +59,9 @@ For production, replace the development map style with a production-ready MapLib
 1. Create a Supabase project.
 2. Open **Authentication → Providers → Anonymous Sign-Ins** and enable anonymous sign-ins.
 3. Run [`supabase/community.sql`](supabase/community.sql) in the SQL editor.
-4. Add the three Supabase values to `.env.local`.
-5. Restart the Next.js development server.
+4. Run the dated files in [`supabase/migrations`](supabase/migrations) in ascending order, including the anonymous Suggestions board migration.
+5. Add the three Supabase values to `.env.local`.
+6. Restart the Next.js development server.
 
 The SQL installs PostGIS and creates:
 
@@ -70,6 +72,7 @@ The SQL installs PostGIS and creates:
 - conversation messages and Realtime publication
 - blocks, reports, chat ending, and basic request/message rate limits
 - restaurant inquiries readable only through the server-side service role
+- anonymous suggestions and one-vote-per-account upvotes exposed through privacy-safe RPCs
 
 ## Nearby privacy model
 
@@ -107,6 +110,7 @@ app/
   nearby/page.tsx
   partner/page.tsx
   plan/page.tsx
+  suggestions/page.tsx
   globals.css
   layout.tsx
   page.tsx
@@ -117,4 +121,4 @@ public/assets/img/
 supabase/community.sql
 ```
 
-Kabsat is imported only by `app/page.tsx`, so it is intentionally absent from Explore, Plan, Nearby, Chats, and Partner.
+Kabsat is imported only by `app/page.tsx`, so it is intentionally absent from Explore, Plan, Nearby, Chats, Suggestions, and Partner.
