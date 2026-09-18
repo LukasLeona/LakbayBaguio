@@ -40,7 +40,11 @@ const faqs = [
   },
   {
     question: "How do anonymous chats work?",
-    answer: "Baguio Buddy creates a random travel name instead of asking for a public profile. Either traveler can report, block, or end a conversation. Chats are automatically removed after 30 minutes of inactivity.",
+    answer: "Open Chat to switch between the Nearby radar and Messages. Baguio Buddy creates a random travel name instead of asking for a public profile, and you can message a nearby traveler immediately. Either person can report, block, or end a conversation. Chats are automatically removed after 30 minutes of inactivity.",
+  },
+  {
+    question: "What can I share on the Baguio Wall?",
+    answer: "Share a Baguio experience as text, a photo, or both. Your public post and reactions never show your account name. Avoid faces, contact details, live locations, or anything that could identify another person. You can delete your own post, and anyone can privately report unsafe content.",
   },
   {
     question: "How do I add or remove a destination?",
@@ -167,8 +171,8 @@ export function UtilityMenu() {
                 </div>
                 <nav aria-label="Information links">
                   <Link href="/suggestions"><span><Lightbulb /><i><strong>Suggestions</strong><small>Share an idea or upvote what travelers want</small></i></span><ChevronRight /></Link>
-                  <button type="button" onClick={() => showView("privacy")}><span><ShieldCheck /><i><strong>Privacy policy</strong><small>How location, chats, and inquiries are handled</small></i></span><ChevronRight /></button>
-                  <button type="button" onClick={() => showView("help")}><span><CircleHelp /><i><strong>Help & FAQs</strong><small>Quick answers for planning and Nearby</small></i></span><ChevronRight /></button>
+                  <button type="button" onClick={() => showView("privacy")}><span><ShieldCheck /><i><strong>Privacy policy</strong><small>How Wall, location, chats, and inquiries are handled</small></i></span><ChevronRight /></button>
+                  <button type="button" onClick={() => showView("help")}><span><CircleHelp /><i><strong>Help & FAQs</strong><small>Quick answers for planning, Wall, and Chat</small></i></span><ChevronRight /></button>
                 </nav>
                 <footer>
                   <p>Still need a hand?</p>
@@ -180,12 +184,13 @@ export function UtilityMenu() {
 
             {view === "privacy" ? (
               <article className="utility-scroll privacy-copy">
-                <p className="policy-date">Effective September 16, 2026</p>
+                <p className="policy-date">Effective September 18, 2026</p>
                 <p>Baguio Buddy is an independent travel-planning application operated by Luke Mark Leona. This notice explains what information the app processes, why it is needed, and the choices available to you.</p>
 
                 <h2>1. Information we process</h2>
                 <p><strong>Trip information.</strong> Destinations, dates, starting point, pace, transport preferences, and saved itinerary details you choose to provide. If you create a share link, a read-only copy of that itinerary is stored so people with the private link can open it.</p>
-                <p><strong>Nearby and anonymous chat.</strong> A random anonymous identifier and alias, approximate device location while radar is active, chat requests, messages, blocks, and safety reports. Your precise coordinate is held in a protected presence record; another traveler receives only a coarse map area and distance band.</p>
+                <p><strong>Nearby and anonymous chat.</strong> A random anonymous identifier and alias, approximate device location while radar is active, conversations, messages, blocks, and safety reports. Your precise coordinate is held in a protected presence record; another traveler receives only a coarse map area and distance band.</p>
+                <p><strong>Baguio Wall.</strong> Post text, optional photos, reactions, and private safety reports. Posts and photos are public, but your anonymous account identifier is not displayed. Photos are resized and re-encoded in your browser to remove embedded metadata such as GPS details before upload. Do not include faces, contact details, live locations, or other identifying information in the visible image or text.</p>
                 <p><strong>Contact and business inquiries.</strong> Your name, email address, business details, contact number if supplied, and message.</p>
                 <p><strong>Suggestions and votes.</strong> Suggestion text and one private anonymous account identifier used to prevent duplicate votes. The identifier is never displayed with your suggestion.</p>
                 <p><strong>Technical information.</strong> Hosting and security providers may process routine request information such as IP address, device/browser details, timestamps, and error logs.</p>
@@ -197,16 +202,16 @@ export function UtilityMenu() {
                 <p>Location access begins only after you choose to activate radar. It is used to confirm that Nearby is being used around Baguio and to find travelers within the chosen area. You can turn radar off at any time. The app is not an emergency or tracking service; never rely on it for personal safety.</p>
 
                 <h2>4. Retention</h2>
-                <p>Nearby presence expires shortly after the last active heartbeat or when you go offline. Pending chat requests expire after 24 hours. Conversations are removed after 30 minutes of inactivity, and ending a chat deletes it for both travelers. Shared itinerary links expire after 90 days. Business and contact inquiries are kept only as long as reasonably needed for review, response, records, security, or legal requirements.</p>
+                <p>Nearby presence expires shortly after the last active heartbeat or when you go offline. Conversations are removed after 30 minutes of inactivity, and ending a chat deletes it for both travelers. Wall posts remain visible until you delete them or they are hidden during moderation; deleting a post also removes its reactions and stored photo. Shared itinerary links expire after 90 days. Business and contact inquiries are kept only as long as reasonably needed for review, response, records, security, or legal requirements.</p>
 
                 <h2>5. Services that help run Baguio Buddy</h2>
                 <p>Information may be processed by Supabase for application data and anonymous authentication, Vercel for hosting, and EmailJS for delivering inquiry messages. Map tiles or links may involve MapLibre, OpenStreetMap, or Google Maps. These providers process information under their own terms and privacy notices. Baguio Buddy does not sell personal information.</p>
 
                 <h2>6. Safety, choices, and your rights</h2>
-                <p>Reasonable technical and organizational safeguards are used, but no internet service can promise absolute security. You can deny location permission, go offline, end chats, or avoid submitting optional details. Subject to applicable law, you may ask to access, correct, object to, erase, or obtain a copy of your personal information, and you may lodge a complaint with the Philippine National Privacy Commission.</p>
+                <p>Reasonable technical and organizational safeguards are used, but no internet service can promise absolute security. You can deny location permission, go offline, end chats, delete your own Wall posts, privately report a post, or avoid submitting optional details. Wall is not an emergency or crisis service. Subject to applicable law, you may ask to access, correct, object to, erase, or obtain a copy of your personal information, and you may lodge a complaint with the Philippine National Privacy Commission.</p>
 
                 <h2>7. Children</h2>
-                <p>Nearby and anonymous chat are not intended for children under 18. If you believe a child submitted personal information, contact us so it can be reviewed and removed.</p>
+                <p>Nearby, anonymous chat, and the public Wall are not intended for children under 18. If you believe a child submitted personal information, contact us so it can be reviewed and removed.</p>
 
                 <h2>8. Updates and contact</h2>
                 <p>This notice may change as Baguio Buddy’s features or legal obligations change. Material updates will be reflected by a new effective date. Privacy requests may be sent to <a href="mailto:lukemarkleona9@gmail.com">lukemarkleona9@gmail.com</a>.</p>
@@ -242,7 +247,7 @@ export function UtilityMenu() {
                     <div className="contact-form-intro"><span>Direct from the app</span><h2>How can we help?</h2><p>Questions, corrections, privacy requests, or a little travel confusion—send it here.</p></div>
                     <label><span>Your name</span><input name="name" required minLength={2} maxLength={80} autoComplete="name" placeholder="Complete name" /></label>
                     <label><span>Email address</span><input name="email" type="email" required maxLength={160} autoComplete="email" placeholder="you@example.com" /></label>
-                    <label><span>What is this about?</span><select name="topic" required defaultValue=""><option value="" disabled>Choose a topic</option><option>Trip planning help</option><option>Nearby or chat safety</option><option>Correct a place listing</option><option>Privacy request</option><option>Something else</option></select></label>
+                    <label><span>What is this about?</span><select name="topic" required defaultValue=""><option value="" disabled>Choose a topic</option><option>Trip planning help</option><option>Wall, Nearby, or chat safety</option><option>Correct a place listing</option><option>Privacy request</option><option>Something else</option></select></label>
                     <label><span>Your message</span><textarea name="message" required minLength={10} maxLength={1200} rows={4} placeholder="Tell us what happened or what you need…" /></label>
                     <label className="honeypot" aria-hidden="true"><span>Leave this blank</span><input name="websiteUrl" tabIndex={-1} autoComplete="off" /></label>
                     <TurnstileWidget action="contact" onToken={setTurnstileToken} />

@@ -1,12 +1,12 @@
 # Baguio Buddy
 
-Baguio Buddy is a mobile-first Next.js application with six independent product areas:
+Baguio Buddy is a mobile-first Next.js application with five core tabs and a utility idea board:
 
 - **Home** — brand story, pending itinerary, restaurant discovery, restaurant-owner inquiry, and Kabsat
 - **Explore** — searchable parks and attractions, restaurants, and hotels
 - **Plan** — an itinerary generator that clusters stops, saves a pending trip locally, prints an A4-ready route, and creates read-only QR/link shares
-- **Nearby** — time-limited traveler discovery with a privacy-safe MapLibre map
-- **Chats** — direct anonymous conversations, real-time messages, unread counts, and safety actions
+- **Wall** — an anonymous Baguio freedom wall for text/photo stories, hearts, owner deletion, and private reports
+- **Chat** — time-limited, privacy-safe traveler discovery and direct anonymous conversations in one surface
 - **Suggestions** — an anonymous community idea board with categories, upvotes, and duplicate-vote protection
 
 The original static `index.html`, `assets/`, and `v2/` folders remain in the repository as migration references. The Next.js application in `app/`, `components/`, and `lib/` is the new entry point.
@@ -15,7 +15,7 @@ The original static `index.html`, `assets/`, and `v2/` folders remain in the rep
 
 - Node.js **20.9 or newer** (Node 22 LTS is recommended)
 - npm
-- A Supabase project for live Nearby, Chats, and restaurant inquiries
+- A Supabase project for live Wall, Chat, Suggestions, itinerary shares, and restaurant inquiries
 
 The project uses Next.js 16 App Router, TypeScript, React, Supabase, MapLibre GL, and Lucide icons.
 
@@ -29,7 +29,7 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-Without Supabase environment values, Nearby and Chats run in a non-persistent preview mode. This makes the full UI reviewable while clearly labeling that it is not live.
+Without Supabase environment values, Wall and Chat run in a non-persistent preview mode. This makes the full UI reviewable while clearly labeling that it is not live.
 
 Useful checks:
 
@@ -59,7 +59,7 @@ For production, replace the development map style with a production-ready MapLib
 1. Create a Supabase project.
 2. Open **Authentication → Providers → Anonymous Sign-Ins** and enable anonymous sign-ins.
 3. Run [`supabase/community.sql`](supabase/community.sql) in the SQL editor.
-4. Run the dated files in [`supabase/migrations`](supabase/migrations) in ascending order, including the anonymous Suggestions board migration.
+4. Run the dated files in [`supabase/migrations`](supabase/migrations) in ascending order, including the Suggestions, itinerary-sharing, and Baguio Wall migrations.
 5. Add the three Supabase values to `.env.local`.
 6. Restart the Next.js development server.
 
@@ -68,12 +68,22 @@ The SQL installs PostGIS and creates:
 - anonymous profiles
 - protected exact presence
 - nearby discovery RPCs
-- chat requests and conversations
+- direct conversations started from the Nearby radar
 - conversation messages and Realtime publication
 - blocks, reports, chat ending, and basic request/message rate limits
 - restaurant inquiries readable only through the server-side service role
 - anonymous suggestions and one-vote-per-account upvotes exposed through privacy-safe RPCs
 - private, read-only itinerary shares that expire after 90 days and use rate-limited RPCs
+- anonymous Wall posts, one-heart-per-account reactions, private reports, and a rate-limited public photo bucket
+
+## Baguio Wall privacy model
+
+- Public cards never expose the author’s anonymous account ID or generated chat alias.
+- Optional JPG, PNG, or WebP photos are resized to a maximum 1600 px side and re-encoded in the browser, stripping embedded metadata such as GPS information.
+- Stored uploads are limited to 4 MB, while posting is limited to five posts and two photos per account per hour.
+- An account can react only once per post, can remove its reaction, and can permanently delete its own post and photo.
+- Reports are private and limited to one report per account per post. Public table access is revoked; the browser uses narrow security-definer RPCs.
+- Visible text or image content can still reveal identity, so the UI warns people not to post faces, contact details, or live locations.
 
 ## Itinerary sharing and printing
 
@@ -90,7 +100,7 @@ The print view contains every day, stop, fare estimate, travel instruction, and 
 - The user chooses a 15, 30, or 60 minute visibility window and can go offline immediately.
 - Discovery is limited to roughly 5 km and excludes blocked users.
 - Nearby is limited to the Baguio area in both the browser and the database.
-- Starting a conversation requires an accepted request.
+- Selecting Chat beside a nearby traveler starts a direct conversation immediately; no approval request is required.
 
 This is a safer baseline, not a substitute for a formal privacy and abuse review before public launch. Production should also add server-side moderation operations, retention/deletion policies, monitoring, and scheduled stale-presence cleanup.
 
@@ -112,12 +122,14 @@ No inquiry data is stored when Supabase is not configured; the UI returns a clea
 ```text
 app/
   api/restaurant-inquiries/route.ts
+  chat/page.tsx
   chats/page.tsx
   explore/page.tsx
   nearby/page.tsx
   partner/page.tsx
   plan/page.tsx
   suggestions/page.tsx
+  wall/page.tsx
   globals.css
   layout.tsx
   page.tsx
@@ -128,4 +140,4 @@ public/assets/img/
 supabase/community.sql
 ```
 
-Kabsat is imported only by `app/page.tsx`, so it is intentionally absent from Explore, Plan, Nearby, Chats, Suggestions, and Partner.
+Kabsat is imported only by `app/page.tsx`, so it is intentionally absent from Explore, Itinerary, Wall, Chat, Suggestions, and Partner.
