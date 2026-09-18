@@ -1,8 +1,13 @@
-import type { Metadata } from "next";
-import { ChatExperience } from "@/components/chat-experience";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Chats" };
+type LegacyChatsPageProps = {
+  searchParams: Promise<{ conversation?: string }>;
+};
 
-export default function ChatsPage() {
-  return <main id="main-content" className="chats-page"><div className="shell"><ChatExperience /></div></main>;
+export default async function LegacyChatsRedirect({ searchParams }: LegacyChatsPageProps) {
+  const { conversation } = await searchParams;
+  const destination = conversation
+    ? `/chat?tab=messages&conversation=${encodeURIComponent(conversation)}`
+    : "/chat?tab=messages";
+  redirect(destination);
 }

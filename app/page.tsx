@@ -29,7 +29,7 @@ const moodCards = [
 const quickActions = [
   { label: "Build a route", detail: "Fare & directions", icon: Route, href: "/plan" },
   { label: "Find a place", detail: "Parks, food & stays", icon: Compass, href: "/explore" },
-  { label: "Meet travelers", detail: "Privacy-first radar", icon: MapPin, href: "/nearby" },
+  { label: "Meet travelers", detail: "Privacy-first radar", icon: MapPin, href: "/chat?tab=nearby" },
 ];
 
 export default function HomePage() {
