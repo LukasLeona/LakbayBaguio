@@ -2155,5 +2155,165 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .shared-home-icon { width: 44px; height: 44px; border-radius: 14px; }
   .shared-home-trip h3 { font-size: .82rem; }
   .shared-home-trip .button { grid-column: 1 / -1; width: 100%; min-height: 40px; }
-  .shared-home-dismiss { top: 8px; right: 8px; }
+.shared-home-dismiss { top: 8px; right: 8px; }
+}
+
+/* Baguio Wall */
+@media screen {
+  .sr-only { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; clip-path: inset(50%) !important; }
+  .wall-page { min-height: 100vh; padding-bottom: 100px; }
+  .wall-shell { padding-top: 28px; }
+  .wall-intro { position: relative; min-height: 390px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(285px, .75fr); align-items: center; gap: 48px; overflow: hidden; padding: 58px 66px; border-radius: 46px; color: white; background: radial-gradient(circle at 82% 12%, rgba(215,228,60,.22), transparent 28%), linear-gradient(135deg, #082c22 0%, #174c3d 58%, #506b42 100%); box-shadow: 0 30px 80px rgba(8,44,34,.16); }
+  .wall-intro::before { content: ""; position: absolute; right: -80px; bottom: -150px; width: 410px; height: 410px; border: 70px solid rgba(255,255,255,.045); border-radius: 50%; }
+  .wall-intro-copy, .wall-quote { position: relative; z-index: 1; }
+  .wall-intro-copy h1 { max-width: 690px; margin: 2px 0 17px; font-size: clamp(3rem, 5.8vw, 5.2rem); line-height: .94; letter-spacing: -.065em; }
+  .wall-intro-copy h1 em { display: block; color: var(--lime, #d7e43c); font-style: normal; }
+  .wall-intro-copy > p { max-width: 595px; margin-bottom: 22px; color: rgba(255,255,255,.73); font-size: .93rem; line-height: 1.65; }
+  .wall-promise { display: inline-flex; align-items: center; gap: 10px; padding: 9px 13px 9px 9px; border: 1px solid rgba(255,255,255,.15); border-radius: 18px; background: rgba(255,255,255,.08); backdrop-filter: blur(9px); }
+  .wall-promise > svg { width: 37px; height: 37px; padding: 9px; border-radius: 13px; color: var(--pine-950); background: var(--lime, #d7e43c); }
+  .wall-promise span { display: grid; }
+  .wall-promise strong { font-size: .67rem; }
+  .wall-promise small { margin-top: 2px; color: rgba(255,255,255,.57); font-size: .52rem; }
+  .wall-quote { align-self: stretch; display: flex; flex-direction: column; justify-content: end; padding: 30px; border: 1px solid rgba(255,255,255,.16); border-radius: 34px 34px 90px 34px; background: linear-gradient(150deg, rgba(255,255,255,.16), rgba(255,255,255,.06)); backdrop-filter: blur(12px); transform: rotate(2deg); }
+  .wall-quote > svg { width: 45px; height: 45px; padding: 12px; margin-bottom: auto; border-radius: 50%; color: var(--pine-950); background: var(--lime, #d7e43c); }
+  .wall-quote p { margin: 40px 0 10px; font-size: 1.42rem; font-weight: 700; line-height: 1.28; letter-spacing: -.035em; }
+  .wall-quote span { color: rgba(255,255,255,.56); font-size: .61rem; }
+  .wall-layout { display: grid; grid-template-columns: minmax(300px, 390px) minmax(0, 1fr); align-items: start; gap: 37px; padding-top: 50px; }
+  .wall-compose-card { position: sticky; top: calc(var(--header-height) + 18px); padding: 26px; border: 1px solid var(--line); border-radius: 31px; background: rgba(255,254,248,.95); box-shadow: var(--shadow-sm); }
+  .wall-compose-heading { display: flex; align-items: center; gap: 13px; margin-bottom: 18px; }
+  .wall-compose-heading > span { width: 51px; height: 51px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 17px; color: var(--pine-950); background: var(--lime, #d7e43c); transform: rotate(-4deg); }
+  .wall-compose-heading > span svg { width: 23px; }
+  .wall-compose-heading small { color: var(--pine-700); font-size: .55rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+  .wall-compose-heading h2 { margin: 2px 0 0; font-size: 1.5rem; letter-spacing: -.045em; }
+  .wall-compose-card form { display: grid; gap: 12px; }
+  .wall-text-field { position: relative; display: block; }
+  .wall-text-field textarea { width: 100%; min-height: 150px; padding: 15px 15px 31px; resize: vertical; border: 1px solid var(--line); outline: 0; border-radius: 20px; color: var(--ink); background: #fafbf5; font-size: .74rem; line-height: 1.6; }
+  .wall-text-field textarea:focus { border-color: var(--pine-700); box-shadow: 0 0 0 3px rgba(63,118,105,.11); }
+  .wall-text-field > small { position: absolute; right: 13px; bottom: 10px; color: #8b9994; font-size: .5rem; }
+  .wall-photo-preview { position: relative; overflow: hidden; border-radius: 20px; background: var(--sage-100); }
+  .wall-photo-preview img { width: 100%; max-height: 265px; object-fit: cover; }
+  .wall-photo-preview button { position: absolute; top: 9px; right: 9px; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 50%; color: white; background: rgba(8,44,34,.78); cursor: pointer; backdrop-filter: blur(8px); }
+  .wall-photo-preview button svg { width: 16px; }
+  .wall-photo-preview > span { position: absolute; left: 9px; bottom: 9px; padding: 6px 9px; border-radius: 999px; color: white; background: rgba(8,44,34,.75); font-size: .49rem; font-weight: 700; backdrop-filter: blur(8px); }
+  .wall-compose-actions { display: flex; align-items: center; gap: 8px; }
+  .wall-compose-actions .button { flex: 1; min-width: 0; padding-inline: 13px; font-size: .64rem; }
+  .wall-compose-actions svg { width: 17px; }
+  .wall-photo-button { min-height: 46px; display: inline-flex; align-items: center; gap: 7px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--pine-800); background: white; cursor: pointer; font-size: .61rem; font-weight: 700; }
+  .wall-photo-button:disabled { cursor: not-allowed; opacity: .55; }
+  .wall-photo-button svg { width: 17px; }
+  .wall-compose-note { display: flex; align-items: start; gap: 6px; margin: 13px 2px 0; color: #7e8e88; font-size: .49rem; line-height: 1.5; }
+  .wall-compose-note svg { flex: 0 0 auto; width: 13px; }
+  .wall-security { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 4px 10px; padding: 11px; border: 1px solid rgba(119,137,37,.2); border-radius: 17px; background: rgba(215,228,60,.13); }
+  .wall-security > svg { width: 34px; height: 34px; padding: 8px; border-radius: 11px; color: var(--pine-950); background: var(--lime, #d7e43c); }
+  .wall-security > div { display: grid; }
+  .wall-security strong { font-size: .6rem; }
+  .wall-security small { color: var(--muted); font-size: .48rem; }
+  .wall-security .turnstile-field { grid-column: 1 / -1; margin-top: 7px; }
+  .wall-feed { min-width: 0; }
+  .wall-feed-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+  .wall-feed-heading .eyebrow { margin-bottom: 4px; }
+  .wall-feed-heading h2 { margin: 0; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.055em; }
+  .wall-sort { display: flex; flex: 0 0 auto; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,254,248,.84); }
+  .wall-sort button { min-height: 37px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border: 0; border-radius: 999px; color: var(--muted); background: transparent; cursor: pointer; font-size: .61rem; font-weight: 700; }
+  .wall-sort button svg { width: 15px; }
+  .wall-sort button.active { color: white; background: var(--pine-950); }
+  .wall-preview-note, .wall-notice { display: flex; align-items: center; gap: 9px; margin-bottom: 13px; padding: 12px 14px; border-radius: 16px; font-size: .65rem; line-height: 1.45; }
+  .wall-preview-note { color: #63570f; border: 1px solid rgba(169,153,36,.24); background: #fff8c8; }
+  .wall-preview-note svg, .wall-notice svg { flex: 0 0 auto; width: 18px; }
+  .wall-preview-note span { display: grid; }
+  .wall-notice.success { color: #174f3d; background: #e3f2de; }
+  .wall-notice.error { color: #8c3d2a; background: #ffe5de; }
+  .wall-post-list, .wall-loading { display: grid; gap: 15px; }
+  .wall-post-card { overflow: visible; padding: 21px; border: 1px solid var(--line); border-radius: 27px; background: rgba(255,254,248,.94); box-shadow: 0 13px 38px rgba(15,55,43,.055); }
+  .wall-post-card > header { display: grid; grid-template-columns: 43px minmax(0,1fr) auto; align-items: center; gap: 10px; margin-bottom: 15px; }
+  .wall-avatar { width: 43px; height: 43px; display: grid; place-items: center; border-radius: 15px 15px 20px 15px; color: var(--pine-950); background: var(--lime, #d7e43c); }
+  .wall-avatar svg { width: 18px; }
+  .wall-post-card header > div:nth-child(2) { min-width: 0; display: grid; gap: 2px; }
+  .wall-post-card header strong { font-size: .7rem; }
+  .wall-post-card header small { color: #899791; font-size: .52rem; }
+  .wall-post-menu { position: relative; }
+  .wall-post-menu > button { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; color: var(--muted); background: transparent; cursor: pointer; }
+  .wall-post-menu > button:hover { background: var(--sage-100); }
+  .wall-post-menu > button svg { width: 18px; }
+  .wall-post-menu > div { position: absolute; z-index: 5; top: 40px; right: 0; min-width: 170px; padding: 6px; border: 1px solid var(--line); border-radius: 14px; background: white; box-shadow: var(--shadow-md); }
+  .wall-post-menu > div button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 0; border-radius: 10px; color: #8f4136; background: transparent; cursor: pointer; font-size: .58rem; font-weight: 700; text-align: left; }
+  .wall-post-menu > div button:hover { background: #fff0ec; }
+  .wall-post-menu > div svg { width: 15px; }
+  .wall-post-photo { overflow: hidden; margin: 0 -3px 16px; border-radius: 22px; background: var(--sage-100); }
+  .wall-post-photo img { width: 100%; max-height: 570px; object-fit: cover; }
+  .wall-post-card > p { margin: 0; color: #304942; font-size: .78rem; line-height: 1.72; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .wall-post-card > footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .wall-post-card footer button { min-height: 41px; display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--pine-700); background: #f7f8f1; cursor: pointer; }
+  .wall-post-card footer button svg { width: 17px; }
+  .wall-post-card footer button strong { font-size: .69rem; }
+  .wall-post-card footer button span { font-size: .55rem; font-weight: 700; }
+  .wall-post-card footer button.loved { color: #a8354d; border-color: rgba(202,83,105,.19); background: #ffe8ed; }
+  .wall-post-card footer > small { color: #91a09a; font-size: .48rem; }
+  .wall-loading i { height: 210px; border-radius: 27px; background: linear-gradient(90deg, rgba(255,255,255,.45), rgba(255,255,255,.92), rgba(255,255,255,.45)); background-size: 220% 100%; animation: suggestion-shimmer 1.2s linear infinite; }
+  .wall-empty { min-height: 330px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 34px; border: 1px dashed var(--sage-300); border-radius: 30px; text-align: center; background: rgba(255,254,248,.54); }
+  .wall-empty > span { width: 60px; height: 60px; display: grid; place-items: center; margin-bottom: 15px; border-radius: 21px; color: var(--pine-950); background: var(--lime, #d7e43c); transform: rotate(-5deg); }
+  .wall-empty h3 { margin: 0 0 6px; font-size: 1.25rem; }
+  .wall-empty p { max-width: 390px; margin: 0; color: var(--muted); font-size: .68rem; line-height: 1.55; }
+  .wall-dialog-backdrop { position: fixed; z-index: 2500; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(5,28,22,.72); backdrop-filter: blur(10px); }
+  .wall-dialog { position: relative; width: min(460px, 100%); padding: 28px; border-radius: 30px; background: var(--paper); box-shadow: 0 35px 90px rgba(4,25,19,.32); }
+  .wall-dialog-close { position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; color: var(--pine-700); background: var(--sage-100); cursor: pointer; }
+  .wall-dialog-close svg { width: 17px; }
+  .wall-dialog-icon { width: 48px; height: 48px; display: grid; place-items: center; margin-bottom: 15px; border-radius: 16px; color: var(--pine-950); background: var(--lime, #d7e43c); }
+  .wall-dialog-icon.danger { color: #8e3d35; background: #ffe3dc; }
+  .wall-dialog-icon svg { width: 21px; }
+  .wall-dialog h2 { margin: 0 42px 7px 0; font-size: 1.65rem; letter-spacing: -.045em; }
+  .wall-dialog > p { margin-bottom: 20px; color: var(--muted); font-size: .69rem; line-height: 1.55; }
+  .wall-dialog label { display: grid; gap: 6px; }
+  .wall-dialog label > span { font-size: .61rem; font-weight: 750; }
+  .wall-dialog select { width: 100%; min-height: 48px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 15px; color: var(--ink); background: white; font-size: .69rem; }
+  .wall-dialog-actions { display: flex; justify-content: end; gap: 8px; margin-top: 21px; }
+  .wall-dialog .button { min-height: 43px; padding-inline: 15px; font-size: .62rem; }
+  .wall-dialog .button.outline { border: 1px solid var(--line); color: var(--pine-800); background: white; }
+  .wall-dialog .button.danger { color: white; background: #9d4137; }
+}
+
+@media screen and (max-width: 760px) {
+  .wall-page { padding-bottom: 94px; }
+  .wall-shell { padding-top: 7px; }
+  .wall-intro { width: calc(100% - 20px); min-height: 310px; grid-template-columns: 1fr; margin-inline: auto; padding: 31px 22px 27px; border-radius: 33px; }
+  .wall-intro-copy h1 { max-width: 355px; margin-bottom: 13px; font-size: clamp(2.4rem, 12vw, 3.2rem); }
+  .wall-intro-copy > p { max-width: 340px; margin-bottom: 18px; font-size: .67rem; line-height: 1.55; }
+  .wall-promise { padding: 8px 10px 8px 8px; border-radius: 15px; }
+  .wall-promise > svg { width: 31px; height: 31px; padding: 8px; }
+  .wall-promise strong { font-size: .57rem; }
+  .wall-promise small { font-size: .45rem; }
+  .wall-quote { display: none; }
+  .wall-layout { width: calc(100% - 20px); grid-template-columns: 1fr; gap: 33px; padding-top: 17px; }
+  .wall-compose-card { position: static; padding: 19px; border-radius: 25px; }
+  .wall-compose-heading { margin-bottom: 14px; }
+  .wall-compose-heading > span { width: 43px; height: 43px; border-radius: 15px; }
+  .wall-compose-heading h2 { font-size: 1.25rem; }
+  .wall-text-field textarea { min-height: 115px; resize: none; font-size: .66rem; }
+  .wall-compose-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); }
+  .wall-photo-button { min-height: 43px; padding-inline: 11px; font-size: .56rem; }
+  .wall-compose-actions .button { min-height: 43px; font-size: .57rem; }
+  .wall-feed-heading { align-items: center; margin-bottom: 13px; }
+  .wall-feed-heading .eyebrow { font-size: .49rem; }
+  .wall-feed-heading h2 { font-size: 1.65rem; }
+  .wall-sort button { min-height: 34px; padding: 7px 9px; font-size: .54rem; }
+  .wall-sort button svg { width: 13px; }
+  .wall-post-list { gap: 12px; }
+  .wall-post-card { padding: 15px; border-radius: 23px; }
+  .wall-post-card > header { grid-template-columns: 39px minmax(0,1fr) auto; margin-bottom: 12px; }
+  .wall-avatar { width: 39px; height: 39px; border-radius: 13px 13px 18px 13px; }
+  .wall-post-photo { margin: 0 -1px 13px; border-radius: 18px; }
+  .wall-post-card > p { font-size: .67rem; line-height: 1.62; }
+  .wall-post-card > footer { margin-top: 14px; padding-top: 12px; }
+  .wall-post-card footer button { min-height: 38px; padding: 7px 11px; }
+  .wall-post-card footer > small { display: none; }
+  .wall-dialog-backdrop { align-items: end; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  .wall-dialog { width: 100%; padding: 23px 18px 18px; border-radius: 28px; }
+  .wall-dialog-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .wall-dialog .button { width: 100%; padding-inline: 9px; }
+}
+
+@media screen and (max-width: 390px) {
+  .wall-compose-actions { grid-template-columns: 1fr; }
+  .wall-photo-button { justify-content: center; }
+  .wall-sort button span { display: none; }
 }
