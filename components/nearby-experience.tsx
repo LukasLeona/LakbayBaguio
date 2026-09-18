@@ -150,7 +150,7 @@ export function NearbyExperience() {
   async function startChat(userId: string) {
     if (!configured) {
       const previewId = userId === "preview-1" ? "preview-conversation" : `preview-conversation-${userId.replace("preview-", "")}`;
-      router.push(`/chats?conversation=${encodeURIComponent(previewId)}`);
+      router.push(`/chat?tab=messages&conversation=${encodeURIComponent(previewId)}`);
       return;
     }
     const client = getSupabaseBrowserClient();
@@ -162,7 +162,7 @@ export function NearbyExperience() {
       setStatus(error.message);
       return;
     }
-    router.push(`/chats?conversation=${encodeURIComponent(String(data))}`);
+    router.push(`/chat?tab=messages&conversation=${encodeURIComponent(String(data))}`);
   }
 
   const remainingLabel = useMemo(() => expiresAt ? `${Math.max(1, Math.ceil((expiresAt - Date.now()) / 60_000))} min` : "Off", [expiresAt]);
@@ -176,7 +176,7 @@ export function NearbyExperience() {
       </section>
 
       <aside className="nearby-panel">
-        <header className="nearby-profile"><TravelerAvatar alias={alias} seed={3} size="large" /><div><span>Your anonymous name</span><strong>{alias}</strong></div><Link href="/chats" aria-label="Open chats"><MessageCircle /><UnreadBadge className="nearby-unread-badge" /></Link></header>
+        <header className="nearby-profile"><TravelerAvatar alias={alias} seed={3} size="large" /><div><span>Your anonymous name</span><strong>{alias}</strong></div><Link href="/chat?tab=messages" aria-label="Open messages"><MessageCircle /><UnreadBadge className="nearby-unread-badge" /></Link></header>
 
         <div className="visibility-card">
           <div className="visibility-heading"><div className="radar-icon"><Radio /></div><div><strong>{visible ? "Radar is active" : "Turn on traveler radar"}</strong><span>{status}</span></div></div>
