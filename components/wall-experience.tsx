@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Camera,
   CheckCircle2,
   Clock3,
   Flag,
@@ -9,6 +8,7 @@ import {
   ImagePlus,
   LoaderCircle,
   MoreHorizontal,
+  PencilLine,
   Send,
   ShieldCheck,
   Sparkles,
@@ -62,6 +62,7 @@ export function WallExperience() {
   const [needsSecurity, setNeedsSecurity] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
 
   const clearPreparedPhoto = useCallback(() => {
     setPhoto((current) => {
@@ -113,6 +114,20 @@ export function WallExperience() {
     if (!client) return;
     void client.auth.getUser().then(({ data }) => setNeedsSecurity(turnstileEnabled && !data.user));
   }, []);
+
+  useEffect(() => {
+    if (!composerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !sending) setComposerOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [composerOpen, sending]);
 
   async function ensureIdentity() {
     const client = getSupabaseBrowserClient();
@@ -166,6 +181,7 @@ export function WallExperience() {
       clearPreparedPhoto();
       setSort("recent");
       setNotice({ kind: "success", text: "Shared anonymously. Your story is now part of the Wall." });
+      setComposerOpen(false);
       await loadPosts();
     } catch (error) {
       if (uploadedPath) {
@@ -246,53 +262,7 @@ export function WallExperience() {
 
   return (
     <div className="wall-shell">
-      <section className="wall-intro shell">
-        <div className="wall-intro-copy">
-          <span className="eyebrow light"><Sparkles /> Baguio freedom wall</span>
-          <h1>Leave a little piece of your <em>Baguio story.</em></h1>
-          <p>Happy, heavy, hilarious, or simply worth remembering. Share it without sharing your name.</p>
-          <div className="wall-promise"><ShieldCheck /><span><strong>No names. No pressure.</strong><small>Posts and reactions appear anonymously.</small></span></div>
-        </div>
-        <div className="wall-quote" aria-hidden="true">
-          <Heart />
-          <p>“The fog lifted just when I needed it to.”</p>
-          <span>— someone in Baguio</span>
-        </div>
-      </section>
-
-      <section className="shell wall-layout">
-        <aside className="wall-compose-card">
-          <div className="wall-compose-heading"><span><Camera /></span><div><small>Your corner</small><h2>What&apos;s on your mind?</h2></div></div>
-          <form onSubmit={submitPost}>
-            <label className="wall-text-field">
-              <span className="sr-only">Your anonymous post</span>
-              <textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={WALL_POST_LIMIT} rows={6} placeholder="Kwento mo lang. This is your little corner of Baguio…" />
-              <small>{body.length}/{WALL_POST_LIMIT}</small>
-            </label>
-            {photo ? (
-              <div className="wall-photo-preview">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo.previewUrl} alt="Photo ready to share" />
-                <button type="button" onClick={clearPreparedPhoto} aria-label="Remove selected photo"><X /></button>
-                <span>Location details removed</span>
-              </div>
-            ) : null}
-            {needsSecurity ? (
-              <div className="wall-security"><ShieldCheck /><div><strong>One private security check</strong><small>Keeps bots away without asking for your name.</small></div><TurnstileWidget action="wall_post" onToken={setTurnstileToken} /></div>
-            ) : null}
-            <div className="wall-compose-actions">
-              <input ref={fileInputRef} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />
-              <button type="button" className="wall-photo-button" disabled={preparingPhoto || Boolean(photo)} onClick={() => fileInputRef.current?.click()}>
-                {preparingPhoto ? <LoaderCircle className="spin" /> : <ImagePlus />} {preparingPhoto ? "Preparing…" : "Add photo"}
-              </button>
-              <button type="submit" className="button primary" disabled={sending || preparingPhoto || !configured}>
-                {sending ? <LoaderCircle className="spin" /> : <Send />} {sending ? "Sharing…" : "Post anonymously"}
-              </button>
-            </div>
-          </form>
-          <p className="wall-compose-note"><ShieldCheck /> Photos are resized and stripped of hidden location metadata before upload.</p>
-        </aside>
-
+      <section className="shell wall-layout wall-layout-feed-only">
         <div className="wall-feed">
           <div className="wall-feed-heading">
             <div><span className="eyebrow">From fellow travelers</span><h2>The Wall</h2></div>
@@ -339,6 +309,49 @@ export function WallExperience() {
           )}
         </div>
       </section>
+
+      <button className="wall-compose-fab" type="button" onClick={() => { setNotice(null); setComposerOpen(true); }} aria-label="Write an anonymous Wall post">
+        <PencilLine />
+      </button>
+
+      {composerOpen ? (
+        <div className="wall-compose-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !sending) setComposerOpen(false); }}>
+          <section className="wall-compose-card wall-compose-modal" role="dialog" aria-modal="true" aria-labelledby="wall-compose-title">
+            <button className="wall-compose-close" type="button" onClick={() => setComposerOpen(false)} disabled={sending} aria-label="Close post composer"><X /></button>
+            <div className="wall-compose-heading"><span><PencilLine /></span><div><small>Baguio freedom wall</small><h2 id="wall-compose-title">Share something</h2></div></div>
+            <p className="wall-compose-intro">Kwento mo lang—your name will never appear on the post.</p>
+            <form onSubmit={submitPost}>
+              <label className="wall-text-field">
+                <span className="sr-only">Your anonymous post</span>
+                <textarea autoFocus value={body} onChange={(event) => setBody(event.target.value)} maxLength={WALL_POST_LIMIT} rows={6} placeholder="What happened in Baguio?" />
+                <small>{body.length}/{WALL_POST_LIMIT}</small>
+              </label>
+              {photo ? (
+                <div className="wall-photo-preview">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photo.previewUrl} alt="Photo ready to share" />
+                  <button type="button" onClick={clearPreparedPhoto} aria-label="Remove selected photo"><X /></button>
+                  <span>Location details removed</span>
+                </div>
+              ) : null}
+              {needsSecurity ? (
+                <div className="wall-security"><ShieldCheck /><div><strong>One private security check</strong><small>Keeps bots away without asking for your name.</small></div><TurnstileWidget action="wall_post" onToken={setTurnstileToken} /></div>
+              ) : null}
+              {notice?.kind === "error" ? <div className="wall-notice error" role="alert"><ShieldCheck /><span>{notice.text}</span></div> : null}
+              <div className="wall-compose-actions">
+                <input ref={fileInputRef} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />
+                <button type="button" className="wall-photo-button" disabled={preparingPhoto || Boolean(photo)} onClick={() => fileInputRef.current?.click()}>
+                  {preparingPhoto ? <LoaderCircle className="spin" /> : <ImagePlus />} {preparingPhoto ? "Preparing…" : "Add photo"}
+                </button>
+                <button type="submit" className="button primary" disabled={sending || preparingPhoto || !configured}>
+                  {sending ? <LoaderCircle className="spin" /> : <Send />} {sending ? "Sharing…" : "Post anonymously"}
+                </button>
+              </div>
+            </form>
+            <p className="wall-compose-note"><ShieldCheck /> Photos are resized and stripped of hidden location metadata before upload.</p>
+          </section>
+        </div>
+      ) : null}
 
       {reporting ? <div className="wall-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setReporting(null); }}><section className="wall-dialog" role="dialog" aria-modal="true" aria-labelledby="wall-report-title"><button className="wall-dialog-close" type="button" onClick={() => setReporting(null)} aria-label="Close"><X /></button><span className="wall-dialog-icon"><Flag /></span><h2 id="wall-report-title">Report this post?</h2><p>Your report stays private. Choose the closest reason so it can be reviewed properly.</p><label><span>Reason</span><select value={reportReason} onChange={(event) => setReportReason(event.target.value as WallReportReason)}>{reportReasons.map((reason) => <option key={reason.value} value={reason.value}>{reason.label}</option>)}</select></label><div className="wall-dialog-actions"><button type="button" className="button outline" onClick={() => setReporting(null)}>Cancel</button><button type="button" className="button primary" disabled={sending} onClick={() => void submitReport()}>{sending ? <LoaderCircle className="spin" /> : <Flag />} Report privately</button></div></section></div> : null}
 

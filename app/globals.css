@@ -1575,6 +1575,36 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .chat-hub-tabs small { display: none; }
 }
 
+/* Feed-first Wall composer */
+@media screen {
+  .wall-shell { padding-top: 0; }
+  .wall-layout.wall-layout-feed-only { width: min(800px, calc(100% - 40px)); display: block; padding-top: 28px; }
+  .wall-layout-feed-only .wall-feed { width: 100%; }
+  .wall-compose-fab { position: fixed; z-index: 1190; right: max(26px, calc((100vw - 1180px) / 2 + 20px)); bottom: 27px; width: 62px; height: 62px; display: grid; place-items: center; border: 1px solid rgba(8,44,34,.14); border-radius: 50%; color: var(--pine-950); background: var(--lime, #d7e43c); box-shadow: 0 7px 0 var(--pine-950), 0 18px 42px rgba(8,44,34,.26); cursor: pointer; transition: transform .18s ease, box-shadow .18s ease; }
+  .wall-compose-fab:hover { transform: translateY(-3px) rotate(-4deg); box-shadow: 0 9px 0 var(--pine-950), 0 22px 48px rgba(8,44,34,.28); }
+  .wall-compose-fab:active { transform: translateY(3px); box-shadow: 0 3px 0 var(--pine-950), 0 10px 24px rgba(8,44,34,.22); }
+  .wall-compose-fab svg { width: 25px; height: 25px; stroke-width: 2.4; }
+  .wall-compose-backdrop { position: fixed; z-index: 2500; inset: 0; display: grid; place-items: center; padding: 22px; background: rgba(5,28,22,.72); backdrop-filter: blur(10px); animation: modal-fade-in .2s ease both; }
+  .wall-compose-card.wall-compose-modal { position: relative; top: auto; width: min(520px, 100%); max-height: calc(100dvh - 44px); overflow-y: auto; padding: 29px; border-radius: 32px; background: var(--paper); box-shadow: 0 35px 90px rgba(4,25,19,.34); }
+  .wall-compose-close { position: absolute; z-index: 2; top: 14px; right: 14px; width: 37px; height: 37px; display: grid; place-items: center; border: 0; border-radius: 50%; color: var(--pine-700); background: var(--sage-100); cursor: pointer; }
+  .wall-compose-close:disabled { cursor: wait; opacity: .55; }
+  .wall-compose-close svg { width: 17px; }
+  .wall-compose-modal .wall-compose-heading { padding-right: 42px; margin-bottom: 7px; }
+  .wall-compose-intro { margin: 0 0 17px 64px; color: var(--muted); font-size: .63rem; line-height: 1.5; }
+  .wall-compose-modal .wall-notice { margin: 0; }
+}
+
+@media screen and (max-width: 760px) {
+  .wall-layout.wall-layout-feed-only { width: calc(100% - 20px); padding-top: 12px; }
+  .wall-compose-fab { right: 18px; bottom: calc(96px + env(safe-area-inset-bottom)); width: 56px; height: 56px; box-shadow: 0 6px 0 var(--pine-950), 0 15px 34px rgba(8,44,34,.26); }
+  .wall-compose-fab svg { width: 22px; height: 22px; }
+  .wall-compose-backdrop { align-items: end; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  .wall-compose-card.wall-compose-modal { width: 100%; max-height: calc(100dvh - 16px); padding: 21px 17px 17px; border-radius: 28px; }
+  .wall-compose-modal .wall-compose-heading { margin-bottom: 5px; }
+  .wall-compose-intro { margin: 0 0 14px 56px; font-size: .56rem; }
+  .wall-compose-modal .wall-text-field textarea { min-height: 128px; }
+}
+
 /* Venue discovery, booking, and directions */
 .place-meta button { display: flex; align-items: center; gap: 4px; padding: 0; border: 0; color: var(--pine-700); background: transparent; cursor: pointer; font: inherit; font-size: .72rem; font-weight: 800; }
 .place-meta button:hover { color: var(--coral); }
