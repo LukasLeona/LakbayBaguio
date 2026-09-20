@@ -24,6 +24,16 @@ The product is designed around three goals:
 - **Make every stop more useful** — provide practical directions, travel-time and fare estimates, maps, and place details.
 - **Make the trip feel social** — offer privacy-conscious traveler discovery, anonymous conversations, community stories, and product suggestions.
 
+## Who it is for
+
+| Audience | The value they receive |
+| --- | --- |
+| **First-time visitors** | A guided starting point for choosing places and understanding how to move between them. |
+| **Returning travelers** | A faster way to combine familiar favorites with something new. |
+| **Solo travelers and groups** | A route that accounts for shared interests, available time, pace, and transport preferences. |
+| **Local businesses** | A thoughtful channel for reaching travelers while they are actively building their trip. |
+| **Tourism and product partners** | A focused digital experience that can support local discovery, visitor confidence, and community feedback. |
+
 ## The traveler experience
 
 | Experience | What it helps the traveler do |
