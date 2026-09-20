@@ -2272,11 +2272,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .wall-text-field textarea { width: 100%; min-height: 150px; padding: 15px 15px 31px; resize: vertical; border: 1px solid var(--line); outline: 0; border-radius: 20px; color: var(--ink); background: #fafbf5; font-size: .74rem; line-height: 1.6; }
   .wall-text-field textarea:focus { border-color: var(--pine-700); box-shadow: 0 0 0 3px rgba(63,118,105,.11); }
   .wall-text-field > small { position: absolute; right: 13px; bottom: 10px; color: #8b9994; font-size: .5rem; }
-  .wall-photo-preview { position: relative; overflow: hidden; border-radius: 20px; background: var(--sage-100); }
-  .wall-photo-preview img { width: 100%; max-height: 265px; object-fit: cover; }
+  .wall-photo-previews { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 7px; padding: 8px; border: 1px solid var(--line); border-radius: 20px; background: #f0f3e9; }
+  .wall-photo-preview { position: relative; min-width: 0; overflow: hidden; aspect-ratio: 1 / .82; border-radius: 14px; background: var(--sage-100); }
+  .wall-photo-preview img { width: 100%; height: 100%; display: block; object-fit: cover; }
   .wall-photo-preview button { position: absolute; top: 9px; right: 9px; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 50%; color: white; background: rgba(8,44,34,.78); cursor: pointer; backdrop-filter: blur(8px); }
   .wall-photo-preview button svg { width: 16px; }
-  .wall-photo-preview > span { position: absolute; left: 9px; bottom: 9px; padding: 6px 9px; border-radius: 999px; color: white; background: rgba(8,44,34,.75); font-size: .49rem; font-weight: 700; backdrop-filter: blur(8px); }
+  .wall-photo-previews > span { grid-column: 1 / -1; padding: 2px 3px 0; color: #71827b; font-size: .49rem; font-weight: 700; }
   .wall-compose-actions { display: flex; align-items: center; gap: 8px; }
   .wall-compose-actions .button { flex: 1; min-width: 0; padding-inline: 13px; font-size: .64rem; }
   .wall-compose-actions svg { width: 17px; }
@@ -2324,6 +2325,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .wall-post-card > p { margin: 0; color: #304942; font-size: .78rem; line-height: 1.72; white-space: pre-wrap; overflow-wrap: anywhere; }
   .wall-post-gallery { display: grid; gap: 3px; overflow: hidden; margin: 15px calc(var(--wall-card-pad) * -1) 0; background: var(--sage-100); }
   .wall-post-gallery figure { position: relative; min-width: 0; min-height: 0; margin: 0; overflow: hidden; background: #dfe7dc; }
+  .wall-post-gallery figure > button { width: 100%; height: 100%; display: block; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
   .wall-post-gallery img { width: 100%; height: 100%; display: block; object-fit: cover; transition: transform .28s ease; }
   .wall-post-gallery figure:hover img { transform: scale(1.018); }
   .wall-post-gallery.photos-1 { grid-template-columns: 1fr; }
@@ -2338,6 +2340,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .wall-post-gallery.photos-5 figure:nth-child(-n+2) { grid-column: span 3; }
   .wall-post-gallery.photos-5 figure:nth-child(n+3) { grid-column: span 2; }
   .wall-post-gallery + footer { margin-top: 0; border-top: 0; }
+  .wall-photo-viewer-backdrop { position: fixed; z-index: 2700; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(2,17,13,.94); backdrop-filter: blur(12px); animation: modal-fade-in .18s ease both; }
+  .wall-photo-viewer { position: relative; width: min(1120px, 100%); height: min(820px, calc(100dvh - 48px)); display: grid; place-items: center; }
+  .wall-photo-viewer > img { max-width: 100%; max-height: 100%; display: block; object-fit: contain; border-radius: 18px; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
+  .wall-photo-viewer-close, .wall-photo-viewer-previous, .wall-photo-viewer-next { position: absolute; z-index: 2; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; color: white; background: rgba(8,44,34,.78); cursor: pointer; backdrop-filter: blur(10px); }
+  .wall-photo-viewer-close { top: 0; right: 0; }
+  .wall-photo-viewer-previous { left: 14px; top: 50%; transform: translateY(-50%); }
+  .wall-photo-viewer-next { right: 14px; top: 50%; transform: translateY(-50%); }
+  .wall-photo-viewer-close svg, .wall-photo-viewer-previous svg, .wall-photo-viewer-next svg { width: 21px; }
+  .wall-photo-viewer-count { position: absolute; z-index: 2; top: 8px; left: 50%; transform: translateX(-50%); padding: 7px 11px; border-radius: 999px; color: white; background: rgba(8,44,34,.72); font-size: .62rem; font-weight: 750; backdrop-filter: blur(10px); }
   .wall-post-card > footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
   .wall-post-card footer button { min-height: 41px; display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--pine-700); background: #f7f8f1; cursor: pointer; }
   .wall-post-card footer button svg { width: 17px; }
@@ -2387,6 +2398,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .wall-text-field textarea { min-height: 115px; resize: none; font-size: .66rem; }
   .wall-compose-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); }
   .wall-photo-button { min-height: 43px; padding-inline: 11px; font-size: .56rem; }
+  .wall-photo-previews { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 5px; padding: 6px; border-radius: 17px; }
+  .wall-photo-preview { border-radius: 12px; }
+  .wall-photo-preview button { top: 5px; right: 5px; width: 29px; height: 29px; }
   .wall-compose-actions .button { min-height: 43px; font-size: .57rem; }
   .wall-feed-heading { align-items: center; margin-bottom: 13px; }
   .wall-feed-heading .eyebrow { font-size: .49rem; }
@@ -2402,6 +2416,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .wall-post-gallery.photos-2 figure { aspect-ratio: 3 / 4; }
   .wall-post-gallery.photos-3 { height: 340px; grid-template-columns: 1.2fr 1fr; }
   .wall-post-gallery.photos-5 { height: 360px; }
+  .wall-photo-viewer-backdrop { padding: 10px; }
+  .wall-photo-viewer { height: calc(100dvh - 20px); }
+  .wall-photo-viewer > img { border-radius: 12px; }
+  .wall-photo-viewer-close, .wall-photo-viewer-previous, .wall-photo-viewer-next { width: 40px; height: 40px; }
+  .wall-photo-viewer-close { top: 7px; right: 7px; }
+  .wall-photo-viewer-previous { left: 6px; }
+  .wall-photo-viewer-next { right: 6px; }
+  .wall-photo-viewer-count { top: 11px; }
   .wall-post-card > p { font-size: .67rem; line-height: 1.62; }
   .wall-post-card > footer { margin-top: 14px; padding-top: 12px; }
   .wall-post-card footer button { min-height: 38px; padding: 7px 11px; }

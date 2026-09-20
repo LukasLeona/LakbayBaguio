@@ -41,7 +41,7 @@ The product is designed around three goals:
 | **Home** | See trip highlights, return to a pending itinerary, discover restaurants and stays, and ask Kabsat for quick help. |
 | **Explore** | Browse parks, attractions, restaurants, and hotels through clearly separated place categories. |
 | **Itinerary** | Choose destinations and travel preferences, then generate a practical multi-day route with estimated fares, directions, and timings. |
-| **Wall** | Share a text or photo memory anonymously and react to stories from other visitors. |
+| **Wall** | Share text or an album of up to five photos anonymously, browse familiar social-style post layouts, and react to other travelers’ stories. |
 | **Chat** | Use the traveler radar in Baguio and start an anonymous, time-limited conversation with someone nearby. |
 | **Suggestions** | Propose improvements for Baguio Buddy and upvote ideas from the community. |
 
@@ -94,7 +94,7 @@ Business owners can start at the [feature inquiry page](https://lakbay-baguio.ve
 | Shared itinerary | Uses a private random token, hides the creator’s account ID, and expires after 90 days. |
 | Nearby presence | Stores exact coordinates in a protected table; other travelers receive only a distance band and coarse map position. |
 | Anonymous chat | Is visible only to conversation members and is scheduled for deletion after 30 minutes of inactivity. |
-| Wall photos | Are resized and re-encoded in the browser to remove embedded metadata such as GPS information before upload. |
+| Wall photos | Up to five images per post are resized and re-encoded in the browser to remove embedded metadata such as GPS information before upload. |
 | Reports | Remain private and are not displayed with public posts or profiles. |
 | Business inquiries | Are written through a server-only Supabase client and are not publicly readable. |
 

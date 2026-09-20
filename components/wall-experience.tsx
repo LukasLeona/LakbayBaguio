@@ -2,6 +2,8 @@
 
 import {
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Flag,
   Heart,
@@ -45,13 +47,15 @@ const reportReasons: Array<{ value: WallReportReason; label: string }> = [
 
 type Notice = { kind: "success" | "error"; text: string };
 
-function WallPhotoGallery({ urls }: { urls: string[] }) {
+function WallPhotoGallery({ urls, onOpen }: { urls: string[]; onOpen: (index: number) => void }) {
   const visibleUrls = urls.slice(0, WALL_MAX_PHOTOS);
   return (
     <div className={`wall-post-gallery photos-${visibleUrls.length}`} aria-label={`${visibleUrls.length} ${visibleUrls.length === 1 ? "photo" : "photos"} shared with this post`}>
       {visibleUrls.map((url, index) => <figure key={url}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt={`Anonymous traveler photo ${index + 1} of ${visibleUrls.length}`} loading="lazy" />
+        <button type="button" onClick={() => onOpen(index)} aria-label={`Open photo ${index + 1} of ${visibleUrls.length}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt={`Anonymous traveler photo ${index + 1} of ${visibleUrls.length}`} loading="lazy" />
+        </button>
       </figure>)}
     </div>
   );
@@ -77,6 +81,7 @@ export function WallExperience() {
   const [turnstileToken, setTurnstileToken] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState<{ urls: string[]; index: number } | null>(null);
 
   const clearPreparedPhotos = useCallback(() => {
     setPhotos((current) => {
@@ -143,10 +148,19 @@ export function WallExperience() {
   }, []);
 
   useEffect(() => {
-    if (!composerOpen) return;
+    if (!composerOpen && !viewingPhoto) return;
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !sending) setComposerOpen(false);
+      if (event.key === "Escape") {
+        if (viewingPhoto) setViewingPhoto(null);
+        else if (!sending) setComposerOpen(false);
+      }
+      if (viewingPhoto && event.key === "ArrowLeft") {
+        setViewingPhoto((current) => current ? { ...current, index: (current.index - 1 + current.urls.length) % current.urls.length } : null);
+      }
+      if (viewingPhoto && event.key === "ArrowRight") {
+        setViewingPhoto((current) => current ? { ...current, index: (current.index + 1) % current.urls.length } : null);
+      }
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", closeOnEscape);
@@ -154,7 +168,14 @@ export function WallExperience() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [composerOpen, sending]);
+  }, [composerOpen, sending, viewingPhoto]);
+
+  const moveViewedPhoto = useCallback((step: number) => {
+    setViewingPhoto((current) => current ? {
+      ...current,
+      index: (current.index + step + current.urls.length) % current.urls.length,
+    } : null);
+  }, []);
 
   async function ensureIdentity() {
     const client = getSupabaseBrowserClient();
@@ -317,7 +338,9 @@ export function WallExperience() {
             <div className="wall-post-list">
               {posts.map((post) => {
                 const client = getSupabaseBrowserClient();
-                const photoUrls = client ? post.photo_paths.map((path) => wallPhotoPublicUrl(client, path)) : [];
+                const photoUrls = post.photo_paths
+                  .map((path) => wallPhotoPublicUrl(client, path))
+                  .filter((url): url is string => Boolean(url));
                 return (
                   <article className="wall-post-card" key={post.id}>
                     <header>
@@ -329,7 +352,7 @@ export function WallExperience() {
                       </div>
                     </header>
                     {post.body ? <p>{post.body}</p> : null}
-                    {photoUrls.length ? <WallPhotoGallery urls={photoUrls} /> : null}
+                    {photoUrls.length ? <WallPhotoGallery urls={photoUrls} onOpen={(index) => setViewingPhoto({ urls: photoUrls, index })} /> : null}
                     <footer>
                       <button type="button" className={post.has_reacted ? "loved" : ""} disabled={pendingReaction === post.id} onClick={() => void toggleReaction(post)} aria-label={`${post.has_reacted ? "Remove heart from" : "Heart"} this post`}>
                         {pendingReaction === post.id ? <LoaderCircle className="spin" /> : <Heart fill={post.has_reacted ? "currentColor" : "none"} />}<strong>{post.reaction_count}</strong><span>{post.has_reacted ? "Loved" : "Send love"}</span>
@@ -385,6 +408,19 @@ export function WallExperience() {
               </div>
             </form>
             <p className="wall-compose-note"><ShieldCheck /> Up to five photos are resized and stripped of hidden location metadata before upload.</p>
+          </section>
+        </div>
+      ) : null}
+
+      {viewingPhoto ? (
+        <div className="wall-photo-viewer-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setViewingPhoto(null); }}>
+          <section className="wall-photo-viewer" role="dialog" aria-modal="true" aria-label={`Photo ${viewingPhoto.index + 1} of ${viewingPhoto.urls.length}`}>
+            <button className="wall-photo-viewer-close" type="button" onClick={() => setViewingPhoto(null)} aria-label="Close photo viewer"><X /></button>
+            <span className="wall-photo-viewer-count">{viewingPhoto.index + 1} / {viewingPhoto.urls.length}</span>
+            {viewingPhoto.urls.length > 1 ? <button className="wall-photo-viewer-previous" type="button" onClick={() => moveViewedPhoto(-1)} aria-label="Previous photo"><ChevronLeft /></button> : null}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={viewingPhoto.urls[viewingPhoto.index]} alt={`Anonymous traveler photo ${viewingPhoto.index + 1} of ${viewingPhoto.urls.length}`} />
+            {viewingPhoto.urls.length > 1 ? <button className="wall-photo-viewer-next" type="button" onClick={() => moveViewedPhoto(1)} aria-label="Next photo"><ChevronRight /></button> : null}
           </section>
         </div>
       ) : null}

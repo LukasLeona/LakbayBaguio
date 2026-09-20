@@ -31,7 +31,11 @@ export const previewWallPosts: WallPost[] = [
   {
     id: "preview-wall-1",
     body: "Baguio felt extra gentle today. I had coffee alone, watched the fog roll past Session Road, and somehow that was enough.",
-    photo_paths: [],
+    photo_paths: [
+      "/assets/img/destinations/session-road.jpg",
+      "/assets/img/destinations/burnham-park.jpg",
+      "/assets/img/destinations/baguio-cathedral.jpg",
+    ],
     created_at: new Date(Date.now() - 12 * 60_000).toISOString(),
     reaction_count: 28,
     has_reacted: false,
@@ -40,7 +44,10 @@ export const previewWallPosts: WallPost[] = [
   {
     id: "preview-wall-2",
     body: "To the stranger who returned my wallet near Burnham Park—salamat. You saved my whole trip. 🌲",
-    photo_paths: [],
+    photo_paths: [
+      "/assets/img/destinations/botanical-garden.jpg",
+      "/assets/img/destinations/wright-park.jpg",
+    ],
     created_at: new Date(Date.now() - 46 * 60_000).toISOString(),
     reaction_count: 64,
     has_reacted: true,
@@ -69,7 +76,9 @@ export function wallRelativeTime(value: string) {
   return new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric" }).format(new Date(value));
 }
 
-export function wallPhotoPublicUrl(client: SupabaseClient, path: string) {
+export function wallPhotoPublicUrl(client: SupabaseClient | null, path: string) {
+  if (path.startsWith("/")) return path;
+  if (!client) return null;
   return client.storage.from(WALL_BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
