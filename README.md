@@ -1,143 +1,183 @@
-# Baguio Buddy
+<p align="center">
+  <img src="public/assets/img/logo.svg" alt="Baguio Buddy" width="300" />
+</p>
 
-Baguio Buddy is a mobile-first Next.js application with five core tabs and a utility idea board:
+<p align="center">
+  <strong>A mobile-first Baguio travel companion for discovering places, building practical itineraries, and meeting fellow travelers safely.</strong>
+</p>
 
-- **Home** — brand story, pending itinerary, restaurant discovery, restaurant-owner inquiry, and Kabsat
-- **Explore** — searchable parks and attractions, restaurants, and hotels
-- **Plan** — an itinerary generator that clusters stops, saves a pending trip locally, prints an A4-ready route, and creates read-only QR/link shares
-- **Wall** — an anonymous Baguio freedom wall for text/photo stories, hearts, owner deletion, and private reports
-- **Chat** — time-limited, privacy-safe traveler discovery and direct anonymous conversations in one surface
-- **Suggestions** — an anonymous community idea board with categories, upvotes, and duplicate-vote protection
+<p align="center">
+  <a href="https://lakbay-baguio.vercel.app/">View the live experience</a>
+  ·
+  <a href="https://lakbay-baguio.vercel.app/explore">Explore Baguio</a>
+  ·
+  <a href="https://lakbay-baguio.vercel.app/plan">Build an itinerary</a>
+</p>
 
-The original static `index.html`, `assets/`, and `v2/` folders remain in the repository as migration references. The Next.js application in `app/`, `components/`, and `lib/` is the new entry point.
+## Meet Baguio Buddy
 
-## Requirements
+Baguio Buddy turns trip planning into one connected experience. Instead of jumping between saved posts, map searches, fare estimates, and handwritten schedules, travelers can discover places and turn their choices into a day-by-day Baguio route.
 
-- Node.js **20.9 or newer** (Node 22 LTS is recommended)
+The product is designed around three goals:
+
+- **Make planning feel simple** — choose the trip details and preferred destinations, then receive an organized itinerary.
+- **Make every stop more useful** — provide practical directions, travel-time and fare estimates, maps, and place details.
+- **Make the trip feel social** — offer privacy-conscious traveler discovery, anonymous conversations, community stories, and product suggestions.
+
+## The traveler experience
+
+| Experience | What it helps the traveler do |
+| --- | --- |
+| **Home** | See trip highlights, return to a pending itinerary, discover restaurants and stays, and ask Kabsat for quick help. |
+| **Explore** | Browse parks, attractions, restaurants, and hotels through clearly separated place categories. |
+| **Itinerary** | Choose destinations and travel preferences, then generate a practical multi-day route with estimated fares, directions, and timings. |
+| **Wall** | Share a text or photo memory anonymously and react to stories from other visitors. |
+| **Chat** | Use the traveler radar in Baguio and start an anonymous, time-limited conversation with someone nearby. |
+| **Suggestions** | Propose improvements for Baguio Buddy and upvote ideas from the community. |
+
+### A trip from idea to route
+
+1. **Discover** places that match the traveler’s interests.
+2. **Choose** destinations, dates, pace, transport preferences, and available time.
+3. **Generate** a day-by-day route with stop order, directions, time, and fare estimates.
+4. **Keep or share** the plan through local saving, copying, printing/PDF, or a private share link and QR code.
+5. **Travel with context** using map links, place details, and a pending-plan reminder across the experience.
+
+Travel times, fares, operating hours, and loading areas are planning estimates. Travelers should confirm current conditions before traveling.
+
+## Value for local businesses
+
+Baguio Buddy gives restaurants, cafés, stays, tours, and local shops a clear way to introduce their place to travelers already deciding where to go.
+
+The business inquiry journey:
+
+- collects the business and contact details needed for review;
+- protects the form with validation, a honeypot, Cloudflare Turnstile, and submission limits;
+- stores the inquiry privately in Supabase;
+- sends a notification through a dedicated EmailJS template; and
+- makes no promise of automatic or paid placement.
+
+Business owners can start at the [feature inquiry page](https://lakbay-baguio.vercel.app/partner).
+
+## Experience principles
+
+- **Mobile first** — five primary actions stay within reach through the bottom navigation.
+- **Baguio specific** — destinations, travel language, visual design, and community features are grounded in the city.
+- **Useful before decorative** — routes, fares, directions, maps, and clear next actions support real travel decisions.
+- **Privacy conscious** — nearby discovery uses coarse public locations, while exact presence remains protected.
+- **Community shaped** — anonymous stories and suggestions give travelers a voice without requiring a public profile.
+- **Inclusive by default** — semantic controls, visible focus states, responsive layouts, and a skip link support broader access.
+
+## Privacy and safety at a glance
+
+| Data or feature | How it is handled |
+| --- | --- |
+| Generated itinerary | Remains in the traveler’s browser unless they explicitly create a share link. |
+| Shared itinerary | Uses a private random token, hides the creator’s account ID, and expires after 90 days. |
+| Nearby presence | Stores exact coordinates in a protected table; other travelers receive only a distance band and coarse map position. |
+| Anonymous chat | Is visible only to conversation members and is scheduled for deletion after 30 minutes of inactivity. |
+| Wall photos | Are resized and re-encoded in the browser to remove embedded metadata such as GPS information before upload. |
+| Reports | Remain private and are not displayed with public posts or profiles. |
+| Business inquiries | Are written through a server-only Supabase client and are not publicly readable. |
+
+Anonymous participation hides the account identity from other users; it cannot prevent someone from identifying themselves through the text or images they choose to publish. The interface therefore reminds people not to share faces, contact details, or live locations.
+
+## Product and technology
+
+- **Frontend:** Next.js 16 App Router, React 19, and TypeScript
+- **Design:** Poppins, Lucide icons, responsive custom CSS, and a mobile bottom-navigation pattern
+- **Data and realtime:** Supabase Postgres, Authentication, Storage, Realtime, PostGIS, Row Level Security, and narrow RPCs
+- **Maps:** MapLibre GL with Google Maps links for turn-by-turn route handoff
+- **Abuse protection:** Cloudflare Turnstile, server validation, honeypots, database constraints, and rate limits
+- **Notifications:** EmailJS
+- **Deployment:** Vercel
+
+## Run the project locally
+
+### Requirements
+
+- Node.js 20.9 or newer; Node.js 22 LTS is recommended
 - npm
-- A Supabase project for live Wall, Chat, Suggestions, itinerary shares, and restaurant inquiries
+- A Supabase project for persistent community, sharing, chat, and inquiry features
 
-The project uses Next.js 16 App Router, TypeScript, React, Supabase, MapLibre GL, and Lucide icons.
+### Start the app
 
-## Local development
-
-```bash
+~~~bash
 npm install
 copy .env.example .env.local
 npm run dev
-```
+~~~
 
-Open `http://localhost:3000`.
+Open <code>http://localhost:3000</code>.
 
-Without Supabase environment values, Wall and Chat run in a non-persistent preview mode. This makes the full UI reviewable while clearly labeling that it is not live.
+Without Supabase configuration, selected community interfaces use clearly labeled preview data so the visual experience can still be reviewed. Persistent posting, chat, sharing, and inquiry storage require the backend configuration.
 
-Useful checks:
+### Environment variables
 
-```bash
+The committed [<code>.env.example</code>](.env.example) contains blank placeholders. Real values belong only in <code>.env.local</code> or the deployment provider’s encrypted environment settings.
+
+| Variable | Exposure | Purpose |
+| --- | --- | --- |
+| <code>NEXT_PUBLIC_SUPABASE_URL</code> | Browser-visible | Supabase project endpoint |
+| <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> | Browser-visible | Publishable key protected by RLS |
+| <code>SUPABASE_SERVICE_ROLE_KEY</code> | **Server secret** | Private server writes and administration |
+| <code>NEXT_PUBLIC_TURNSTILE_SITE_KEY</code> | Browser-visible | Turnstile widget configuration |
+| <code>TURNSTILE_SECRET_KEY</code> | **Server secret** | Server-side Turnstile verification |
+| <code>NEXT_PUBLIC_MAP_STYLE_URL</code> | Browser-visible | Optional MapLibre-compatible map style |
+| <code>EMAILJS_SERVICE_ID</code> | Server configuration | Contact notification service |
+| <code>EMAILJS_TEMPLATE_ID</code> | Server configuration | Contact notification template |
+| <code>EMAILJS_PUBLIC_KEY</code> | Public identifier | EmailJS account identifier |
+| <code>EMAILJS_PRIVATE_KEY</code> | **Server secret** | EmailJS private authorization when enabled |
+| <code>NEXT_PUBLIC_EMAILJS_SERVICE_ID</code> | Browser-visible | Business inquiry notification service |
+| <code>NEXT_PUBLIC_EMAILJS_INQUIRY_TEMPLATE_ID</code> | Browser-visible | Business inquiry template |
+| <code>NEXT_PUBLIC_EMAILJS_PUBLIC_KEY</code> | Browser-visible | EmailJS public identifier |
+
+Never add a service-role key, Turnstile secret, EmailJS private key, database password, or personal access token to a <code>NEXT_PUBLIC_*</code> variable.
+
+<details>
+<summary><strong>Configure Supabase</strong></summary>
+
+1. Create a Supabase project.
+2. Enable **Authentication → Providers → Anonymous Sign-Ins**.
+3. Run <code>supabase/community.sql</code> in the SQL editor.
+4. Run the dated files in <code>supabase/migrations/</code> in ascending order.
+5. Add the Supabase URL, publishable key, and service-role key to <code>.env.local</code>.
+6. Restart the development server.
+
+The SQL creates anonymous profiles, protected nearby presence, direct conversations and messages, blocks and reports, restaurant inquiries, community suggestions, private itinerary shares, Wall posts and reactions, cleanup jobs, and database-side rate limits.
+
+</details>
+
+## Quality checks
+
+~~~bash
 npm run lint
 npm run build
 npm audit
-```
+~~~
 
-## Environment variables
+## Project structure
 
-Copy `.env.example` to `.env.local` and set:
-
-```dotenv
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
-SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVER_ONLY_SERVICE_ROLE_KEY
-NEXT_PUBLIC_MAP_STYLE_URL=https://demotiles.maplibre.org/style.json
-```
-
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is browser-safe when Row Level Security is correctly configured. `SUPABASE_SERVICE_ROLE_KEY` is server-only and must never be prefixed with `NEXT_PUBLIC_`, copied into browser code, or committed.
-
-For production, replace the development map style with a production-ready MapLibre-compatible provider and follow that provider's attribution and usage requirements.
-
-## Supabase setup
-
-1. Create a Supabase project.
-2. Open **Authentication → Providers → Anonymous Sign-Ins** and enable anonymous sign-ins.
-3. Run [`supabase/community.sql`](supabase/community.sql) in the SQL editor.
-4. Run the dated files in [`supabase/migrations`](supabase/migrations) in ascending order, including the Suggestions, itinerary-sharing, and Baguio Wall migrations.
-5. Add the three Supabase values to `.env.local`.
-6. Restart the Next.js development server.
-
-The SQL installs PostGIS and creates:
-
-- anonymous profiles
-- protected exact presence
-- nearby discovery RPCs
-- direct conversations started from the Nearby radar
-- conversation messages and Realtime publication
-- blocks, reports, chat ending, and basic request/message rate limits
-- restaurant inquiries readable only through the server-side service role
-- anonymous suggestions and one-vote-per-account upvotes exposed through privacy-safe RPCs
-- private, read-only itinerary shares that expire after 90 days and use rate-limited RPCs
-- anonymous Wall posts, one-heart-per-account reactions, private reports, and a rate-limited public photo bucket
-
-## Baguio Wall privacy model
-
-- Public cards never expose the author’s anonymous account ID or generated chat alias.
-- Optional JPG, PNG, or WebP photos are resized to a maximum 1600 px side and re-encoded in the browser, stripping embedded metadata such as GPS information.
-- Stored uploads are limited to 4 MB, while posting is limited to five posts and two photos per account per hour.
-- An account can react only once per post, can remove its reaction, and can permanently delete its own post and photo.
-- Reports are private and limited to one report per account per post. Public table access is revoked; the browser uses narrow security-definer RPCs.
-- Visible text or image content can still reveal identity, so the UI warns people not to post faces, contact details, or live locations.
-
-## Itinerary sharing and printing
-
-Generated itineraries can be copied, printed or saved as a PDF, and shared from the itinerary action bar. Sharing creates a private token through Supabase; the QR code is generated locally in the browser and the shared page never includes the creator's anonymous account ID. Opening a shared route remembers only a small preview on that browser so Home can offer a convenient “Shared with you” card. The recipient can dismiss that card at any time.
-
-The print view contains every day, stop, fare estimate, travel instruction, and Google Maps leg. It uses an A4-friendly layout on desktop and mobile print dialogs while leaving the interactive controls out of the PDF.
-
-## Nearby privacy model
-
-- Exact coordinates are stored only in the protected `presence` table.
-- The browser cannot select from `presence` directly.
-- Other travelers receive a distance band and coordinates rounded to a coarse map cell, not exact coordinates.
-- Presence is discoverable only while fresh and is refreshed by an active page heartbeat.
-- The user chooses a 15, 30, or 60 minute visibility window and can go offline immediately.
-- Discovery is limited to roughly 5 km and excludes blocked users.
-- Nearby is limited to the Baguio area in both the browser and the database.
-- Selecting Chat beside a nearby traveler starts a direct conversation immediately; no approval request is required.
-
-This is a safer baseline, not a substitute for a formal privacy and abuse review before public launch. Production should also add server-side moderation operations, retention/deletion policies, monitoring, and scheduled stale-presence cleanup.
-
-## Restaurant inquiries
-
-Restaurant owners use `/partner`. The form posts to `/api/restaurant-inquiries`, which:
-
-- validates required values on the server
-- uses a honeypot for simple bot traffic
-- limits repeated submissions from the same email
-- writes with a server-only Supabase client
-- sends the owner notification from the browser with the dedicated `Baguio Buddy Inquiry` EmailJS template only after the protected Supabase save succeeds
-- makes no promise of automatic or paid placement
-
-No inquiry data is stored when Supabase is not configured; the UI returns a clear setup message instead. If EmailJS cannot accept the notification, the saved inquiry remains in Supabase and the UI reports that the email alert failed without encouraging a duplicate submission.
-
-## Project map
-
-```text
+~~~text
 app/
-  api/restaurant-inquiries/route.ts
-  chat/page.tsx
-  chats/page.tsx
-  explore/page.tsx
-  nearby/page.tsx
-  partner/page.tsx
-  plan/page.tsx
-  suggestions/page.tsx
-  wall/page.tsx
-  globals.css
-  layout.tsx
-  page.tsx
-components/
-lib/
-  supabase/
-public/assets/img/
-supabase/community.sql
-```
+  api/                         Server endpoints for contact and inquiries
+  chat/                        Nearby radar and anonymous conversations
+  explore/                     Destination discovery
+  partner/                     Local-business feature inquiry
+  plan/                        Itinerary builder and generated routes
+  suggestions/                 Community idea board
+  wall/                        Anonymous Baguio stories
+  page.tsx                     Home experience
+components/                    Shared product and feature components
+lib/                           Places, itinerary logic, integrations, and helpers
+public/assets/                 Brand and destination media
+supabase/                      Database schema and migrations
+~~~
 
-Kabsat is imported only by `app/page.tsx`, so it is intentionally absent from Explore, Itinerary, Wall, Chat, Suggestions, and Partner.
+The original static <code>index.html</code>, <code>assets/</code>, and <code>v2/</code> directories remain as migration references. The active product is the Next.js application in <code>app/</code>, <code>components/</code>, and <code>lib/</code>.
+
+## Project status
+
+Baguio Buddy is an independently developed product and an active work in progress. Before a larger public launch, the project should complete a formal privacy and abuse review, define moderation operations, confirm content and image licenses, monitor database and hosting usage, and test the full experience with real travelers in Baguio.
+
+No license is currently granted for reuse or redistribution of this repository’s source code or media.
