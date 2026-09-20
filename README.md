@@ -55,6 +55,14 @@ The product is designed around three goals:
 
 Travel times, fares, operating hours, and loading areas are planning estimates. Travelers should confirm current conditions before traveling.
 
+### What a successful experience should deliver
+
+- **Less planning friction:** one flow replaces scattered notes, tabs, and screenshots.
+- **More confident decisions:** each stop includes enough context to understand where it fits in the trip.
+- **A plan people can use:** the generated route can be revisited, printed, saved as a PDF, or shared with companions.
+- **Better local discovery:** restaurants, stays, and attractions are presented as part of the journey rather than isolated listings.
+- **A visible feedback loop:** community suggestions help future improvements reflect what travelers actually need.
+
 ## Value for local businesses
 
 Baguio Buddy gives restaurants, cafés, stays, tours, and local shops a clear way to introduce their place to travelers already deciding where to go.
