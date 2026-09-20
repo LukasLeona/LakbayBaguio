@@ -206,6 +206,14 @@ supabase/                      Database schema and migrations
 
 The original static <code>index.html</code>, <code>assets/</code>, and <code>v2/</code> directories remain as migration references. The active product is the Next.js application in <code>app/</code>, <code>components/</code>, and <code>lib/</code>.
 
+## Feedback and collaboration
+
+- Share product improvements through the live [Suggestions board](https://lakbay-baguio.vercel.app/suggestions), where the community can upvote ideas.
+- Use the [business inquiry page](https://lakbay-baguio.vercel.app/partner) for restaurant, stay, tour, or local-shop feature requests.
+- Use **Help / Contact** inside the application for private questions. Do not publish credentials, user records, precise locations, or unredacted security reports in a public issue.
+
+Thoughtful issues and pull requests are welcome for reproducible bugs, accessibility improvements, documentation, and clearly scoped product enhancements. Proposed changes should preserve the privacy boundaries described above.
+
 ## Project status
 
 Baguio Buddy is an independently developed product and an active work in progress. Before a larger public launch, the project should complete a formal privacy and abuse review, define moderation operations, confirm content and image licenses, monitor database and hosting usage, and test the full experience with real travelers in Baguio.
