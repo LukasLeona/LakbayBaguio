@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const WALL_BUCKET = "wall-media";
 export const WALL_POST_LIMIT = 1500;
+export const WALL_MAX_PHOTOS = 5;
 export const WALL_MAX_SOURCE_BYTES = 12 * 1024 * 1024;
 export const WALL_MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
@@ -11,7 +12,7 @@ export type WallReportReason = "spam" | "harassment" | "unsafe" | "private_infor
 export type WallPost = {
   id: string;
   body: string;
-  photo_path: string | null;
+  photo_paths: string[];
   created_at: string;
   reaction_count: number;
   has_reacted: boolean;
@@ -30,7 +31,7 @@ export const previewWallPosts: WallPost[] = [
   {
     id: "preview-wall-1",
     body: "Baguio felt extra gentle today. I had coffee alone, watched the fog roll past Session Road, and somehow that was enough.",
-    photo_path: null,
+    photo_paths: [],
     created_at: new Date(Date.now() - 12 * 60_000).toISOString(),
     reaction_count: 28,
     has_reacted: false,
@@ -39,7 +40,7 @@ export const previewWallPosts: WallPost[] = [
   {
     id: "preview-wall-2",
     body: "To the stranger who returned my wallet near Burnham Park—salamat. You saved my whole trip. 🌲",
-    photo_path: null,
+    photo_paths: [],
     created_at: new Date(Date.now() - 46 * 60_000).toISOString(),
     reaction_count: 64,
     has_reacted: true,
@@ -48,7 +49,7 @@ export const previewWallPosts: WallPost[] = [
   {
     id: "preview-wall-3",
     body: "First solo trip. Medyo scary, medyo lonely, pero proud ako na tinuloy ko pa rin.",
-    photo_path: null,
+    photo_paths: [],
     created_at: new Date(Date.now() - 3 * 60 * 60_000).toISOString(),
     reaction_count: 41,
     has_reacted: false,
@@ -68,8 +69,7 @@ export function wallRelativeTime(value: string) {
   return new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric" }).format(new Date(value));
 }
 
-export function wallPhotoPublicUrl(client: SupabaseClient, path: string | null) {
-  if (!path) return null;
+export function wallPhotoPublicUrl(client: SupabaseClient, path: string) {
   return client.storage.from(WALL_BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
@@ -131,9 +131,9 @@ export async function uploadWallPhoto(client: SupabaseClient, userId: string, ph
   return path;
 }
 
-export async function removeWallPhoto(client: SupabaseClient, path: string | null) {
-  if (!path) return;
-  const { error } = await client.storage.from(WALL_BUCKET).remove([path]);
+export async function removeWallPhotos(client: SupabaseClient, paths: string[]) {
+  if (!paths.length) return;
+  const { error } = await client.storage.from(WALL_BUCKET).remove(paths);
   if (error) throw error;
 }
 
@@ -144,7 +144,8 @@ export function wallErrorMessage(error: unknown) {
       ? String(error.message)
       : "Something went wrong.";
   if (message.includes("Wall post limit reached")) return "You’ve shared five posts this hour. Give the wall a quick breather, then try again.";
-  if (message.includes("Photo post limit reached")) return "You’ve shared two photos this hour. Text posts are still welcome, or try another photo later.";
+  if (message.includes("Photo post limit reached")) return "You’ve shared two photo posts this hour. Text posts are still welcome, or try another album later.";
+  if (message.includes("up to five photos")) return "Choose up to five photos for each Wall post.";
   if (message.toLowerCase().includes("captcha") || message.includes("Anonymous sign-in")) return "Complete the private security check, then try again.";
   if (message.includes("row-level security")) return "The photo could not be uploaded securely. Please refresh and try again.";
   return message;
