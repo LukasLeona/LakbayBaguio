@@ -152,6 +152,18 @@ The committed [<code>.env.example</code>](.env.example) contains blank placehold
 
 Never add a service-role key, Turnstile secret, EmailJS private key, database password, or personal access token to a <code>NEXT_PUBLIC_*</code> variable.
 
+### Public repository safety
+
+The repository is structured so that runtime secrets stay outside Git:
+
+- <code>.env.local</code>, Vercel project metadata, dependencies, and build output are ignored.
+- Browser variables and publishable keys must be treated as public and protected by Row Level Security, domain restrictions, validation, and rate limits.
+- Database rows are not part of the repository, but the database schema and security rules are visible and should be reviewed like any other public code.
+- Contact details, public service identifiers, bundled media, destination information, and the complete source history become downloadable when the repository is public.
+- Database exports, moderation evidence, user screenshots, production logs, and real credentials must never be added to issues, pull requests, or commits.
+
+If a private credential is ever committed, removing the line in a later commit is not enough. Revoke or rotate the credential first, then clean the Git history before publishing.
+
 <details>
 <summary><strong>Configure Supabase</strong></summary>
 
