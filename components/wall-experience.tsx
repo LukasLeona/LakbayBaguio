@@ -45,6 +45,18 @@ const reportReasons: Array<{ value: WallReportReason; label: string }> = [
 
 type Notice = { kind: "success" | "error"; text: string };
 
+function WallPhotoGallery({ urls }: { urls: string[] }) {
+  const visibleUrls = urls.slice(0, WALL_MAX_PHOTOS);
+  return (
+    <div className={`wall-post-gallery photos-${visibleUrls.length}`} aria-label={`${visibleUrls.length} ${visibleUrls.length === 1 ? "photo" : "photos"} shared with this post`}>
+      {visibleUrls.map((url, index) => <figure key={url}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt={`Anonymous traveler photo ${index + 1} of ${visibleUrls.length}`} loading="lazy" />
+      </figure>)}
+    </div>
+  );
+}
+
 export function WallExperience() {
   const configured = isCommunityConfigured();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -316,8 +328,8 @@ export function WallExperience() {
                         {menuPost === post.id ? <div>{post.is_owner ? <button type="button" onClick={() => { setPendingDelete(post); setMenuPost(null); }}><Trash2 /> Delete my post</button> : <button type="button" onClick={() => setReporting(post)}><Flag /> Report privately</button>}</div> : null}
                       </div>
                     </header>
-                    {photoUrls[0] ? <div className="wall-post-photo">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={photoUrls[0]} alt="Photo shared by an anonymous Baguio traveler" loading="lazy" /></div> : null}
                     {post.body ? <p>{post.body}</p> : null}
+                    {photoUrls.length ? <WallPhotoGallery urls={photoUrls} /> : null}
                     <footer>
                       <button type="button" className={post.has_reacted ? "loved" : ""} disabled={pendingReaction === post.id} onClick={() => void toggleReaction(post)} aria-label={`${post.has_reacted ? "Remove heart from" : "Heart"} this post`}>
                         {pendingReaction === post.id ? <LoaderCircle className="spin" /> : <Heart fill={post.has_reacted ? "currentColor" : "none"} />}<strong>{post.reaction_count}</strong><span>{post.has_reacted ? "Loved" : "Send love"}</span>
