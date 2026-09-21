@@ -44,7 +44,9 @@ function coordinatesFromUrl(url: URL) {
   const dataMatch = text.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
   const queryValue = url.searchParams.get("q") ?? url.searchParams.get("query") ?? "";
   const queryMatch = queryValue.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
-  const match = atMatch ?? dataMatch ?? queryMatch;
+  // Google place links may contain both a map viewport (@lat,lng) and the
+  // selected place pin (!3dlat!4dlng). The pin is the authoritative value.
+  const match = dataMatch ?? queryMatch ?? atMatch;
 
   return {
     lat: finiteCoordinate(match?.[1]),
@@ -92,6 +94,31 @@ export function parseGoogleMapsPlaceUrl(value: string): ParsedGoogleMapsPlace | 
     locationPrecision:
       coordinates.lat !== null && coordinates.lng !== null ? "pin" : "approximate",
   };
+}
+
+export async function resolveGoogleMapsPlaceUrl(
+  value: string,
+  signal?: AbortSignal,
+): Promise<ParsedGoogleMapsPlace> {
+  const local = parseGoogleMapsPlaceUrl(value);
+  if (!local) throw new Error("Paste a valid Google Maps place or share link.");
+  if (local.name && local.locationPrecision === "pin") return local;
+
+  const response = await fetch("/api/maps/resolve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: value.trim() }),
+    cache: "no-store",
+    signal,
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | { place?: ParsedGoogleMapsPlace; error?: string }
+    | null;
+
+  if (!response.ok || !payload?.place) {
+    throw new Error(payload?.error || "We could not verify that Google Maps place.");
+  }
+  return payload.place;
 }
 
 export function googleMapsStaySearchUrl(kind: StayKind, propertyName = "") {
