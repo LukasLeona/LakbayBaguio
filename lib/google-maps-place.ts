@@ -139,20 +139,23 @@ export function createPlannerStay(input: {
 }): PlannerStay {
   const parsed = parseGoogleMapsPlaceUrl(input.googleMapsUrl);
   if (!parsed) throw new Error("Paste a valid Google Maps place or share link for your stay.");
+  if (!parsed.name || parsed.locationPrecision !== "pin") {
+    throw new Error("We could not confirm the exact property pin. Open the place in Google Maps, tap Share, and paste that link.");
+  }
 
-  const name = input.name.trim() || parsed.name || (input.kind === "hotel" ? "My hotel" : "My Airbnb");
+  const name = parsed.name || input.name.trim();
 
   return {
     id: `stay-${input.kind}`,
     kind: input.kind,
     name,
     googleMapsUrl: parsed.normalizedUrl,
-    googleQuery: parsed.query || `${name}, Baguio City`,
+    googleQuery: `${name}, Baguio City, Philippines`,
     checkInDay: input.checkInDay,
     checkInTime: input.checkInTime,
     luggagePlan: input.luggagePlan,
-    lat: parsed.lat ?? BAGUIO_CENTER.lat,
-    lng: parsed.lng ?? BAGUIO_CENTER.lng,
+    lat: parsed.lat as number,
+    lng: parsed.lng as number,
     locationPrecision: parsed.locationPrecision,
   };
 }

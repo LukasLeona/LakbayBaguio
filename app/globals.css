@@ -1551,6 +1551,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stay-luggage-choice small { color: var(--muted); font-size: .53rem; }
 .stay-map-status, .stay-map-help { min-height: 30px; display: flex; align-items: center; gap: 6px; margin: -2px 1px 0; font-size: .55rem; font-weight: 700; }
 .stay-map-status.valid { color: #2c735d; }
+.stay-map-status.checking { color: #6f604b; }
 .stay-map-status.invalid { color: #9a4438; }
 .stay-map-help { color: #766858; }
 .stay-check-in-stop .route-stop-marker { color: #3f3022; background: #e9c77f; }

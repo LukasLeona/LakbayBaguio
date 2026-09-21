@@ -105,7 +105,7 @@ Anonymous participation hides the account identity from other users; it cannot p
 - **Frontend:** Next.js 16 App Router, React 19, and TypeScript
 - **Design:** Poppins, Lucide icons, responsive custom CSS, and a mobile bottom-navigation pattern
 - **Data and realtime:** Supabase Postgres, Authentication, Storage, Realtime, PostGIS, Row Level Security, and narrow RPCs
-- **Maps:** MapLibre GL with Google Maps links for turn-by-turn route handoff
+- **Maps:** MapLibre GL with verified Google Maps place links, named route waypoints, and mobile-safe route segments for turn-by-turn handoff
 - **Abuse protection:** Cloudflare Turnstile, server validation, honeypots, database constraints, and rate limits
 - **Notifications:** EmailJS
 - **Deployment:** Vercel

@@ -22,6 +22,8 @@ import {
   createPlannerStay,
   googleMapsStaySearchUrl,
   parseGoogleMapsPlaceUrl,
+  resolveGoogleMapsPlaceUrl,
+  type ParsedGoogleMapsPlace,
 } from "@/lib/google-maps-place";
 import {
   DEFAULT_FARE_SETTINGS,
@@ -182,6 +184,9 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [stayKind, setStayKind] = useState<StayKind>("hotel");
   const [stayName, setStayName] = useState("");
   const [stayMapsUrl, setStayMapsUrl] = useState("");
+  const [verifiedStayMap, setVerifiedStayMap] = useState<{ sourceUrl: string; place: ParsedGoogleMapsPlace } | null>(null);
+  const [stayMapState, setStayMapState] = useState<"idle" | "checking" | "verified" | "error">("idle");
+  const [stayMapError, setStayMapError] = useState("");
   const [checkInDay, setCheckInDay] = useState(0);
   const [checkInTime, setCheckInTime] = useState("14:00");
   const [luggagePlan, setLuggagePlan] = useState<LuggagePlan>("carry");
@@ -232,6 +237,11 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     () => (stayMapsUrl.trim() ? parseGoogleMapsPlaceUrl(stayMapsUrl) : null),
     [stayMapsUrl],
   );
+  const currentVerifiedStay = verifiedStayMap?.sourceUrl === stayMapsUrl.trim()
+    ? verifiedStayMap.place
+    : parsedStayMap?.name && parsedStayMap.locationPrecision === "pin"
+      ? parsedStayMap
+      : null;
 
   useEffect(() => {
     let restoredDate = "";
@@ -313,6 +323,54 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   useEffect(() => {
     setCheckInDay((current) => Math.min(current, numberOfDays - 1));
   }, [numberOfDays]);
+
+  useEffect(() => {
+    const sourceUrl = stayMapsUrl.trim();
+    if (!includeStay || !sourceUrl) {
+      setVerifiedStayMap(null);
+      setStayMapState("idle");
+      setStayMapError("");
+      return;
+    }
+
+    const local = parseGoogleMapsPlaceUrl(sourceUrl);
+    if (!local) {
+      setVerifiedStayMap(null);
+      setStayMapState("error");
+      setStayMapError("Paste a valid Google Maps place or share link.");
+      return;
+    }
+    if (local.name && local.locationPrecision === "pin") {
+      setVerifiedStayMap({ sourceUrl, place: local });
+      setStayName(local.name);
+      setStayMapState("verified");
+      setStayMapError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      setStayMapState("checking");
+      setStayMapError("");
+      resolveGoogleMapsPlaceUrl(sourceUrl, controller.signal)
+        .then((place) => {
+          setVerifiedStayMap({ sourceUrl, place });
+          if (place.name) setStayName(place.name);
+          setStayMapState("verified");
+        })
+        .catch((resolutionError) => {
+          if (controller.signal.aborted) return;
+          setVerifiedStayMap(null);
+          setStayMapState("error");
+          setStayMapError(resolutionError instanceof Error ? resolutionError.message : "We could not verify that Google Maps place.");
+        });
+    }, 550);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [includeStay, stayMapsUrl]);
 
   useEffect(() => {
     const updateStep = () => {
@@ -400,14 +458,23 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     );
   }
 
-  function buildPlan(event: FormEvent<HTMLFormElement>) {
+  async function buildPlan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (generating) return;
     let stay: PlannerRequest["stay"];
     if (includeStay) {
       try {
-        stay = createPlannerStay({ kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, luggagePlan });
+        setGenerating(true);
+        const place = currentVerifiedStay ?? await resolveGoogleMapsPlaceUrl(stayMapsUrl);
+        setVerifiedStayMap({ sourceUrl: stayMapsUrl.trim(), place });
+        setStayMapState("verified");
+        setStayMapError("");
+        if (place.name) setStayName(place.name);
+        stay = createPlannerStay({ kind: stayKind, name: place.name || stayName, googleMapsUrl: place.normalizedUrl, checkInDay, checkInTime, luggagePlan });
       } catch (stayError) {
+        setGenerating(false);
+        setStayMapState("error");
+        setStayMapError(stayError instanceof Error ? stayError.message : "Check your accommodation details.");
         setError(stayError instanceof Error ? stayError.message : "Check your accommodation details.");
         scrollToStep("trip-details");
         return;
@@ -416,6 +483,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     const request: PlannerRequest = { start: selectedStart, destinations: selectedDestinations, date: tripDate, numberOfDays, availableMinutes: availableHours * 60, travelers, modes, preference, fareSettings, startTime, ...(stay ? { stay } : {}) };
     const issues = validatePlannerRequest(request);
     if (issues.length) {
+      setGenerating(false);
       setError(issues[0].message);
       if (issues[0].field.startsWith("destination")) scrollToStep("destinations");
       else if (issues[0].field === "modes") scrollToStep("preferences");
@@ -489,13 +557,13 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                 <button type="button" className={stayKind === "airbnb" ? "active" : ""} aria-pressed={stayKind === "airbnb"} onClick={() => setStayKind("airbnb")}><House size={17} /> Airbnb</button>
               </div>
               <label className="planner-field stay-name-field"><span>Property name</span><input type="text" value={stayName} onChange={(event) => setStayName(event.target.value)} placeholder={stayKind === "hotel" ? "Example: G1 Lodge" : "Example: Pine View Airbnb"} /></label>
-              <label className="planner-field stay-map-field"><span>Google Maps place or share link</span><div><MapPin size={17} /><input type="url" value={stayMapsUrl} onChange={(event) => { const value = event.target.value; setStayMapsUrl(value); const place = parseGoogleMapsPlaceUrl(value); if (!stayName && place?.name) setStayName(place.name); }} placeholder="https://maps.app.goo.gl/..." /><a href={googleMapsStaySearchUrl(stayKind, stayName)} target="_blank" rel="noreferrer" aria-label="Find this stay in Google Maps" title="Find in Google Maps"><ExternalLink size={17} /></a></div></label>
+              <label className="planner-field stay-map-field"><span>Google Maps place or share link</span><div><MapPin size={17} /><input type="url" value={stayMapsUrl} onChange={(event) => { setStayMapsUrl(event.target.value); setVerifiedStayMap(null); setSaved(false); }} placeholder="https://maps.app.goo.gl/..." /><a href={googleMapsStaySearchUrl(stayKind, stayName)} target="_blank" rel="noreferrer" aria-label="Find this stay in Google Maps" title="Find in Google Maps"><ExternalLink size={17} /></a></div></label>
               <div className="stay-schedule-grid">
                 <label className="planner-field"><span>Check-in day</span><select value={checkInDay} onChange={(event) => setCheckInDay(Number(event.target.value))}>{Array.from({ length: numberOfDays }, (_, index) => <option value={index} key={index}>Day {index + 1}</option>)}</select></label>
                 <label className="planner-field"><span>Check-in time</span><input type="time" value={checkInTime} onChange={(event) => setCheckInTime(event.target.value)} /></label>
               </div>
               <label className="stay-luggage-choice"><input type="checkbox" checked={luggagePlan === "property-drop"} onChange={(event) => setLuggagePlan(event.target.checked ? "property-drop" : "carry")} /><span><strong>I can leave my bags at the property before check-in</strong><small>We will still remind you to confirm this arrangement.</small></span></label>
-              {stayMapsUrl ? <p className={`stay-map-status ${parsedStayMap ? "valid" : "invalid"}`}>{parsedStayMap ? <><Check size={14} /> Google Maps link saved{parsedStayMap.locationPrecision === "pin" ? " with its map pin." : ". Exact navigation will use this link."}</> : <>Paste a Google Maps place or share link.</>}</p> : <p className="stay-map-help"><MapPin size={14} /> Find the property in Google Maps, tap Share, then paste its link here.</p>}
+              {stayMapsUrl ? <p className={`stay-map-status ${stayMapState === "verified" ? "valid" : stayMapState === "checking" ? "checking" : "invalid"}`} aria-live="polite">{stayMapState === "checking" ? <><LoaderCircle className="spin" size={14} /> Checking the exact Google Maps place…</> : stayMapState === "verified" && currentVerifiedStay ? <><Check size={14} /> {currentVerifiedStay.name} — exact pin confirmed.</> : <>{stayMapError || "Paste the exact place or Share link from Google Maps."}</>}</p> : <p className="stay-map-help"><MapPin size={14} /> Find the property in Google Maps, tap Share, then paste its link here.</p>}
             </div> : null}
           </section>
 
