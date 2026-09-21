@@ -15,7 +15,8 @@ export type DestinationCategory =
   | "Viewpoint"
   | "Museum"
   | "Food & shopping"
-  | "Culture";
+  | "Culture"
+  | "Stay";
 
 export type DestinationScope = "Baguio City" | "Nearby Benguet side trip";
 export type DestinationTimeSlot = "night";

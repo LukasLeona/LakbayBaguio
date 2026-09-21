@@ -101,6 +101,7 @@ export type PlannedTransport = {
 };
 
 export type PlannedStop = {
+  kind: "destination" | "check-in";
   number: number;
   destination: PlannerDestination;
   arrivalMinutes: number;
@@ -164,6 +165,7 @@ type DayBuildOptions = {
   modes: readonly TransportMode[];
   fareSettings: FareSettings;
   startMinutes: number;
+  stay?: PlannerStay;
 };
 
 type TransportOptions = Pick<
@@ -461,6 +463,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     buildDayItinerary(request.start, bucket, {
       ...dayOptions,
       dayIndex,
+      ...(request.stay?.checkInDay === dayIndex ? { stay: request.stay } : {}),
     }),
   );
 
@@ -670,19 +673,90 @@ export function buildDayItinerary(
   let current: PlannerLocation = start;
   let cursor = options.startMinutes;
   const dayEnd = options.startMinutes + options.availableMinutes;
+  const stayDestination = options.stay
+    ? stayToDestination(options.stay)
+    : null;
+  const checkInMinutes = options.stay
+    ? parseTimeToMinutes(options.stay.checkInTime) ?? dayEnd
+    : null;
+  let stayAdded = false;
+
+  const appendStayCheckIn = () => {
+    if (!stayDestination || !options.stay || checkInMinutes === null || stayAdded) return;
+
+    const distance = haversineKm(current, stayDestination);
+    const transport = chooseTransport(current, stayDestination, distance, options);
+    const afterTravel = cursor + transport.minutes;
+    const scheduledArrival = Math.max(afterTravel, checkInMinutes);
+    const wait = Math.max(0, checkInMinutes - afterTravel);
+
+    items.push(
+      createPlannedStop({
+        kind: "check-in",
+        destination: stayDestination,
+        from: current,
+        arrivalMinutes: scheduledArrival,
+        waitMinutes: wait,
+        distance,
+        transport,
+        number: items.length + 1,
+        placeMapUrl: options.stay.googleMapsUrl,
+      }),
+    );
+    cursor = scheduledArrival + stayDestination.duration;
+    current = stayDestination;
+    stayAdded = true;
+
+    if (scheduledArrival > checkInMinutes + 15) {
+      notices.push(
+        `${options.stay.name} check-in is estimated at ${minutesToTime(scheduledArrival)}, after the selected ${minutesToTime(checkInMinutes)} time. Consider removing an earlier stop.`,
+      );
+    } else {
+      notices.push(
+        `${options.stay.name} check-in is held at ${minutesToTime(checkInMinutes)}; the route is arranged around it.`,
+      );
+    }
+    if (options.stay.locationPrecision === "approximate") {
+      notices.push(
+        `The shortened Google Maps link for ${options.stay.name} does not expose its pin coordinates, so travel estimates use central Baguio. Open the saved Maps link for exact navigation.`,
+      );
+    }
+  };
 
   ordered.forEach((destination) => {
-    const distance = haversineKm(current, destination);
-    const transport = chooseTransport(
+    let distance = haversineKm(current, destination);
+    let transport = chooseTransport(
       current,
       destination,
       distance,
       options,
     );
-    const arrival = cursor + transport.minutes;
+    let arrival = cursor + transport.minutes;
     const { open, close } = openingWindow(destination);
-    const scheduledArrival = Math.max(arrival, open);
-    const wait = Math.max(0, open - arrival);
+    let scheduledArrival = Math.max(arrival, open);
+    let wait = Math.max(0, open - arrival);
+
+    if (stayDestination && !stayAdded && checkInMinutes !== null) {
+      const distanceToStay = haversineKm(destination, stayDestination);
+      const travelToStay = chooseTransport(
+        destination,
+        stayDestination,
+        distanceToStay,
+        options,
+      );
+      const wouldMissCheckIn =
+        cursor >= checkInMinutes ||
+        scheduledArrival + destination.duration + travelToStay.minutes > checkInMinutes + 15;
+
+      if (wouldMissCheckIn) {
+        appendStayCheckIn();
+        distance = haversineKm(current, destination);
+        transport = chooseTransport(current, destination, distance, options);
+        arrival = cursor + transport.minutes;
+        scheduledArrival = Math.max(arrival, open);
+        wait = Math.max(0, open - arrival);
+      }
+    }
 
     // Preserve the legacy 90-minute grace period for an arrival just beyond the
     // chosen day window, but never schedule a visit after the attraction closes.
@@ -708,6 +782,8 @@ export function buildDayItinerary(
     cursor = scheduledArrival + destination.duration;
     current = destination;
   });
+
+  appendStayCheckIn();
 
   nightStops.forEach((destination) => {
     const distance = haversineKm(current, destination);
@@ -1092,6 +1168,7 @@ export function transportLabel(mode: TransportMode): string {
 }
 
 function createPlannedStop({
+  kind = "destination",
   destination,
   from,
   arrivalMinutes,
@@ -1100,7 +1177,9 @@ function createPlannedStop({
   transport,
   number,
   eveningAddOn,
+  placeMapUrl,
 }: {
+  kind?: "destination" | "check-in";
   destination: PlannerDestination;
   from: PlannerLocation;
   arrivalMinutes: number;
@@ -1109,8 +1188,10 @@ function createPlannedStop({
   transport: PlannedTransport;
   number: number;
   eveningAddOn?: true;
+  placeMapUrl?: string;
 }): PlannedStop {
   return {
+    kind,
     number,
     destination,
     arrivalMinutes,
@@ -1120,7 +1201,7 @@ function createPlannedStop({
     transport,
     from,
     ...(eveningAddOn ? { eveningAddOn } : {}),
-    placeMapUrl: googleSearchUrl(destination.googleQuery || destination.name),
+    placeMapUrl: placeMapUrl ?? googleSearchUrl(destination.googleQuery || destination.name),
     mapPreviewUrl: googleMapEmbedUrl(
       destination.googleQuery || destination.name,
     ),
@@ -1163,6 +1244,40 @@ function validateLocation(
   }
 }
 
+function stayToDestination(stay: PlannerStay): PlannerDestination {
+  const isHotel = stay.kind === "hotel";
+  return {
+    id: `${stay.id}-check-in`,
+    name: `${stay.name} check-in`,
+    area: "City Center",
+    duration: 30,
+    open: stay.checkInTime,
+    close: "23:59",
+    category: "Stay",
+    popular: false,
+    description: `Check in at your ${isHotel ? "hotel" : "Airbnb"}, settle your luggage, and take a short breather before the next stop.`,
+    activities:
+      stay.luggagePlan === "property-drop"
+        ? ["Confirm the early luggage arrangement", "Keep valuables with you", "Save the host or front-desk contact"]
+        : ["Complete check-in", "Leave luggage securely", "Save the host or front-desk contact"],
+    tags: ["stay", "check-in", stay.kind],
+    icon: isHotel ? "🏨" : "🏠",
+    image: "/assets/img/favicon.svg",
+    googleQuery: stay.googleQuery,
+    routeGuide: {
+      ...GENERIC_ROUTE_GUIDE,
+      modeLabel: `${isHotel ? "Hotel" : "Airbnb"} check-in`,
+      loadingQuery: `${stay.name}, Baguio City`,
+      signboard: `the route closest to ${stay.name}`,
+      returnHint: "Keep the property pin open and confirm the safest drop-off with the driver.",
+    },
+    scope: "Baguio City",
+    alight: `Show the driver the saved Google Maps pin and ask to alight at ${stay.name}.`,
+    lat: stay.lat,
+    lng: stay.lng,
+  };
+}
+
 function resolveStartMinutes(request: PlannerRequest): number {
   if (request.startMinutes !== undefined) {
     return Math.round(request.startMinutes);
@@ -1196,7 +1311,10 @@ function openingWindow(destination: PlannerDestination): {
 
 function summarizeDays(days: readonly PlannedDay[]): ItineraryTotals {
   return {
-    scheduledStops: days.reduce((sum, day) => sum + day.items.length, 0),
+    scheduledStops: days.reduce(
+      (sum, day) => sum + day.items.filter((item) => item.kind !== "check-in").length,
+      0,
+    ),
     unscheduledStops: days.reduce(
       (sum, day) => sum + day.unscheduled.length,
       0,
