@@ -1523,6 +1523,62 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .explore-filter-panel .explore-controls { grid-template-columns: 1fr; }
 }
 
+/* Traveler-supplied accommodation and fixed check-in stop */
+.stay-planner-card { margin-top: 22px; overflow: hidden; border: 1px solid #ddcfbd; border-radius: 22px; background: linear-gradient(135deg, #fffaf2 0%, #f2eadf 100%); box-shadow: 0 10px 28px rgba(65,47,31,.06); }
+.stay-planner-card > header { display: grid; grid-template-columns: 42px minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 16px; }
+.stay-card-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; color: #fff8ed; background: #755d46; box-shadow: 0 7px 16px rgba(74,52,33,.16); }
+.stay-planner-card > header small { color: #8a6e51; font-size: .48rem; font-weight: 800; letter-spacing: .13em; }
+.stay-planner-card > header h2 { margin: 2px 0; font-size: .88rem; letter-spacing: -.02em; }
+.stay-planner-card > header p { margin: 0; color: #766858; font-size: .6rem; line-height: 1.45; }
+.stay-toggle { min-height: 36px; padding: 7px 12px; border: 1px solid #a99277; border-radius: 999px; color: #4b3928; background: rgba(255,255,255,.68); cursor: pointer; font-size: .59rem; font-weight: 800; }
+.stay-planner-card.expanded .stay-toggle { color: #76513d; border-color: transparent; background: #eadccd; }
+.stay-planner-fields { display: grid; grid-template-columns: minmax(170px,.55fr) minmax(0,1.45fr); gap: 13px; padding: 17px; border-top: 1px solid rgba(107,82,57,.13); background: rgba(255,255,255,.45); }
+.stay-kind-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; align-self: end; }
+.stay-kind-picker button { height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #d8c8b6; border-radius: 13px; color: #725d48; background: #fffdf8; cursor: pointer; font-size: .65rem; font-weight: 750; }
+.stay-kind-picker button.active { color: white; border-color: #594532; background: #594532; box-shadow: 0 7px 14px rgba(75,54,35,.14); }
+.stay-map-field, .stay-schedule-grid, .stay-luggage-choice, .stay-map-status, .stay-map-help { grid-column: 1 / -1; }
+.stay-map-field > div { height: 48px; display: grid; grid-template-columns: 20px minmax(0,1fr) 42px; align-items: center; gap: 6px; padding-left: 12px; border: 1px solid var(--line); border-radius: 13px; background: #fffdf8; }
+.stay-map-field > div:focus-within { border-color: var(--pine-700); box-shadow: 0 0 0 3px rgba(63,118,105,.1); }
+.stay-map-field > div > svg { color: #8a6e51; }
+.stay-map-field input { height: 44px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.stay-map-field input:focus { box-shadow: none; }
+.stay-map-field a { width: 42px; height: 100%; display: grid; place-items: center; border-left: 1px solid var(--line); color: var(--pine-800); }
+.stay-schedule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stay-luggage-choice { display: flex; align-items: start; gap: 9px; padding: 12px; border: 1px solid rgba(105,80,56,.13); border-radius: 14px; background: rgba(255,255,255,.64); cursor: pointer; }
+.stay-luggage-choice input { margin-top: 2px; accent-color: var(--pine-700); }
+.stay-luggage-choice span { display: grid; gap: 2px; }
+.stay-luggage-choice strong { font-size: .62rem; }
+.stay-luggage-choice small { color: var(--muted); font-size: .53rem; }
+.stay-map-status, .stay-map-help { min-height: 30px; display: flex; align-items: center; gap: 6px; margin: -2px 1px 0; font-size: .55rem; font-weight: 700; }
+.stay-map-status.valid { color: #2c735d; }
+.stay-map-status.invalid { color: #9a4438; }
+.stay-map-help { color: #766858; }
+.stay-check-in-stop .route-stop-marker { color: #3f3022; background: #e9c77f; }
+.stay-check-in-stop .route-stop-content { padding: 14px; border: 1px solid #e4d4bd; border-radius: 18px; background: linear-gradient(140deg, #fffaf1, #f5ede2); }
+.stay-check-in-stop .visit-time { color: #5f4934; background: #eadcc8; }
+.stay-check-in-stop .stop-ideas li::marker { color: #9a7044; }
+
+@media screen and (max-width: 760px) {
+  .stay-planner-card { margin-top: 18px; border-radius: 20px; }
+  .stay-planner-card > header { grid-template-columns: 38px minmax(0,1fr); gap: 10px; padding: 14px; }
+  .stay-card-icon { width: 38px; height: 38px; border-radius: 13px; }
+  .stay-planner-card > header h2 { font-size: .76rem; }
+  .stay-planner-card > header p { font-size: .54rem; }
+  .stay-toggle { grid-column: 2; justify-self: start; min-height: 32px; margin-top: 1px; padding: 6px 10px; }
+  .stay-planner-fields { grid-template-columns: 1fr; gap: 11px; padding: 14px; }
+  .stay-kind-picker, .stay-name-field, .stay-map-field, .stay-schedule-grid, .stay-luggage-choice, .stay-map-status, .stay-map-help { grid-column: 1; }
+  .stay-kind-picker button, .stay-map-field > div { height: 46px; }
+  .stay-luggage-choice { padding: 11px; }
+  .stay-check-in-stop .route-stop-content { padding: 11px; border-radius: 16px; }
+}
+
+@media screen and (max-width: 400px) {
+  .stay-schedule-grid { grid-template-columns: 1fr 1fr; gap: 7px; }
+  .stay-planner-fields { padding: 12px; }
+  .stay-map-field > div { grid-template-columns: 17px minmax(0,1fr) 38px; padding-left: 9px; }
+  .stay-map-field a { width: 38px; }
+}
+
 /* Unified Nearby + Messages */
 @media screen {
   .chat-hub-page { height: auto; min-height: 100vh; padding: 27px 0 110px; background: radial-gradient(circle at 8% 8%, rgba(183,207,191,.32), transparent 23rem), var(--cream); }

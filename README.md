@@ -40,7 +40,7 @@ The product is designed around three goals:
 | --- | --- |
 | **Home** | See trip highlights, return to a pending itinerary, discover restaurants and stays, and ask Kabsat for quick help. |
 | **Explore** | Browse parks, attractions, restaurants, and hotels through clearly separated place categories. |
-| **Itinerary** | Choose destinations and travel preferences, then generate a practical multi-day route with estimated fares, directions, and timings. |
+| **Itinerary** | Choose destinations, add an optional hotel or Airbnb from Google Maps, and generate a practical multi-day route arranged around check-in time. |
 | **Wall** | Share text or an album of up to five photos anonymously, browse familiar social-style post layouts, and react to other travelers’ stories. |
 | **Chat** | Use the traveler radar in Baguio and start an anonymous, time-limited conversation with someone nearby. |
 | **Suggestions** | Propose improvements for Baguio Buddy and upvote ideas from the community. |
@@ -48,8 +48,8 @@ The product is designed around three goals:
 ### A trip from idea to route
 
 1. **Discover** places that match the traveler’s interests.
-2. **Choose** destinations, dates, pace, transport preferences, and available time.
-3. **Generate** a day-by-day route with stop order, directions, time, and fare estimates.
+2. **Choose** destinations, dates, pace, transport preferences, available time, and an optional hotel or Airbnb Google Maps link.
+3. **Generate** a day-by-day route with stop order, directions, time, fare estimates, and a fixed check-in agenda item.
 4. **Keep or share** the plan through local saving, copying, printing/PDF, or a private share link and QR code.
 5. **Travel with context** using map links, place details, and a pending-plan reminder across the experience.
 
