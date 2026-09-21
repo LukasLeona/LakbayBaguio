@@ -25,10 +25,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { ItineraryShareDialog } from "@/components/itinerary-share-dialog";
 import {
+  buildDayRouteUrls,
   formatCurrency,
   formatDayDate,
   formatDuration,
   formatTripDate,
+  googleDirectionsUrl,
   itineraryToText,
   minutesToTime,
   parseTimeToMinutes,
@@ -75,6 +77,7 @@ export function ItineraryResults({
   const [shareOpen, setShareOpen] = useState(false);
   const day = itinerary.days[activeDay] ?? itinerary.days[0];
   const firstStop = day?.items[0];
+  const routeLinks = day ? buildDayRouteUrls(itinerary.start, day) : [];
 
   async function copyPlan() {
     const value = itineraryToText(itinerary);
@@ -192,7 +195,7 @@ export function ItineraryResults({
                       <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
                       <div className="route-link-row">
                         {stop.transport.loadingMapUrl ? <a href={stop.transport.loadingMapUrl} target="_blank" rel="noreferrer"><MapPin size={14} /> Loading area <ExternalLink size={12} /></a> : null}
-                        <a href={stop.transport.legMapUrl} target="_blank" rel="noreferrer"><Navigation size={14} /> Open this leg <ExternalLink size={12} /></a>
+                        <a href={googleDirectionsUrl(stop.from, stop.destination, stop.transport.mode)} target="_blank" rel="noreferrer"><Navigation size={14} /> Open this leg <ExternalLink size={12} /></a>
                         <a href={stop.placeMapUrl} target="_blank" rel="noreferrer"><Route size={14} /> {stop.kind === "check-in" ? "Open saved stay" : "View place"} <ExternalLink size={12} /></a>
                       </div>
                     </section>
@@ -220,7 +223,7 @@ export function ItineraryResults({
         <aside className="route-map-panel">
           <header className="panel-heading-rich">
             <div><small>GOOGLE MAPS</small><h2>See the route</h2></div>
-            {day?.routeMapUrl ? <a href={day.routeMapUrl} target="_blank" rel="noreferrer" aria-label="Open day route in Google Maps"><ExternalLink size={17} /></a> : null}
+            {routeLinks[0] ? <a href={routeLinks[0]} target="_blank" rel="noreferrer" aria-label="Open day route in Google Maps"><ExternalLink size={17} /></a> : null}
           </header>
           {firstStop ? (
             <>
@@ -232,15 +235,15 @@ export function ItineraryResults({
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                 />
-                <span>Previewing Day {day.index + 1}. Open the complete route to see every stop.</span>
+                <span>Previewing Day {day.index + 1}. Open {routeLinks.length > 1 ? "each route part" : "the complete route"} to see every stop.</span>
               </div>
               <div className="route-map-actions">
-                <a className="button primary" href={day.routeMapUrl} target="_blank" rel="noreferrer"><Navigation size={16} /> Open complete Day {day.index + 1} route</a>
-                <a className="button secondary" href={firstStop.transport.legMapUrl} target="_blank" rel="noreferrer">Navigate to first stop</a>
+                {routeLinks.map((url, index) => <a className={`button ${index === 0 ? "primary" : "secondary"}`} href={url} target="_blank" rel="noreferrer" key={url}><Navigation size={16} /> {routeLinks.length > 1 ? `Open route part ${index + 1} of ${routeLinks.length}` : `Open complete Day ${day.index + 1} route`}</a>)}
+                <a className="button secondary" href={googleDirectionsUrl(firstStop.from, firstStop.destination, firstStop.transport.mode)} target="_blank" rel="noreferrer">Navigate to first stop</a>
               </div>
             </>
           ) : <div className="map-empty"><MapPin size={28} /><p>No map route for this day yet.</p></div>}
-          <p className="route-map-note">Google Maps may use your device location when the route opens. Confirm live traffic, jeepney loading points, and temporary road changes locally.</p>
+          <p className="route-map-note">Google Maps may use your device location when the route opens. Longer days are divided into mobile-safe route parts so no later stop is dropped. Confirm live traffic, jeepney loading points, and temporary road changes locally.</p>
         </aside>
       </div>
 
@@ -272,7 +275,7 @@ export function ItineraryResults({
                 <p className="print-place-meta">{stop.kind === "check-in" ? `${itinerary.stay?.kind === "airbnb" ? "Airbnb" : "Hotel"} · Fixed check-in` : `${stop.destination.area} · ${stop.destination.category}`} · {formatDuration(stop.destination.duration)}</p>
                 <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {stop.from.name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
                 <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
-                <p className="print-map-link"><a href={stop.transport.legMapUrl}>Open this leg in Google Maps</a></p>
+                <p className="print-map-link"><a href={googleDirectionsUrl(stop.from, stop.destination, stop.transport.mode)}>Open this leg in Google Maps</a></p>
               </section>
             ))}
           </article>

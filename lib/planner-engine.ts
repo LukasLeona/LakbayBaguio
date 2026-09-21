@@ -126,6 +126,8 @@ export type PlannedDay = {
   startMinutes: number;
   endMinutes: number;
   routeMapUrl: string;
+  /** Mobile-safe route segments; each contains at most three waypoints. */
+  routeMapUrls: string[];
 };
 
 export type ItineraryTotals = {
@@ -467,10 +469,14 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     }),
   );
 
-  const days = daysWithoutRoutes.map((day) => ({
-    ...day,
-    routeMapUrl: buildDayRouteUrl(request.start, day),
-  }));
+  const days = daysWithoutRoutes.map((day) => {
+    const routeMapUrls = buildDayRouteUrls(request.start, day);
+    return {
+      ...day,
+      routeMapUrl: routeMapUrls[0],
+      routeMapUrls,
+    };
+  });
   const totals = summarizeDays(days);
   const date = request.date || "";
 
@@ -654,7 +660,7 @@ export function buildDayItinerary(
   start: PlannerLocation,
   bucket: readonly PlannerDestination[],
   options: DayBuildOptions,
-): Omit<PlannedDay, "routeMapUrl"> {
+): Omit<PlannedDay, "routeMapUrl" | "routeMapUrls"> {
   const nightStops = bucket.filter(
     (destination) => destination.timeSlot === "night",
   );
@@ -996,8 +1002,8 @@ export function googleDirectionsUrl(
 ): string {
   const params = new URLSearchParams({
     api: "1",
-    origin: locationForUrl(from),
-    destination: locationForUrl(to),
+    origin: locationForDirections(from),
+    destination: locationForDirections(to),
     travelmode: mode === "walk" ? "walking" : "driving",
   });
   return `https://www.google.com/maps/dir/?${params.toString()}`;
@@ -1016,26 +1022,44 @@ export function buildDayRouteUrl(
   start: PlannerLocation,
   day: Pick<PlannedDay, "items">,
 ): string {
+  return buildDayRouteUrls(start, day)[0];
+}
+
+/**
+ * Google Maps mobile browsers support fewer waypoints than desktop. Keeping
+ * each URL to three waypoints prevents later agenda stops from disappearing.
+ */
+export function buildDayRouteUrls(
+  start: PlannerLocation,
+  day: Pick<PlannedDay, "items">,
+): string[] {
   if (!day.items.length) {
-    return googleSearchUrl(start.googleQuery || start.name);
+    return [googleSearchUrl(start.googleQuery || start.name)];
   }
 
-  const destinations = day.items.map((item) =>
-    locationForUrl(item.destination),
-  );
-  const destination = destinations[destinations.length - 1];
-  const waypoints = destinations.slice(0, -1).slice(0, 8);
-  const allWalking = day.items.every(
-    (item) => item.transport.mode === "walk",
-  );
-  const params = new URLSearchParams({
-    api: "1",
-    origin: locationForUrl(start),
-    destination,
-    travelmode: allWalking ? "walking" : "driving",
-  });
-  if (waypoints.length) params.set("waypoints", waypoints.join("|"));
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
+  const routeUrls: string[] = [];
+  let segmentOrigin: PlannerLocation = start;
+
+  for (let index = 0; index < day.items.length; index += 4) {
+    const segment = day.items.slice(index, index + 4);
+    const destinations = segment.map((item) =>
+      locationForDirections(item.destination),
+    );
+    const destination = destinations[destinations.length - 1];
+    const waypoints = destinations.slice(0, -1);
+    const allWalking = segment.every((item) => item.transport.mode === "walk");
+    const params = new URLSearchParams({
+      api: "1",
+      origin: locationForDirections(segmentOrigin),
+      destination,
+      travelmode: allWalking ? "walking" : "driving",
+    });
+    if (waypoints.length) params.set("waypoints", waypoints.join("|"));
+    routeUrls.push(`https://www.google.com/maps/dir/?${params.toString()}`);
+    segmentOrigin = segment[segment.length - 1].destination;
+  }
+
+  return routeUrls;
 }
 
 export function itineraryToText(itinerary: PlannedItinerary): string {
@@ -1338,6 +1362,11 @@ function locationForUrl(location: PlannerLocation): string {
     return `${location.lat},${location.lng}`;
   }
   return location.googleQuery || location.name;
+}
+
+function locationForDirections(location: PlannerLocation): string {
+  if (location.id === "current-location") return locationForUrl(location);
+  return location.googleQuery || location.name || locationForUrl(location);
 }
 
 function degreesToRadians(value: number): number {
