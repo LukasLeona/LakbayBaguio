@@ -41,6 +41,9 @@ export type AutoPickTheme =
 
 export type TravelPreference = "balanced" | "cheapest" | "fastest" | "less-walking";
 export type TransportMode = "walk" | "jeepney" | "taxi";
+export type StayKind = "hotel" | "airbnb";
+export type StayLocationPrecision = "pin" | "approximate";
+export type LuggagePlan = "carry" | "property-drop";
 
 export interface Coordinates {
   readonly lat: number;
@@ -86,6 +89,21 @@ export interface StartLocation extends Coordinates {
   readonly terminal?: boolean;
   readonly customName?: boolean;
   readonly googleQuery: string;
+}
+
+/** A traveler-supplied accommodation used as a fixed-time itinerary stop. */
+export interface PlannerStay extends Coordinates {
+  readonly id: string;
+  readonly kind: StayKind;
+  readonly name: string;
+  readonly googleMapsUrl: string;
+  readonly googleQuery: string;
+  /** Zero-based trip day containing the check-in. */
+  readonly checkInDay: number;
+  /** Local 24-hour time in HH:mm format. */
+  readonly checkInTime: string;
+  readonly luggagePlan: LuggagePlan;
+  readonly locationPrecision: StayLocationPrecision;
 }
 
 export interface BaggageOption {
