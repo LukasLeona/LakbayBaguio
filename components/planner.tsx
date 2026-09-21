@@ -2,10 +2,15 @@
 
 import {
   BaggageClaim,
+  BedDouble,
+  Building2,
   Check,
   ChevronRight,
   Crosshair,
+  ExternalLink,
+  House,
   LoaderCircle,
+  MapPin,
   Search,
   Sparkles,
   X,
@@ -13,6 +18,11 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ItineraryResults } from "@/components/itinerary-results";
+import {
+  createPlannerStay,
+  googleMapsStaySearchUrl,
+  parseGoogleMapsPlaceUrl,
+} from "@/lib/google-maps-place";
 import {
   DEFAULT_FARE_SETTINGS,
   DEFAULT_PLANNER_SETTINGS,
@@ -34,9 +44,11 @@ import {
 import type {
   AutoPickTheme,
   FareSettings,
+  LuggagePlan,
   PlannerCategoryFilter,
   PlannerDestination,
   StartLocation,
+  StayKind,
   TransportMode,
   TravelPreference,
 } from "@/lib/planner-types";
@@ -86,6 +98,15 @@ type PlannerDraft = {
   modes?: TransportMode[];
   autoPickTheme?: AutoPickTheme;
   fareSettings?: Partial<FareSettings>;
+  stay?: {
+    enabled: boolean;
+    kind: StayKind;
+    name: string;
+    googleMapsUrl: string;
+    checkInDay: number;
+    checkInTime: string;
+    luggagePlan: LuggagePlan;
+  };
 };
 
 function localDateValue() {
@@ -157,6 +178,13 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [startTime, setStartTime] = useState<string>(DEFAULT_PLANNER_SETTINGS.dailyStartTime);
   const [availableHours, setAvailableHours] = useState<number>(DEFAULT_PLANNER_SETTINGS.availableHoursPerDay);
   const [travelers, setTravelers] = useState<number>(DEFAULT_PLANNER_SETTINGS.travelers);
+  const [includeStay, setIncludeStay] = useState(false);
+  const [stayKind, setStayKind] = useState<StayKind>("hotel");
+  const [stayName, setStayName] = useState("");
+  const [stayMapsUrl, setStayMapsUrl] = useState("");
+  const [checkInDay, setCheckInDay] = useState(0);
+  const [checkInTime, setCheckInTime] = useState("14:00");
+  const [luggagePlan, setLuggagePlan] = useState<LuggagePlan>("carry");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [preference, setPreference] = useState<TravelPreference>(DEFAULT_PLANNER_SETTINGS.preference);
   const [modes, setModes] = useState<TransportMode[]>([...DEFAULT_PLANNER_SETTINGS.modes]);
@@ -200,6 +228,11 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     return getBaggageOptionsForStart(selectedStart.id);
   }, [selectedStart, startTime]);
 
+  const parsedStayMap = useMemo(
+    () => (stayMapsUrl.trim() ? parseGoogleMapsPlaceUrl(stayMapsUrl) : null),
+    [stayMapsUrl],
+  );
+
   useEffect(() => {
     let restoredDate = "";
     try {
@@ -217,6 +250,15 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
         if (Array.isArray(draft.modes)) setModes(draft.modes.filter(isTransportMode));
         if (isAutoPickTheme(draft.autoPickTheme)) setAutoPickTheme(draft.autoPickTheme);
         if (draft.fareSettings) setFareSettings((current) => ({ ...current, ...draft.fareSettings }));
+        if (draft.stay) {
+          setIncludeStay(Boolean(draft.stay.enabled));
+          if (draft.stay.kind === "hotel" || draft.stay.kind === "airbnb") setStayKind(draft.stay.kind);
+          if (typeof draft.stay.name === "string") setStayName(draft.stay.name);
+          if (typeof draft.stay.googleMapsUrl === "string") setStayMapsUrl(draft.stay.googleMapsUrl);
+          if (Number.isInteger(draft.stay.checkInDay)) setCheckInDay(Math.max(0, draft.stay.checkInDay));
+          if (typeof draft.stay.checkInTime === "string") setCheckInTime(draft.stay.checkInTime);
+          if (draft.stay.luggagePlan === "carry" || draft.stay.luggagePlan === "property-drop") setLuggagePlan(draft.stay.luggagePlan);
+        }
       }
 
       const rawPending = localStorage.getItem(ITINERARY_STORAGE_KEY);
@@ -236,6 +278,15 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           setPreference(pending.preference);
           setModes(pending.modes);
           setFareSettings(pending.fareSettings);
+          if (pending.stay) {
+            setIncludeStay(true);
+            setStayKind(pending.stay.kind);
+            setStayName(pending.stay.name);
+            setStayMapsUrl(pending.stay.googleMapsUrl);
+            setCheckInDay(pending.stay.checkInDay);
+            setCheckInTime(pending.stay.checkInTime);
+            setLuggagePlan(pending.stay.luggagePlan);
+          }
         } else if (pending && typeof pending === "object" && Array.isArray((pending as { stops?: unknown[] }).stops)) {
           const legacyIds = (pending as { stops: { id?: string }[] }).stops.map((stop) => stop.id ?? "").filter((id) => Boolean(getPlannerDestinationById(id)));
           if (legacyIds.length) setSelectedIds((current) => [...new Set([...current, ...legacyIds])]);
@@ -255,9 +306,13 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
   useEffect(() => {
     if (!restored) return;
-    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, fareSettings };
+    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, fareSettings, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, luggagePlan } };
     try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)); } catch { /* Storage is optional. */ }
-  }, [autoPickTheme, availableHours, fareSettings, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, travelers, tripDate]);
+  }, [autoPickTheme, availableHours, checkInDay, checkInTime, fareSettings, includeStay, luggagePlan, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
+
+  useEffect(() => {
+    setCheckInDay((current) => Math.min(current, numberOfDays - 1));
+  }, [numberOfDays]);
 
   useEffect(() => {
     const updateStep = () => {
@@ -348,7 +403,17 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   function buildPlan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (generating) return;
-    const request: PlannerRequest = { start: selectedStart, destinations: selectedDestinations, date: tripDate, numberOfDays, availableMinutes: availableHours * 60, travelers, modes, preference, fareSettings, startTime };
+    let stay: PlannerRequest["stay"];
+    if (includeStay) {
+      try {
+        stay = createPlannerStay({ kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, luggagePlan });
+      } catch (stayError) {
+        setError(stayError instanceof Error ? stayError.message : "Check your accommodation details.");
+        scrollToStep("trip-details");
+        return;
+      }
+    }
+    const request: PlannerRequest = { start: selectedStart, destinations: selectedDestinations, date: tripDate, numberOfDays, availableMinutes: availableHours * 60, travelers, modes, preference, fareSettings, startTime, ...(stay ? { stay } : {}) };
     const issues = validatePlannerRequest(request);
     if (issues.length) {
       setError(issues[0].message);
@@ -411,6 +476,28 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
             <label className="planner-field"><span>Time available each day</span><select value={availableHours} onChange={(event) => setAvailableHours(Number(event.target.value))}>{[4, 6, 8, 10, 12].map((hours) => <option key={hours} value={hours}>{hours === 12 ? "Full day" : `${hours} hours`}</option>)}</select></label>
             <label className="planner-field"><span>Travelers</span><input type="number" min="1" max="12" required value={travelers} onChange={(event) => setTravelers(clamp(Number(event.target.value) || 1, 1, 12))} /></label>
           </div>
+
+          <section className={`stay-planner-card ${includeStay ? "expanded" : ""}`} aria-labelledby="stay-planner-title">
+            <header>
+              <span className="stay-card-icon"><BedDouble size={20} /></span>
+              <div><small>OPTIONAL FIXED STOP</small><h2 id="stay-planner-title">Add your hotel or Airbnb check-in</h2><p>We will plan your day around check-in and include directions to the property.</p></div>
+              <button type="button" className="stay-toggle" aria-pressed={includeStay} onClick={() => { setIncludeStay((current) => !current); setSaved(false); }}>{includeStay ? "Remove" : "Add stay"}</button>
+            </header>
+            {includeStay ? <div className="stay-planner-fields">
+              <div className="stay-kind-picker" role="group" aria-label="Accommodation type">
+                <button type="button" className={stayKind === "hotel" ? "active" : ""} aria-pressed={stayKind === "hotel"} onClick={() => setStayKind("hotel")}><Building2 size={17} /> Hotel</button>
+                <button type="button" className={stayKind === "airbnb" ? "active" : ""} aria-pressed={stayKind === "airbnb"} onClick={() => setStayKind("airbnb")}><House size={17} /> Airbnb</button>
+              </div>
+              <label className="planner-field stay-name-field"><span>Property name</span><input type="text" value={stayName} onChange={(event) => setStayName(event.target.value)} placeholder={stayKind === "hotel" ? "Example: G1 Lodge" : "Example: Pine View Airbnb"} /></label>
+              <label className="planner-field stay-map-field"><span>Google Maps place or share link</span><div><MapPin size={17} /><input type="url" value={stayMapsUrl} onChange={(event) => { const value = event.target.value; setStayMapsUrl(value); const place = parseGoogleMapsPlaceUrl(value); if (!stayName && place?.name) setStayName(place.name); }} placeholder="https://maps.app.goo.gl/..." /><a href={googleMapsStaySearchUrl(stayKind, stayName)} target="_blank" rel="noreferrer" aria-label="Find this stay in Google Maps" title="Find in Google Maps"><ExternalLink size={17} /></a></div></label>
+              <div className="stay-schedule-grid">
+                <label className="planner-field"><span>Check-in day</span><select value={checkInDay} onChange={(event) => setCheckInDay(Number(event.target.value))}>{Array.from({ length: numberOfDays }, (_, index) => <option value={index} key={index}>Day {index + 1}</option>)}</select></label>
+                <label className="planner-field"><span>Check-in time</span><input type="time" value={checkInTime} onChange={(event) => setCheckInTime(event.target.value)} /></label>
+              </div>
+              <label className="stay-luggage-choice"><input type="checkbox" checked={luggagePlan === "property-drop"} onChange={(event) => setLuggagePlan(event.target.checked ? "property-drop" : "carry")} /><span><strong>I can leave my bags at the property before check-in</strong><small>We will still remind you to confirm this arrangement.</small></span></label>
+              {stayMapsUrl ? <p className={`stay-map-status ${parsedStayMap ? "valid" : "invalid"}`}>{parsedStayMap ? <><Check size={14} /> Google Maps link saved{parsedStayMap.locationPrecision === "pin" ? " with its map pin." : ". Exact navigation will use this link."}</> : <>Paste a Google Maps place or share link.</>}</p> : <p className="stay-map-help"><MapPin size={14} /> Find the property in Google Maps, tap Share, then paste its link here.</p>}
+            </div> : null}
+          </section>
 
           {baggageOptions.length ? <aside className="arrival-tip-rich"><header><span><BaggageClaim size={20} /></span><div><h2>Arriving before hotel check-in?</h2><p>You may be able to leave your bags before starting the route. Services and rates can change, so verify at the counter and keep valuables with you.</p></div></header><div>{baggageOptions.map((option) => <article key={option.name}><strong>{option.name}</strong><p>{option.detail}</p><a href={googleSearchUrl(option.query)} target="_blank" rel="noreferrer">View in Google Maps ↗</a></article>)}</div></aside> : null}
         </section>
