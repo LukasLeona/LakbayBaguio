@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  BedDouble,
   BusFront,
   CalendarDays,
   Car,
@@ -30,6 +31,7 @@ import {
   formatTripDate,
   itineraryToText,
   minutesToTime,
+  parseTimeToMinutes,
   transportLabel,
   type PlannedItinerary,
   type PlannedStop,
@@ -117,14 +119,15 @@ export function ItineraryResults({
           <h1 id="generated-plan-title">{itinerary.title}</h1>
           <p>
             {itinerary.totals.scheduledStops} scheduled stops from {itinerary.start.name}
-            {itinerary.date ? ` beginning ${formatTripDate(itinerary.date)}` : ""}.
+            {itinerary.date ? ` beginning ${formatTripDate(itinerary.date)}` : ""}
+            {itinerary.stay ? `, with ${itinerary.stay.name} check-in included` : ""}.
           </p>
         </div>
       </header>
 
       <div className="trip-metrics" aria-label="Itinerary summary">
         <article><i><CalendarDays /></i><div><span>Travel days</span><strong>{itinerary.numberOfDays}</strong><small>{itinerary.numberOfDays === 1 ? "day planned" : "days planned"}</small></div></article>
-        <article><i><MapPin /></i><div><span>Scheduled stops</span><strong>{itinerary.totals.scheduledStops}</strong><small>places arranged</small></div></article>
+        <article><i><MapPin /></i><div><span>Scheduled stops</span><strong>{itinerary.totals.scheduledStops}</strong><small>{itinerary.stay ? "places + stay check-in" : "places arranged"}</small></div></article>
         <article><i><Clock3 /></i><div><span>Estimated travel</span><strong>{formatDuration(itinerary.totals.travelMinutes)}</strong><small>between stops</small></div></article>
         <article><i><WalletCards /></i><div><span>Estimated transport</span><strong>{formatCurrency(itinerary.totals.fare)}</strong><small>planning estimate</small></div></article>
       </div>
@@ -141,7 +144,7 @@ export function ItineraryResults({
           >
             <span>Day {item.index + 1}</span>
             <strong>{itinerary.date ? formatDayDate(itinerary.date, item.index) : `Route ${item.index + 1}`}</strong>
-            <small>{item.items.length} {item.items.length === 1 ? "stop" : "stops"}</small>
+            <small>{item.items.length} agenda {item.items.length === 1 ? "item" : "items"}</small>
           </button>
         ))}
       </div>
@@ -162,16 +165,16 @@ export function ItineraryResults({
           {day?.items.length ? (
             <div className="route-timeline-rich">
               {day.items.map((stop) => (
-                <article className="route-stop-rich" key={`${day.index}-${stop.destination.id}`}>
+                <article className={`route-stop-rich ${stop.kind === "check-in" ? "stay-check-in-stop" : ""}`} key={`${day.index}-${stop.destination.id}`}>
                   <div className="route-stop-time">{minutesToTime(stop.arrivalMinutes)}</div>
-                  <div className="route-stop-marker">{stop.number}</div>
+                  <div className="route-stop-marker">{stop.kind === "check-in" ? <BedDouble size={15} aria-hidden="true" /> : stop.number}</div>
                   <div className="route-stop-content">
                     <header>
                       <div>
                         <h3><span aria-hidden="true">{stop.destination.icon}</span> {stop.destination.name}</h3>
-                        <p>{stop.destination.area} · {stop.destination.category}</p>
+                        <p>{stop.kind === "check-in" ? `${itinerary.stay?.kind === "airbnb" ? "Airbnb" : "Hotel"} · Fixed-time stop` : `${stop.destination.area} · ${stop.destination.category}`}</p>
                       </div>
-                      <span className="visit-time">Visit {formatDuration(stop.destination.duration)}</span>
+                      <span className="visit-time">{stop.kind === "check-in" ? "Check in" : "Visit"} {formatDuration(stop.destination.duration)}</span>
                     </header>
                     <p className="stop-description">{stop.destination.description}</p>
 
@@ -185,17 +188,17 @@ export function ItineraryResults({
                           <span>{fareLabel(stop)}</span>
                         </div>
                       </header>
-                      {stop.waitMinutes > 0 ? <p className="wait-note"><Clock3 size={14} /> Includes a {formatDuration(stop.waitMinutes)} wait for opening.</p> : null}
+                      {stop.waitMinutes > 0 ? <p className="wait-note"><Clock3 size={14} /> {stop.kind === "check-in" ? `Arrive about ${formatDuration(stop.waitMinutes)} before your selected check-in time.` : `Includes a ${formatDuration(stop.waitMinutes)} wait for opening.`}</p> : null}
                       <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
                       <div className="route-link-row">
                         {stop.transport.loadingMapUrl ? <a href={stop.transport.loadingMapUrl} target="_blank" rel="noreferrer"><MapPin size={14} /> Loading area <ExternalLink size={12} /></a> : null}
                         <a href={stop.transport.legMapUrl} target="_blank" rel="noreferrer"><Navigation size={14} /> Open this leg <ExternalLink size={12} /></a>
-                        <a href={stop.placeMapUrl} target="_blank" rel="noreferrer"><Route size={14} /> View place <ExternalLink size={12} /></a>
+                        <a href={stop.placeMapUrl} target="_blank" rel="noreferrer"><Route size={14} /> {stop.kind === "check-in" ? "Open saved stay" : "View place"} <ExternalLink size={12} /></a>
                       </div>
                     </section>
 
                     <section className="stop-ideas">
-                      <strong><Lightbulb size={15} /> Make the most of this stop</strong>
+                      <strong>{stop.kind === "check-in" ? <BedDouble size={15} /> : <Lightbulb size={15} />} {stop.kind === "check-in" ? "Check-in checklist" : "Make the most of this stop"}</strong>
                       <ul>{stop.destination.activities.map((activity) => <li key={activity}>{activity}</li>)}</ul>
                     </section>
                   </div>
@@ -256,6 +259,7 @@ export function ItineraryResults({
           <div className="print-brand"><img src="/assets/img/favicon.svg" alt="" /><strong>Baguio Buddy</strong><span>{variant === "shared" ? "Shared route" : "Personal itinerary"}</span></div>
           <h1>{itinerary.title}</h1>
           <p>Starting point: {itinerary.start.name}</p>
+          {itinerary.stay ? <p>Stay: {itinerary.stay.name} · {itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"} · Day {itinerary.stay.checkInDay + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)}</p> : null}
           <p>{itinerary.date ? `Trip date: ${formatTripDate(itinerary.date)} · ` : ""}{itinerary.totals.scheduledStops} stops · {formatDuration(itinerary.totals.travelMinutes)} travel · {formatCurrency(itinerary.totals.fare)} transport</p>
         </header>
         {itinerary.days.map((printDay) => (
@@ -265,7 +269,7 @@ export function ItineraryResults({
             {printDay.items.map((stop) => (
               <section key={stop.destination.id}>
                 <h3>{stop.number}. {minutesToTime(stop.arrivalMinutes)} — {stop.destination.name}</h3>
-                <p className="print-place-meta">{stop.destination.area} · {stop.destination.category} · Visit {formatDuration(stop.destination.duration)}</p>
+                <p className="print-place-meta">{stop.kind === "check-in" ? `${itinerary.stay?.kind === "airbnb" ? "Airbnb" : "Hotel"} · Fixed check-in` : `${stop.destination.area} · ${stop.destination.category}`} · {formatDuration(stop.destination.duration)}</p>
                 <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {stop.from.name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
                 <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
                 <p className="print-map-link"><a href={stop.transport.legMapUrl}>Open this leg in Google Maps</a></p>

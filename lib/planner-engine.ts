@@ -1047,6 +1047,9 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     `Scheduled stops: ${itinerary.totals.scheduledStops}`,
     `Estimated travel: ${formatDuration(itinerary.totals.travelMinutes)}`,
     `Estimated transport: ${formatCurrency(itinerary.totals.fare)}`,
+    ...(itinerary.stay
+      ? [`Stay: ${itinerary.stay.name} (${itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"}), check-in Day ${itinerary.stay.checkInDay + 1} at ${minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)}`]
+      : []),
     "",
   ];
 
@@ -1058,7 +1061,7 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     day.notices.forEach((notice) => lines.push(`Note: ${notice}`));
     day.items.forEach((item, index) => {
       lines.push(
-        `${index + 1}. ${minutesToTime(item.arrivalMinutes)} - ${item.destination.name}`,
+        `${index + 1}. ${minutesToTime(item.arrivalMinutes)} - ${item.destination.name}${item.kind === "check-in" ? " (fixed check-in)" : ""}`,
       );
       lines.push(
         `   ${transportLabel(item.transport.mode)} from ${item.from.name}, about ${formatDuration(item.transport.minutes)} (${item.distance.toFixed(1)} km est.).`,
