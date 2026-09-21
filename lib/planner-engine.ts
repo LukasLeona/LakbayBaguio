@@ -9,6 +9,7 @@
 import type {
   Coordinates,
   FareSettings,
+  PlannerStay,
   PlannerArea,
   PlannerDestination,
   RouteGuide,
@@ -16,10 +17,12 @@ import type {
   TransportMode,
   TravelPreference,
 } from "@/lib/planner-types";
+import { isSupportedGoogleMapsUrl } from "@/lib/google-maps-place";
 
 export type {
   FareSettings,
   PlannerDestination,
+  PlannerStay,
   StartLocation,
   TransportMode,
   TravelPreference,
@@ -70,6 +73,8 @@ export type PlannerRequest = {
   startTime?: string;
   /** Alternative to startTime, primarily useful for tests and restored state. */
   startMinutes?: number;
+  /** Optional fixed-time accommodation check-in added to the route. */
+  stay?: PlannerStay;
 };
 
 export type PlannerValidationCode =
@@ -146,6 +151,7 @@ export type PlannedItinerary = {
   startMinutes: number;
   selectedCount: number;
   selectedDestinationIds: string[];
+  stay?: PlannerStay;
   totals: ItineraryTotals;
   disclaimer: string;
 };
@@ -363,6 +369,51 @@ export function validatePlannerRequest(
     });
   }
 
+  if (request?.stay) {
+    const stay = request.stay;
+    validateLocation(stay, "stay", issues);
+
+    if (stay.kind !== "hotel" && stay.kind !== "airbnb") {
+      issues.push({
+        field: "stay.kind",
+        code: "invalid",
+        message: "Choose Hotel or Airbnb for your stay.",
+      });
+    }
+    if (!isSupportedGoogleMapsUrl(stay.googleMapsUrl)) {
+      issues.push({
+        field: "stay.googleMapsUrl",
+        code: "invalid",
+        message: "Paste a valid Google Maps place or share link for your stay.",
+      });
+    }
+    if (
+      !Number.isInteger(stay.checkInDay) ||
+      stay.checkInDay < 0 ||
+      stay.checkInDay >= request.numberOfDays
+    ) {
+      issues.push({
+        field: "stay.checkInDay",
+        code: "range",
+        message: "Choose a check-in day within your trip.",
+      });
+    }
+    if (parseTimeToMinutes(stay.checkInTime) === null) {
+      issues.push({
+        field: "stay.checkInTime",
+        code: "invalid",
+        message: "Check-in time must use HH:mm format.",
+      });
+    }
+    if (stay.luggagePlan !== "carry" && stay.luggagePlan !== "property-drop") {
+      issues.push({
+        field: "stay.luggagePlan",
+        code: "invalid",
+        message: "Choose how you plan to handle luggage before check-in.",
+      });
+    }
+  }
+
   const fares = mergeFareSettings(request?.fareSettings);
   (Object.keys(fares) as Array<keyof FareSettings>).forEach((key) => {
     if (!Number.isFinite(fares[key]) || fares[key] < 0) {
@@ -432,6 +483,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
       preference: request.preference,
       fareSettings,
       startMinutes,
+      stay: request.stay,
     }),
   );
 
@@ -453,6 +505,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     startMinutes,
     selectedCount: destinations.length,
     selectedDestinationIds: destinations.map((destination) => destination.id),
+    ...(request.stay ? { stay: request.stay } : {}),
     totals,
     disclaimer: PLANNING_DISCLAIMER,
   };
