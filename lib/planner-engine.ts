@@ -17,6 +17,7 @@ import type {
   TransportMode,
   TravelPreference,
 } from "@/lib/planner-types";
+import { LTFRB_FARE_POLICY, OFFICIAL_FARE_SETTINGS } from "@/lib/fare-policy";
 import { isSupportedGoogleMapsUrl } from "@/lib/google-maps-place";
 
 export type {
@@ -29,15 +30,9 @@ export type {
 } from "@/lib/planner-types";
 
 export const PLANNING_DISCLAIMER =
-  "Travel time, fares, attraction hours, and jeepney loading areas are estimates. Confirm current details locally.";
+  `Travel time and routes are estimates. Fare calculations use LTFRB-published rates reviewed ${LTFRB_FARE_POLICY.reviewedLabel}; confirm the taxi meter, jeepney fare matrix, attraction hours, and loading areas locally.`;
 
-export const DEFAULT_FARE_SETTINGS = Object.freeze({
-  jeepMinimum: 13,
-  jeepBaseKm: 4,
-  jeepPerKm: 1.8,
-  taxiFlag: 50,
-  taxiPerKm: 15,
-});
+export const DEFAULT_FARE_SETTINGS = OFFICIAL_FARE_SETTINGS;
 
 export const PLANNER_LIMITS = Object.freeze({
   minimumDestinations: 2,
@@ -1127,7 +1122,11 @@ export function chooseTransport(
     const jeepneyTotal =
       calculateJeepneyFare(distance, options.fareSettings) *
       options.travelers;
-    const taxiTotal = calculateTaxiFare(distance, options.fareSettings);
+    const taxiTotal = calculateTaxiFare(
+      distance,
+      options.fareSettings,
+      estimateTravelMinutes(distance, "taxi"),
+    );
     mode = jeepneyTotal <= taxiTotal ? "jeepney" : "taxi";
   } else if (allowed.has("jeepney") && jeepneyIsSuitable) {
     mode = "jeepney";
@@ -1148,7 +1147,7 @@ export function chooseTransport(
       : 0;
   const vehicleFare =
     mode === "taxi"
-      ? calculateTaxiFare(distance, options.fareSettings)
+      ? calculateTaxiFare(distance, options.fareSettings, minutes)
       : 0;
   const totalFare =
     mode === "jeepney"
@@ -1173,7 +1172,7 @@ export function calculateJeepneyFare(
   distance: number,
   settings: FareSettings,
 ): number {
-  return roundMoney(
+  return roundFareToQuarter(
     settings.jeepMinimum +
       Math.max(0, distance - settings.jeepBaseKm) * settings.jeepPerKm,
   );
@@ -1182,8 +1181,13 @@ export function calculateJeepneyFare(
 export function calculateTaxiFare(
   distance: number,
   settings: FareSettings,
+  travelMinutes = estimateTravelMinutes(distance, "taxi"),
 ): number {
-  return roundMoney(settings.taxiFlag + distance * settings.taxiPerKm);
+  return roundMoney(
+    settings.taxiFlag +
+      distance * settings.taxiPerKm +
+      travelMinutes * settings.taxiPerMinute,
+  );
 }
 
 export function estimateTravelMinutes(
@@ -1570,6 +1574,8 @@ function mergeFareSettings(settings?: Partial<FareSettings>): FareSettings {
     jeepPerKm: settings?.jeepPerKm ?? DEFAULT_FARE_SETTINGS.jeepPerKm,
     taxiFlag: settings?.taxiFlag ?? DEFAULT_FARE_SETTINGS.taxiFlag,
     taxiPerKm: settings?.taxiPerKm ?? DEFAULT_FARE_SETTINGS.taxiPerKm,
+    taxiPerMinute:
+      settings?.taxiPerMinute ?? DEFAULT_FARE_SETTINGS.taxiPerMinute,
   };
 }
 
@@ -1626,6 +1632,10 @@ function degreesToRadians(value: number): number {
 
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function roundFareToQuarter(value: number): number {
+  return Math.round(value * 4) / 4;
 }
 
 function roundDistance(value: number): number {

@@ -17,6 +17,7 @@ import type {
   RouteGuide,
   StartLocation,
 } from "@/lib/planner-types";
+import { OFFICIAL_FARE_SETTINGS } from "@/lib/fare-policy";
 
 export const PLANNER_ROUTE_GUIDES = {
   "City Center": {
@@ -1656,13 +1657,7 @@ export const PLANNER_CATEGORY_ORDER = [
   "Nearby Side Trips"
 ] as const satisfies readonly PlannerCategoryFilter[];
 
-export const DEFAULT_FARE_SETTINGS = {
-  jeepMinimum: 13,
-  jeepBaseKm: 4,
-  jeepPerKm: 1.8,
-  taxiFlag: 50,
-  taxiPerKm: 15,
-} as const satisfies FareSettings;
+export const DEFAULT_FARE_SETTINGS = OFFICIAL_FARE_SETTINGS satisfies FareSettings;
 
 export const DEFAULT_PLANNER_SETTINGS = {
   startLocationId: "victory-liner",

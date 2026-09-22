@@ -1,9 +1,12 @@
 "use client";
 
 import {
+  BadgeCheck,
   BaggageClaim,
   BedDouble,
+  BusFront,
   Building2,
+  CarFront,
   Check,
   ChevronRight,
   Crosshair,
@@ -26,7 +29,6 @@ import {
   type ParsedGoogleMapsPlace,
 } from "@/lib/google-maps-place";
 import {
-  DEFAULT_FARE_SETTINGS,
   DEFAULT_PLANNER_SETTINGS,
   PLANNER_CATEGORY_ORDER,
   PLANNER_DESTINATIONS,
@@ -35,6 +37,7 @@ import {
   getPlannerDestinationById,
   getPlannerStartLocationById,
 } from "@/lib/planner-data";
+import { LTFRB_FARE_POLICY } from "@/lib/fare-policy";
 import {
   generateItinerary,
   googleSearchUrl,
@@ -45,7 +48,6 @@ import {
 } from "@/lib/planner-engine";
 import type {
   AutoPickTheme,
-  FareSettings,
   LuggagePlan,
   PlannerCategoryFilter,
   PlannerDestination,
@@ -99,7 +101,6 @@ type PlannerDraft = {
   preference?: TravelPreference;
   modes?: TransportMode[];
   autoPickTheme?: AutoPickTheme;
-  fareSettings?: Partial<FareSettings>;
   stay?: {
     enabled: boolean;
     kind: StayKind;
@@ -193,7 +194,6 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [preference, setPreference] = useState<TravelPreference>(DEFAULT_PLANNER_SETTINGS.preference);
   const [modes, setModes] = useState<TransportMode[]>([...DEFAULT_PLANNER_SETTINGS.modes]);
-  const [fareSettings, setFareSettings] = useState<FareSettings>({ ...DEFAULT_FARE_SETTINGS });
   const [autoPickTheme, setAutoPickTheme] = useState<AutoPickTheme>(DEFAULT_PLANNER_SETTINGS.autoPickTheme);
   const [filter, setFilter] = useState<PlannerCategoryFilter>("All");
   const [query, setQuery] = useState("");
@@ -259,7 +259,6 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
         if (isTravelPreference(draft.preference)) setPreference(draft.preference);
         if (Array.isArray(draft.modes)) setModes(draft.modes.filter(isTransportMode));
         if (isAutoPickTheme(draft.autoPickTheme)) setAutoPickTheme(draft.autoPickTheme);
-        if (draft.fareSettings) setFareSettings((current) => ({ ...current, ...draft.fareSettings }));
         if (draft.stay) {
           setIncludeStay(Boolean(draft.stay.enabled));
           if (draft.stay.kind === "hotel" || draft.stay.kind === "airbnb") setStayKind(draft.stay.kind);
@@ -287,7 +286,6 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           setSelectedIds(pending.selectedDestinationIds.filter((id) => Boolean(getPlannerDestinationById(id))));
           setPreference(pending.preference);
           setModes(pending.modes);
-          setFareSettings(pending.fareSettings);
           if (pending.stay) {
             setIncludeStay(true);
             setStayKind(pending.stay.kind);
@@ -316,9 +314,9 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
   useEffect(() => {
     if (!restored) return;
-    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, fareSettings, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, luggagePlan } };
+    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, luggagePlan } };
     try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)); } catch { /* Storage is optional. */ }
-  }, [autoPickTheme, availableHours, checkInDay, checkInTime, fareSettings, includeStay, luggagePlan, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
+  }, [autoPickTheme, availableHours, checkInDay, checkInTime, includeStay, luggagePlan, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
 
   useEffect(() => {
     setCheckInDay((current) => Math.min(current, numberOfDays - 1));
@@ -438,10 +436,6 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     setError("");
   }
 
-  function updateFare(field: keyof FareSettings, value: string) {
-    setFareSettings((current) => ({ ...current, [field]: Math.max(0, Number(value) || 0) }));
-  }
-
   function useCurrentLocation() {
     if (!navigator.geolocation) { setToast("Location access is not supported by this browser."); return; }
     setLocating(true);
@@ -480,7 +474,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
         return;
       }
     }
-    const request: PlannerRequest = { start: selectedStart, destinations: selectedDestinations, date: tripDate, numberOfDays, availableMinutes: availableHours * 60, travelers, modes, preference, fareSettings, startTime, ...(stay ? { stay } : {}) };
+    const request: PlannerRequest = { start: selectedStart, destinations: selectedDestinations, date: tripDate, numberOfDays, availableMinutes: availableHours * 60, travelers, modes, preference, startTime, ...(stay ? { stay } : {}) };
     const issues = validatePlannerRequest(request);
     if (issues.length) {
       setGenerating(false);
@@ -590,7 +584,30 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
           <fieldset className="transport-modes"><legend>Allowed transportation</legend><div>{MODES.map((mode) => <button type="button" key={mode.value} aria-pressed={modes.includes(mode.value)} className={modes.includes(mode.value) ? "active" : ""} onClick={() => toggleMode(mode.value)}><span>{mode.icon}</span>{mode.label}{modes.includes(mode.value) ? <Check size={13} /> : null}</button>)}</div></fieldset>
 
-          <details className="fare-assumptions"><summary>Adjust planning fare assumptions</summary><div><label><span>Jeepney minimum</span><input type="number" min="0" step="1" value={fareSettings.jeepMinimum} onChange={(event) => updateFare("jeepMinimum", event.target.value)} /></label><label><span>Base distance (km)</span><input type="number" min="0" step="0.5" value={fareSettings.jeepBaseKm} onChange={(event) => updateFare("jeepBaseKm", event.target.value)} /></label><label><span>Added per km</span><input type="number" min="0" step="0.1" value={fareSettings.jeepPerKm} onChange={(event) => updateFare("jeepPerKm", event.target.value)} /></label><label><span>Taxi flag-down</span><input type="number" min="0" step="1" value={fareSettings.taxiFlag} onChange={(event) => updateFare("taxiFlag", event.target.value)} /></label><label><span>Taxi per km</span><input type="number" min="0" step="1" value={fareSettings.taxiPerKm} onChange={(event) => updateFare("taxiPerKm", event.target.value)} /></label></div><p>Editable estimates only. Verify current fares with the driver or dispatcher.</p></details>
+          <section className="fare-policy-card" aria-labelledby="fare-policy-title">
+            <header>
+              <span className="fare-policy-seal"><BadgeCheck size={20} /></span>
+              <div><small>LTFRB-SOURCED ESTIMATES</small><h3 id="fare-policy-title">Planning fares are filled in for you</h3><p>No manual rates to research or type. Baguio Buddy applies the reviewed fare profile automatically.</p></div>
+              <span className="fare-policy-reviewed">Checked {LTFRB_FARE_POLICY.reviewedLabel}</span>
+            </header>
+            <div className="fare-policy-rates">
+              <article>
+                <span><BusFront size={18} /> {LTFRB_FARE_POLICY.jeepney.label}</span>
+                <strong>₱{LTFRB_FARE_POLICY.jeepney.minimum}<small> first {LTFRB_FARE_POLICY.jeepney.baseKilometers} km</small></strong>
+                <p>+₱{LTFRB_FARE_POLICY.jeepney.perKilometer.toFixed(2)} for every succeeding kilometer</p>
+                <small className="fare-policy-effective">{LTFRB_FARE_POLICY.jeepney.effectiveLabel}</small>
+                <a href={LTFRB_FARE_POLICY.jeepney.sourceUrl} target="_blank" rel="noreferrer">Official fare guide <ExternalLink size={12} /></a>
+              </article>
+              <article>
+                <span><CarFront size={18} /> {LTFRB_FARE_POLICY.taxi.label}</span>
+                <strong>₱{LTFRB_FARE_POLICY.taxi.flagDown}<small> flag-down</small></strong>
+                <p>+₱{LTFRB_FARE_POLICY.taxi.perKilometer.toFixed(2)}/km + ₱{LTFRB_FARE_POLICY.taxi.perMinute.toFixed(2)}/minute</p>
+                <small className="fare-policy-effective">{LTFRB_FARE_POLICY.taxi.effectiveLabel}</small>
+                <a href={LTFRB_FARE_POLICY.taxi.sourceUrl} target="_blank" rel="noreferrer">Official fare rates <ExternalLink size={12} /></a>
+              </article>
+            </div>
+            <footer><span>Estimates still vary with the actual route, traffic, authorized discounts, and taxi meter.</span><a href={LTFRB_FARE_POLICY.taxi.orderUrl} target="_blank" rel="noreferrer">View taxi fare order <ExternalLink size={12} /></a></footer>
+          </section>
 
           {error ? <p className="planner-error" role="alert">{error}</p> : null}
           <button className="generate-plan-button" type="submit" disabled={generating} aria-busy={generating}><span><small>{generating ? "Mapping time, fare, and directions" : "Ready when you are"}</small><strong>{generating ? "Building your Baguio route…" : "Generate my itinerary"}</strong></span>{generating ? <LoaderCircle className="spin" size={22} /> : <ChevronRight size={22} />}</button>

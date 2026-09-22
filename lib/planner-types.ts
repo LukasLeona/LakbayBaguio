@@ -128,6 +128,8 @@ export interface FareSettings {
   readonly taxiFlag: number;
   /** Estimated taxi addition per kilometer, per vehicle. */
   readonly taxiPerKm: number;
+  /** Estimated taxi addition per minute of travel, per vehicle. */
+  readonly taxiPerMinute: number;
 }
 
 export interface PlannerDefaults {
