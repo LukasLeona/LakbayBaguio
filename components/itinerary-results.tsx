@@ -87,7 +87,10 @@ export function ItineraryResults({
   const currentItinerary = canonicalStart === itinerary.start
     ? itinerary
     : { ...itinerary, start: canonicalStart };
-  const routeLinks = day ? buildDayRouteUrls(canonicalStart, day) : [];
+  const dayRouteStart = day?.items[0]
+    ? canonicalRouteLocation(day.items[0].from)
+    : canonicalStart;
+  const routeLinks = day ? buildDayRouteUrls(dayRouteStart, day) : [];
 
   async function copyPlan() {
     const value = itineraryToText(currentItinerary);
