@@ -24,6 +24,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { ItineraryShareDialog } from "@/components/itinerary-share-dialog";
+import { getPlannerStartLocationById } from "@/lib/planner-data";
 import {
   buildDayRouteUrls,
   formatCurrency,
@@ -36,6 +37,7 @@ import {
   parseTimeToMinutes,
   transportLabel,
   type PlannedItinerary,
+  type PlannerLocation,
   type PlannedStop,
   type TransportMode,
 } from "@/lib/planner-engine";
@@ -64,6 +66,10 @@ function fareLabel(stop: PlannedStop) {
   return `${formatCurrency(stop.transport.vehicleFare)} per vehicle`;
 }
 
+function canonicalRouteLocation(location: PlannerLocation): PlannerLocation {
+  return location.id ? getPlannerStartLocationById(location.id) ?? location : location;
+}
+
 export function ItineraryResults({
   itinerary,
   activeDay,
@@ -77,10 +83,14 @@ export function ItineraryResults({
   const [shareOpen, setShareOpen] = useState(false);
   const day = itinerary.days[activeDay] ?? itinerary.days[0];
   const firstStop = day?.items[0];
-  const routeLinks = day ? buildDayRouteUrls(itinerary.start, day) : [];
+  const canonicalStart = getPlannerStartLocationById(itinerary.start.id) ?? itinerary.start;
+  const currentItinerary = canonicalStart === itinerary.start
+    ? itinerary
+    : { ...itinerary, start: canonicalStart };
+  const routeLinks = day ? buildDayRouteUrls(canonicalStart, day) : [];
 
   async function copyPlan() {
-    const value = itineraryToText(itinerary);
+    const value = itineraryToText(currentItinerary);
     try {
       await navigator.clipboard.writeText(value);
     } catch {
@@ -121,7 +131,7 @@ export function ItineraryResults({
           <span className="result-kicker"><i /> {variant === "shared" ? "Itinerary shared with you" : "Your generated plan"}</span>
           <h1 id="generated-plan-title">{itinerary.title}</h1>
           <p>
-            {itinerary.totals.scheduledStops} scheduled stops from {itinerary.start.name}
+            {itinerary.totals.scheduledStops} scheduled stops from {canonicalStart.name}
             {itinerary.date ? ` beginning ${formatTripDate(itinerary.date)}` : ""}
             {itinerary.stay ? `, with ${itinerary.stay.name} check-in included` : ""}.
           </p>
@@ -184,7 +194,7 @@ export function ItineraryResults({
                     <section className={`transport-card mode-${stop.transport.mode}`} aria-label={`Travel to ${stop.destination.name}`}>
                       <header>
                         <span className="transport-icon"><TransportIcon mode={stop.transport.mode} /></span>
-                        <div><strong>{transportLabel(stop.transport.mode)} from {stop.from.name}</strong><small>{stop.destination.routeGuide.modeLabel}</small></div>
+                        <div><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong><small>{stop.destination.routeGuide.modeLabel}</small></div>
                         <div className="transport-stats">
                           <span>{stop.distance.toFixed(1)} km est.</span>
                           <span>{formatDuration(stop.transport.minutes)}</span>
@@ -195,7 +205,7 @@ export function ItineraryResults({
                       <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
                       <div className="route-link-row">
                         {stop.transport.loadingMapUrl ? <a href={stop.transport.loadingMapUrl} target="_blank" rel="noreferrer"><MapPin size={14} /> Loading area <ExternalLink size={12} /></a> : null}
-                        <a href={googleDirectionsUrl(stop.from, stop.destination, stop.transport.mode)} target="_blank" rel="noreferrer"><Navigation size={14} /> Open this leg <ExternalLink size={12} /></a>
+                        <a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)} target="_blank" rel="noreferrer"><Navigation size={14} /> Open this leg <ExternalLink size={12} /></a>
                         <a href={stop.placeMapUrl} target="_blank" rel="noreferrer"><Route size={14} /> {stop.kind === "check-in" ? "Open saved stay" : "View place"} <ExternalLink size={12} /></a>
                       </div>
                     </section>
@@ -239,7 +249,7 @@ export function ItineraryResults({
               </div>
               <div className="route-map-actions">
                 {routeLinks.map((url, index) => <a className={`button ${index === 0 ? "primary" : "secondary"}`} href={url} target="_blank" rel="noreferrer" key={url}><Navigation size={16} /> {routeLinks.length > 1 ? `Open route part ${index + 1} of ${routeLinks.length}` : `Open complete Day ${day.index + 1} route`}</a>)}
-                <a className="button secondary" href={googleDirectionsUrl(firstStop.from, firstStop.destination, firstStop.transport.mode)} target="_blank" rel="noreferrer">Navigate to first stop</a>
+                <a className="button secondary" href={googleDirectionsUrl(canonicalRouteLocation(firstStop.from), firstStop.destination, firstStop.transport.mode)} target="_blank" rel="noreferrer">Navigate to first stop</a>
               </div>
             </>
           ) : <div className="map-empty"><MapPin size={28} /><p>No map route for this day yet.</p></div>}
@@ -261,7 +271,7 @@ export function ItineraryResults({
         <header>
           <div className="print-brand"><img src="/assets/img/favicon.svg" alt="" /><strong>Baguio Buddy</strong><span>{variant === "shared" ? "Shared route" : "Personal itinerary"}</span></div>
           <h1>{itinerary.title}</h1>
-          <p>Starting point: {itinerary.start.name}</p>
+          <p>Starting point: {canonicalStart.name}</p>
           {itinerary.stay ? <p>Stay: {itinerary.stay.name} · {itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"} · Day {itinerary.stay.checkInDay + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)}</p> : null}
           <p>{itinerary.date ? `Trip date: ${formatTripDate(itinerary.date)} · ` : ""}{itinerary.totals.scheduledStops} stops · {formatDuration(itinerary.totals.travelMinutes)} travel · {formatCurrency(itinerary.totals.fare)} transport</p>
         </header>
@@ -273,16 +283,16 @@ export function ItineraryResults({
               <section key={stop.destination.id}>
                 <h3>{stop.number}. {minutesToTime(stop.arrivalMinutes)} — {stop.destination.name}</h3>
                 <p className="print-place-meta">{stop.kind === "check-in" ? `${itinerary.stay?.kind === "airbnb" ? "Airbnb" : "Hotel"} · Fixed check-in` : `${stop.destination.area} · ${stop.destination.category}`} · {formatDuration(stop.destination.duration)}</p>
-                <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {stop.from.name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
+                <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
                 <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
-                <p className="print-map-link"><a href={googleDirectionsUrl(stop.from, stop.destination, stop.transport.mode)}>Open this leg in Google Maps</a></p>
+                <p className="print-map-link"><a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)}>Open this leg in Google Maps</a></p>
               </section>
             ))}
           </article>
         ))}
         <footer>{itinerary.disclaimer}</footer>
       </section>
-      {variant === "owned" ? <ItineraryShareDialog itinerary={itinerary} open={shareOpen} onClose={() => setShareOpen(false)} /> : null}
+      {variant === "owned" ? <ItineraryShareDialog itinerary={currentItinerary} open={shareOpen} onClose={() => setShareOpen(false)} /> : null}
     </section>
   );
 }
