@@ -145,41 +145,52 @@ export function ItineraryResults({
 
   return (
     <section className="generated-plan" id="itinerary-result" aria-labelledby="generated-plan-title">
-      <header className="generated-plan-header">
-        <div>
-          <span className="result-kicker"><i /> {variant === "shared" ? "Itinerary shared with you" : "Your generated plan"}</span>
-          <h1 id="generated-plan-title">{itinerary.title}</h1>
-          <p>
-            {itinerary.totals.scheduledStops} scheduled stops from {canonicalStart.name}
-            {itinerary.date ? ` beginning ${formatTripDate(itinerary.date)}` : ""}
-            {itinerary.stay ? `, with ${itinerary.stay.name} check-in and checkout included` : ""}.
-          </p>
+      <section className="itinerary-overview" aria-label="Itinerary overview">
+        <header className="generated-plan-header">
+          <div>
+            <span className="result-kicker"><i /> {variant === "shared" ? "Itinerary shared with you" : "Your generated plan"}</span>
+            <h1 id="generated-plan-title">{itinerary.title}</h1>
+            <p>A calmer route shaped around nearby stops, practical travel time, and the moments that matter.</p>
+            <div className="plan-context-row">
+              <span><MapPin /> From {canonicalStart.name}</span>
+              {itinerary.date ? <span><CalendarDays /> Starts {formatTripDate(itinerary.date)}</span> : null}
+              {itinerary.stay ? <span><BedDouble /> {itinerary.stay.name}</span> : null}
+            </div>
+          </div>
+          <div className="plan-route-stamp" aria-label={`${itinerary.numberOfDays}-day route with ${itinerary.totals.scheduledStops} scheduled stops`}>
+            <Route aria-hidden="true" />
+            <strong>{itinerary.numberOfDays}</strong>
+            <span>day route</span>
+          </div>
+        </header>
+
+        <div className="trip-metrics" aria-label="Itinerary summary">
+          <article><i><CalendarDays /></i><div><span>Travel days</span><strong>{itinerary.numberOfDays}</strong><small>{itinerary.numberOfDays === 1 ? "day planned" : "days planned"}</small></div></article>
+          <article><i><MapPin /></i><div><span>Scheduled stops</span><strong>{itinerary.totals.scheduledStops}</strong><small>{itinerary.stay ? "including stay anchors" : "places arranged"}</small></div></article>
+          <article><i><Clock3 /></i><div><span>Travel time</span><strong>{formatDuration(itinerary.totals.travelMinutes)}</strong><small>estimated between stops</small></div></article>
+          <article><i><WalletCards /></i><div><span>Transport</span><strong>{formatCurrency(itinerary.totals.fare)}</strong><small>planning estimate</small></div></article>
         </div>
-      </header>
+      </section>
 
-      <div className="trip-metrics" aria-label="Itinerary summary">
-        <article><i><CalendarDays /></i><div><span>Travel days</span><strong>{itinerary.numberOfDays}</strong><small>{itinerary.numberOfDays === 1 ? "day planned" : "days planned"}</small></div></article>
-        <article><i><MapPin /></i><div><span>Scheduled stops</span><strong>{itinerary.totals.scheduledStops}</strong><small>{itinerary.stay ? "places, plus stay anchors" : "places arranged"}</small></div></article>
-        <article><i><Clock3 /></i><div><span>Estimated travel</span><strong>{formatDuration(itinerary.totals.travelMinutes)}</strong><small>between stops</small></div></article>
-        <article><i><WalletCards /></i><div><span>Estimated transport</span><strong>{formatCurrency(itinerary.totals.fare)}</strong><small>planning estimate</small></div></article>
-      </div>
-
-      <div className="itinerary-day-tabs" role="tablist" aria-label="Choose itinerary day">
-        {itinerary.days.map((item) => (
-          <button
-            key={item.index}
-            type="button"
-            role="tab"
-            aria-selected={item.index === activeDay}
-            className={item.index === activeDay ? "active" : ""}
-            onClick={() => onActiveDayChange(item.index)}
-          >
-            <span>Day {item.index + 1}</span>
-            <strong>{itinerary.date ? formatDayDate(itinerary.date, item.index) : `Route ${item.index + 1}`}</strong>
-            <small>{item.items.length} agenda {item.items.length === 1 ? "item" : "items"}</small>
-          </button>
-        ))}
-      </div>
+      <section className="itinerary-day-selector" aria-label="Choose itinerary day">
+        <header><div><span>DAILY ROUTE</span><strong>Choose a day</strong></div><small>Tap a day to see its agenda and map.</small></header>
+        <div className="itinerary-day-tabs" role="tablist">
+          {itinerary.days.map((item) => (
+            <button
+              key={item.index}
+              type="button"
+              role="tab"
+              aria-selected={item.index === activeDay}
+              className={item.index === activeDay ? "active" : ""}
+              onClick={() => onActiveDayChange(item.index)}
+            >
+              <span>Day {item.index + 1}</span>
+              <strong>{itinerary.date ? formatDayDate(itinerary.date, item.index) : `Route ${item.index + 1}`}</strong>
+              <small>{item.items.length} agenda {item.items.length === 1 ? "item" : "items"}</small>
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="generated-results-grid">
         <article className="route-panel-rich">
