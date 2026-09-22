@@ -1614,7 +1614,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 /* Itinerary review before a route is saved */
-.itinerary-review-backdrop { position: fixed; inset: 0; z-index: 250; display: grid; place-items: center; padding: 20px; background: rgba(4,28,22,.7); backdrop-filter: blur(14px); }
+.itinerary-review-backdrop { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; padding: 20px; background: rgba(4,28,22,.7); backdrop-filter: blur(14px); }
 .itinerary-review-dialog { width: min(1050px, 100%); max-height: min(92vh, 900px); overflow: auto; padding: 24px; border: 1px solid rgba(255,255,255,.55); border-radius: 30px; background: #f8f5ea; box-shadow: 0 34px 90px rgba(0,20,15,.32); }
 .itinerary-review-header { display: flex; align-items: start; justify-content: space-between; gap: 24px; }
 .itinerary-review-header > div > span { display: flex; align-items: center; gap: 7px; color: var(--pine-700); font-size: .53rem; font-weight: 900; letter-spacing: .13em; }
@@ -1668,7 +1668,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 @media screen and (max-width: 760px) {
   .itinerary-review-backdrop { align-items: end; padding: 0; }
-  .itinerary-review-dialog { max-height: 94dvh; padding: 17px 12px; border-radius: 25px 25px 0 0; }
+  .itinerary-review-dialog { max-height: 96dvh; padding: 17px 12px calc(88px + env(safe-area-inset-bottom)); border-radius: 25px 25px 0 0; }
   .itinerary-review-header { padding: 0 3px; }
   .itinerary-review-header h2 { font-size: 1.65rem; }
   .itinerary-review-header p { font-size: .56rem; }
@@ -1678,7 +1678,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .review-day-card > header { padding: 12px 12px 8px; }
   .review-area-line { margin-inline: 12px; }
   .review-stop { min-height: 44px; }
-  .itinerary-review-actions { bottom: -17px; margin: 14px -12px -17px; padding: 11px 12px calc(13px + env(safe-area-inset-bottom)); }
+  .itinerary-review-actions { position: fixed; z-index: 2001; left: 0; right: 0; bottom: 0; margin: 0; padding: 11px 12px calc(13px + env(safe-area-inset-bottom)); box-shadow: 0 -10px 24px rgba(8,44,34,.13); }
   .itinerary-review-actions button { flex: 1; min-height: 44px; padding-inline: 10px; }
 }
 

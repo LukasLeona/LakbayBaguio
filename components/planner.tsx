@@ -574,16 +574,44 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     router.push("/plan/itinerary");
   }
 
-  function editReviewedPlan(destinationId?: string) {
-    if (destinationId) {
-      setSelectedIds((current) => current.filter((id) => id !== destinationId));
-      if (destinationId === "baguio-city-market" && finalDayPreference === "pasalubong") {
-        setFinalDayPreference("easy-stop");
-      }
-      setToast("Place removed. Generate again to rebalance the route.");
-    }
+  function editReviewedPlan() {
     setReviewResult(null);
     window.setTimeout(() => scrollToStep("destinations"), 40);
+  }
+
+  function removeReviewedDestination(destinationId: string) {
+    if (!reviewResult) return;
+    const remainingIds = reviewResult.selectedDestinationIds.filter((id) => id !== destinationId);
+    const remainingDestinations = PLANNER_DESTINATIONS.filter((destination) => remainingIds.includes(destination.id));
+    if (remainingDestinations.length < 2) return;
+
+    const removedAutomaticMarket = destinationId === "baguio-city-market"
+      && reviewResult.stay?.finalDayPreference === "pasalubong";
+    const nextStay = reviewResult.stay
+      ? {
+          ...reviewResult.stay,
+          ...(removedAutomaticMarket ? { finalDayPreference: "easy-stop" as const } : {}),
+        }
+      : undefined;
+    const next = generateItinerary({
+      start: reviewResult.start,
+      destinations: remainingDestinations,
+      date: reviewResult.date,
+      numberOfDays: reviewResult.numberOfDays,
+      availableMinutes: reviewResult.availableMinutes,
+      travelers: reviewResult.travelers,
+      modes: reviewResult.modes,
+      preference: reviewResult.preference,
+      fareSettings: reviewResult.fareSettings,
+      startMinutes: reviewResult.startMinutes,
+      ...(nextStay ? { stay: nextStay } : {}),
+      ...(reviewResult.departure ? { departure: reviewResult.departure } : {}),
+    });
+
+    setSelectedIds((current) => current.filter((id) => id !== destinationId));
+    if (removedAutomaticMarket) setFinalDayPreference("easy-stop");
+    setReviewResult(next);
+    setSaved(false);
   }
 
   function savePlan() {
@@ -719,7 +747,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
       {initialView === "itinerary" && restored && result ? <ItineraryResults itinerary={result} activeDay={activeDay} saved={saved} onActiveDayChange={setActiveDay} onEdit={() => router.push("/plan")} onSave={savePlan} /> : null}
       {initialView === "itinerary" && !restored ? <div className="loading-card itinerary-loading">Opening your itinerary…</div> : null}
-      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} onConfirm={confirmReviewedPlan} onEdit={() => editReviewedPlan()} onRemove={editReviewedPlan} /> : null}
+      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} onConfirm={confirmReviewedPlan} onEdit={editReviewedPlan} onRemove={removeReviewedDestination} /> : null}
       {toast ? <div className="planner-toast" role="status">{toast}</div> : null}
     </div>
   );
