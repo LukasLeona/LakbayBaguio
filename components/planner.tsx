@@ -23,6 +23,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ItineraryResults } from "@/components/itinerary-results";
 import { ItineraryReviewDialog } from "@/components/itinerary-review-dialog";
+import { StayAutocomplete } from "@/components/stay-autocomplete";
 import {
   createPlannerStay,
   googleMapsStaySearchUrl,
@@ -663,7 +664,26 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                 <button type="button" className={stayKind === "hotel" ? "active" : ""} aria-pressed={stayKind === "hotel"} onClick={() => setStayKind("hotel")}><Building2 size={17} /> Hotel</button>
                 <button type="button" className={stayKind === "airbnb" ? "active" : ""} aria-pressed={stayKind === "airbnb"} onClick={() => setStayKind("airbnb")}><House size={17} /> Airbnb</button>
               </div>
-              <label className="planner-field stay-name-field"><span>Property name</span><input type="text" value={stayName} onChange={(event) => setStayName(event.target.value)} placeholder={stayKind === "hotel" ? "Example: G1 Lodge" : "Example: Pine View Airbnb"} /></label>
+              <StayAutocomplete
+                kind={stayKind}
+                value={stayName}
+                onValueChange={(value) => {
+                  setStayName(value);
+                  if (stayMapsUrl) {
+                    setStayMapsUrl("");
+                    setVerifiedStayMap(null);
+                    setStayMapState("idle");
+                  }
+                  setSaved(false);
+                }}
+                onSelect={(place) => {
+                  setStayName(place.name);
+                  setStayMapsUrl(place.googleMapsUrl);
+                  setVerifiedStayMap(null);
+                  setStayMapState("checking");
+                  setSaved(false);
+                }}
+              />
               <label className="planner-field stay-map-field"><span>Google Maps place or share link</span><div><MapPin size={17} /><input type="url" value={stayMapsUrl} onChange={(event) => { setStayMapsUrl(event.target.value); setVerifiedStayMap(null); setSaved(false); }} placeholder="https://maps.app.goo.gl/..." /><a href={googleMapsStaySearchUrl(stayKind, stayName)} target="_blank" rel="noreferrer" aria-label="Find this stay in Google Maps" title="Find in Google Maps"><ExternalLink size={17} /></a></div></label>
               <div className="stay-schedule-grid">
                 <section className="stay-schedule-group">

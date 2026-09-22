@@ -42,7 +42,6 @@ type GooglePlacePayload = {
   displayName?: { text?: string };
   formattedAddress?: string;
   location?: { latitude?: number; longitude?: number };
-  googleMapsUri?: string;
 };
 
 const BAGUIO_SEARCH = Object.freeze({ latitude: 16.4023, longitude: 120.596, radius: 28_000 });
@@ -147,7 +146,7 @@ export async function fetchStayDetails(placeId: string, sessionToken: string, ap
     cache: "no-store",
     headers: {
       "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": "id,displayName,formattedAddress,location,googleMapsUri",
+      "X-Goog-FieldMask": "id,displayName,formattedAddress,location",
     },
   });
 
@@ -166,6 +165,8 @@ export async function fetchStayDetails(placeId: string, sessionToken: string, ap
     address: place.formattedAddress || "Baguio City, Philippines",
     lat: lat as number,
     lng: lng as number,
-    googleMapsUrl: place.googleMapsUri || canonicalGoogleMapsPlaceUrl(name, lat as number, lng as number),
+    // Keep a coordinate-bearing URL so the planner can verify the selected pin
+    // locally without another network request. googleMapsUri can be a CID URL.
+    googleMapsUrl: canonicalGoogleMapsPlaceUrl(name, lat as number, lng as number),
   };
 }

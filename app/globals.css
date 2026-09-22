@@ -1582,6 +1582,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stay-kind-picker button { height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #d8c8b6; border-radius: 13px; color: #725d48; background: #fffdf8; cursor: pointer; font-size: .65rem; font-weight: 750; }
 .stay-kind-picker button.active { color: white; border-color: #594532; background: #594532; box-shadow: 0 7px 14px rgba(75,54,35,.14); }
 .stay-map-field, .stay-schedule-grid, .final-day-picker, .departure-fields, .stay-luggage-choice, .stay-map-status, .stay-map-help { grid-column: 1 / -1; }
+.stay-autocomplete { position: relative; min-width: 0; }
+.stay-autocomplete-input { height: 48px; display: grid; grid-template-columns: 20px minmax(0,1fr) 20px; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid var(--line); border-radius: 13px; background: #fffdf8; }
+.stay-autocomplete-input:focus-within { border-color: var(--pine-700); box-shadow: 0 0 0 3px rgba(63,118,105,.1); }
+.stay-autocomplete-input > svg { color: #8a6e51; }
+.stay-autocomplete-input input { min-width: 0; height: 44px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.stay-autocomplete-input input:focus { box-shadow: none; }
+.stay-suggestion-popover { position: absolute; z-index: 40; top: calc(100% + 7px); right: 0; left: 0; overflow: hidden; border: 1px solid #d6cab9; border-radius: 16px; background: #fffef9; box-shadow: 0 20px 45px rgba(47,38,27,.18); }
+.stay-suggestion-popover ul { max-height: 310px; overflow-y: auto; margin: 0; padding: 5px; list-style: none; }
+.stay-suggestion-popover li + li { border-top: 1px solid #eee7db; }
+.stay-suggestion-popover li button { width: 100%; min-height: 62px; display: grid; grid-template-columns: 34px minmax(0,1fr) auto; align-items: center; gap: 9px; padding: 9px; border: 0; border-radius: 11px; color: var(--ink); background: transparent; cursor: pointer; text-align: left; }
+.stay-suggestion-popover li button:hover, .stay-suggestion-popover li button.active { background: #f2f5e8; }
+.stay-suggestion-popover li button > i { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; color: #6b543e; background: #eee3d5; font-style: normal; }
+.stay-suggestion-popover li button > i svg { width: 16px; height: 16px; }
+.stay-suggestion-popover li button > span { min-width: 0; display: grid; gap: 3px; }
+.stay-suggestion-popover li strong { overflow: hidden; font-size: .61rem; text-overflow: ellipsis; white-space: nowrap; }
+.stay-suggestion-popover li small { overflow: hidden; display: flex; align-items: center; gap: 4px; color: #766858; font-size: .49rem; text-overflow: ellipsis; white-space: nowrap; }
+.stay-suggestion-popover li small svg { width: 11px; height: 11px; flex: 0 0 auto; }
+.stay-suggestion-popover li em { padding: 4px 6px; border-radius: 999px; color: #4c7165; background: #e6eee2; font-size: .42rem; font-style: normal; font-weight: 800; white-space: nowrap; }
+.stay-suggestion-message { margin: 0; padding: 16px; color: #766858; font-size: .56rem; line-height: 1.5; }
+.stay-suggestion-popover > footer { min-height: 33px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 11px; border-top: 1px solid #eee7db; color: #817260; background: #faf8f1; font-size: .44rem; }
+.stay-suggestion-popover footer img { width: 98px; height: auto; }
 .stay-map-field > div { height: 48px; display: grid; grid-template-columns: 20px minmax(0,1fr) 42px; align-items: center; gap: 6px; padding-left: 12px; border: 1px solid var(--line); border-radius: 13px; background: #fffdf8; }
 .stay-map-field > div:focus-within { border-color: var(--pine-700); box-shadow: 0 0 0 3px rgba(63,118,105,.1); }
 .stay-map-field > div > svg { color: #8a6e51; }
@@ -1639,6 +1660,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .stay-planner-fields { grid-template-columns: 1fr; gap: 11px; padding: 14px; }
   .stay-kind-picker, .stay-name-field, .stay-map-field, .stay-schedule-grid, .final-day-picker, .departure-fields, .stay-luggage-choice, .stay-map-status, .stay-map-help { grid-column: 1; }
   .stay-kind-picker button, .stay-map-field > div { height: 46px; }
+  .stay-autocomplete-input { height: 46px; }
+  .stay-suggestion-popover { right: -1px; left: -1px; }
   .stay-luggage-choice { padding: 11px; }
   .stay-schedule-grid { grid-template-columns: 1fr; }
   .stay-schedule-group > header { min-height: 0; }
