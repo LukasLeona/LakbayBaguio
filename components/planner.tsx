@@ -8,6 +8,7 @@ import {
   Building2,
   CarFront,
   Check,
+  ChevronDown,
   ChevronRight,
   Crosshair,
   ExternalLink,
@@ -713,13 +714,16 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
           <fieldset className="transport-modes"><legend>Allowed transportation</legend><div>{MODES.map((mode) => <button type="button" key={mode.value} aria-pressed={modes.includes(mode.value)} className={modes.includes(mode.value) ? "active" : ""} onClick={() => toggleMode(mode.value)}><span>{mode.icon}</span>{mode.label}{modes.includes(mode.value) ? <Check size={13} /> : null}</button>)}</div></fieldset>
 
-          <section className="fare-policy-card" aria-labelledby="fare-policy-title">
-            <header>
+          <details className="fare-policy-card">
+            <summary>
               <span className="fare-policy-seal"><BadgeCheck size={20} /></span>
-              <div><small>LTFRB-SOURCED ESTIMATES</small><h3 id="fare-policy-title">Planning fares are filled in for you</h3><p>No manual rates to research or type. Baguio Buddy applies the reviewed fare profile automatically.</p></div>
+              <div><small>FARE ESTIMATES</small><h3>Planning fares are filled in for you</h3><p>Tap to review the LTFRB-sourced jeepney and taxi rates.</p></div>
               <span className="fare-policy-reviewed">Checked {LTFRB_FARE_POLICY.reviewedLabel}</span>
-            </header>
-            <div className="fare-policy-rates">
+              <ChevronDown className="fare-policy-chevron" size={18} aria-hidden="true" />
+            </summary>
+            <div className="fare-policy-content">
+              <p className="fare-policy-intro">No manual rates to research or type. Baguio Buddy applies this reviewed fare profile automatically when it estimates your route.</p>
+              <div className="fare-policy-rates">
               <article>
                 <span><BusFront size={18} /> {LTFRB_FARE_POLICY.jeepney.label}</span>
                 <strong>₱{LTFRB_FARE_POLICY.jeepney.minimum}<small> first {LTFRB_FARE_POLICY.jeepney.baseKilometers} km</small></strong>
@@ -734,9 +738,10 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                 <small className="fare-policy-effective">{LTFRB_FARE_POLICY.taxi.effectiveLabel}</small>
                 <a href={LTFRB_FARE_POLICY.taxi.sourceUrl} target="_blank" rel="noreferrer">Official fare rates <ExternalLink size={12} /></a>
               </article>
+              </div>
+              <footer><span>Estimates still vary with the actual route, traffic, authorized discounts, and taxi meter.</span><a href={LTFRB_FARE_POLICY.taxi.orderUrl} target="_blank" rel="noreferrer">View taxi fare order <ExternalLink size={12} /></a></footer>
             </div>
-            <footer><span>Estimates still vary with the actual route, traffic, authorized discounts, and taxi meter.</span><a href={LTFRB_FARE_POLICY.taxi.orderUrl} target="_blank" rel="noreferrer">View taxi fare order <ExternalLink size={12} /></a></footer>
-          </section>
+          </details>
 
           {error ? <p className="planner-error" role="alert">{error}</p> : null}
           <button className="generate-plan-button" type="submit" disabled={generating} aria-busy={generating}><span><small>{generating ? "Mapping time, fare, and directions" : "Ready when you are"}</small><strong>{generating ? "Building your Baguio route…" : "Generate my itinerary"}</strong></span>{generating ? <LoaderCircle className="spin" size={22} /> : <ChevronRight size={22} />}</button>
