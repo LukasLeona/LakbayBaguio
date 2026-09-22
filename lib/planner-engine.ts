@@ -450,6 +450,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     request.availableMinutes,
     request.preference,
     startMinutes,
+    request.stay,
   );
 
   const dayOptions = {
@@ -461,8 +462,12 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     startMinutes,
   };
 
+  const dayStarts = buckets.map((_, dayIndex) =>
+    startLocationForDay(request.start, request.stay, dayIndex),
+  );
+
   const daysWithoutRoutes = buckets.map((bucket, dayIndex) =>
-    buildDayItinerary(request.start, bucket, {
+    buildDayItinerary(dayStarts[dayIndex], bucket, {
       ...dayOptions,
       dayIndex,
       ...(request.stay?.checkInDay === dayIndex ? { stay: request.stay } : {}),
@@ -470,7 +475,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
   );
 
   const days = daysWithoutRoutes.map((day) => {
-    const routeMapUrls = buildDayRouteUrls(request.start, day);
+    const routeMapUrls = buildDayRouteUrls(dayStarts[day.index], day);
     return {
       ...day,
       routeMapUrl: routeMapUrls[0],
@@ -520,10 +525,148 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
   };
 }
 
+type DestinationCluster = {
+  key: string;
+  area: PlannerArea;
+  destinations: PlannerDestination[];
+  centroid: PlannerLocation;
+  estimatedMinutes: number;
+  firstIndex: number;
+};
+
+function destinationCentroid(
+  destinations: readonly PlannerDestination[],
+  label: string,
+): PlannerLocation {
+  const divisor = Math.max(1, destinations.length);
+  return {
+    name: label,
+    lat: destinations.reduce((sum, destination) => sum + destination.lat, 0) / divisor,
+    lng: destinations.reduce((sum, destination) => sum + destination.lng, 0) / divisor,
+    area: destinations[0]?.area,
+  };
+}
+
+function estimateClusterMinutes(
+  destinations: readonly PlannerDestination[],
+  preference: TravelPreference,
+  startMinutes: number,
+): number {
+  if (!destinations.length) return 0;
+  const centroid = destinationCentroid(destinations, destinations[0].area);
+  const ordered = optimizeRoute(centroid, destinations, preference, startMinutes);
+  let minutes = ordered.reduce(
+    (sum, destination) => sum + destination.duration,
+    0,
+  );
+
+  for (let index = 1; index < ordered.length; index += 1) {
+    minutes += estimateTravelMinutes(
+      haversineKm(ordered[index - 1], ordered[index]),
+      "taxi",
+    );
+  }
+
+  // Keep a small transition buffer between visits so a day feels achievable,
+  // rather than packing every minute with another attraction.
+  return minutes + ordered.length * 8 + 20;
+}
+
+function makeDestinationCluster(
+  area: PlannerArea,
+  destinations: PlannerDestination[],
+  firstIndex: number,
+  preference: TravelPreference,
+  startMinutes: number,
+  suffix = "",
+): DestinationCluster {
+  return {
+    key: `${area}${suffix}`,
+    area,
+    destinations,
+    centroid: destinationCentroid(destinations, area),
+    estimatedMinutes: estimateClusterMinutes(
+      destinations,
+      preference,
+      startMinutes,
+    ),
+    firstIndex,
+  };
+}
+
+function splitOversizedClusters(
+  clusters: DestinationCluster[],
+  availableDays: number,
+  targetMinutes: number,
+  preference: TravelPreference,
+  startMinutes: number,
+): DestinationCluster[] {
+  const result = [...clusters];
+  let spareDays = Math.max(0, availableDays - result.length);
+
+  while (spareDays > 0) {
+    const candidateIndex = result.reduce((bestIndex, cluster, index) => {
+      if (
+        cluster.destinations.length < 2 ||
+        cluster.estimatedMinutes <= targetMinutes * 1.12
+      ) {
+        return bestIndex;
+      }
+      if (bestIndex < 0) return index;
+      return cluster.estimatedMinutes > result[bestIndex].estimatedMinutes
+        ? index
+        : bestIndex;
+    }, -1);
+
+    if (candidateIndex < 0) break;
+    const candidate = result[candidateIndex];
+    const ordered = optimizeRoute(
+      candidate.centroid,
+      candidate.destinations,
+      preference,
+      startMinutes,
+    );
+    const splitAt = Math.ceil(ordered.length / 2);
+    const first = makeDestinationCluster(
+      candidate.area,
+      ordered.slice(0, splitAt),
+      candidate.firstIndex,
+      preference,
+      startMinutes,
+      `${candidate.key}-a`,
+    );
+    const second = makeDestinationCluster(
+      candidate.area,
+      ordered.slice(splitAt),
+      candidate.firstIndex + splitAt,
+      preference,
+      startMinutes,
+      `${candidate.key}-b`,
+    );
+    result.splice(candidateIndex, 1, first, second);
+    spareDays -= 1;
+  }
+
+  return result;
+}
+
+function minimumClusterDistance(
+  cluster: DestinationCluster,
+  destinations: readonly PlannerDestination[],
+): number {
+  if (!destinations.length) return Number.POSITIVE_INFINITY;
+  return Math.min(
+    ...destinations.map((destination) =>
+      haversineKm(cluster.centroid, destination),
+    ),
+  );
+}
+
 /**
- * Separates regular, Atok, and evening-only stops before scheduling each day.
- * Unlike the legacy implementation, the selected preference is not replaced
- * with "balanced" while calculating the cross-day order.
+ * Groups stops by Baguio travel corridor before assigning them to days.
+ * Corridor boundaries are kept intact unless a group is too large or there
+ * are fewer days than selected areas. This prevents a global nearest-neighbor
+ * route from being cut halfway through City Center or the Mines View corridor.
  */
 export function buildDayBuckets(
   start: PlannerLocation,
@@ -532,6 +675,7 @@ export function buildDayBuckets(
   availableMinutes: number,
   preference: TravelPreference,
   startMinutes: number,
+  stay?: PlannerStay,
 ): PlannerDestination[][] {
   const buckets = Array.from(
     { length: numberOfDays },
@@ -557,35 +701,127 @@ export function buildDayBuckets(
     regularStops.push(...atokStops);
   }
 
-  const route = optimizeRoute(
-    start,
-    regularStops,
-    preference,
-    startMinutes,
-  );
   const targetPerDay = Math.max(180, availableMinutes - 45);
   const finalRegularDay =
     atokStops.length && numberOfDays > 1 ? numberOfDays - 2 : numberOfDays - 1;
-  let currentDay = 0;
-  let load = 0;
+  const regularDayCount = Math.max(1, finalRegularDay + 1);
+  const byArea = new Map<
+    PlannerArea,
+    { destinations: PlannerDestination[]; firstIndex: number }
+  >();
 
-  route.forEach((destination) => {
-    const estimated = destination.duration + 28;
-    if (
-      currentDay < finalRegularDay &&
-      load > 0 &&
-      load + estimated > targetPerDay
-    ) {
-      currentDay += 1;
-      load = 0;
+  regularStops.forEach((destination, index) => {
+    const existing = byArea.get(destination.area);
+    if (existing) {
+      existing.destinations.push(destination);
+    } else {
+      byArea.set(destination.area, {
+        destinations: [destination],
+        firstIndex: index,
+      });
     }
-    buckets[currentDay].push(destination);
-    load += estimated;
   });
 
-  nightStops.forEach((destination, index) => {
-    const targetDay = Math.min(index, Math.max(0, numberOfDays - 1));
-    buckets[targetDay].push(destination);
+  let clusters = [...byArea.entries()].map(([area, group]) =>
+    makeDestinationCluster(
+      area,
+      group.destinations,
+      group.firstIndex,
+      preference,
+      startMinutes,
+    ),
+  );
+  clusters = splitOversizedClusters(
+    clusters,
+    regularDayCount,
+    targetPerDay,
+    preference,
+    startMinutes,
+  );
+
+  const remaining = [...clusters];
+  const bucketLoads = Array.from({ length: regularDayCount }, () => 0);
+  const seedCount = Math.min(regularDayCount, remaining.length);
+
+  // Give each usable day one coherent corridor before considering merges.
+  for (let dayIndex = 0; dayIndex < seedCount; dayIndex += 1) {
+    const anchor = startLocationForDay(start, stay, dayIndex);
+    let bestIndex = 0;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    remaining.forEach((cluster, index) => {
+      let score = haversineKm(anchor, cluster.centroid);
+      if (anchor.area === cluster.area) score -= 0.75;
+      if (stay && dayIndex === stay.checkInDay) {
+        score += haversineKm(cluster.centroid, stay) * 1.25;
+      }
+      score += cluster.firstIndex / 100_000;
+      if (score < bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    });
+
+    const [cluster] = remaining.splice(bestIndex, 1);
+    buckets[dayIndex].push(...cluster.destinations);
+    bucketLoads[dayIndex] += cluster.estimatedMinutes;
+  }
+
+  // When there are more corridors than days, merge only the geographically
+  // closest groups and strongly discourage an already overloaded day.
+  remaining.forEach((cluster) => {
+    let bestDay = 0;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    for (let dayIndex = 0; dayIndex < regularDayCount; dayIndex += 1) {
+      const proximity = minimumClusterDistance(cluster, buckets[dayIndex]);
+      const overload = Math.max(
+        0,
+        bucketLoads[dayIndex] + cluster.estimatedMinutes - targetPerDay,
+      );
+      const sameArea = buckets[dayIndex].some(
+        (destination) => destination.area === cluster.area,
+      );
+      const checkInPenalty =
+        stay && dayIndex === stay.checkInDay && overload > 0 ? 2 : 0;
+      const score =
+        proximity +
+        overload / 45 +
+        checkInPenalty +
+        (sameArea ? -0.8 : 0);
+      if (score < bestScore) {
+        bestScore = score;
+        bestDay = dayIndex;
+      }
+    }
+
+    buckets[bestDay].push(...cluster.destinations);
+    bucketLoads[bestDay] += cluster.estimatedMinutes;
+  });
+
+  // Evening-only places follow the day whose daytime route is closest, rather
+  // than being attached by selection order.
+  nightStops.forEach((destination) => {
+    let bestDay = 0;
+    let bestScore = Number.POSITIVE_INFINITY;
+    for (let dayIndex = 0; dayIndex < regularDayCount; dayIndex += 1) {
+      const dayStops = buckets[dayIndex];
+      const proximity = dayStops.length
+        ? Math.min(
+            ...dayStops.map((stop) => haversineKm(stop, destination)),
+          )
+        : haversineKm(startLocationForDay(start, stay, dayIndex), destination);
+      const sameArea = dayStops.some((stop) => stop.area === destination.area);
+      const existingNightStops = dayStops.filter(
+        (stop) => stop.timeSlot === "night",
+      ).length;
+      const score = proximity + existingNightStops * 1.5 + (sameArea ? -1 : 0);
+      if (score < bestScore) {
+        bestScore = score;
+        bestDay = dayIndex;
+      }
+    }
+    buckets[bestDay].push(destination);
   });
 
   return buckets;
@@ -1302,6 +1538,21 @@ function stayToDestination(stay: PlannerStay): PlannerDestination {
     alight: `Show the driver the saved Google Maps pin and ask to alight at ${stay.name}.`,
     lat: stay.lat,
     lng: stay.lng,
+  };
+}
+
+function startLocationForDay(
+  tripStart: PlannerLocation,
+  stay: PlannerStay | undefined,
+  dayIndex: number,
+): PlannerLocation {
+  if (!stay || dayIndex <= stay.checkInDay) return tripStart;
+  return {
+    id: stay.id,
+    name: stay.name,
+    lat: stay.lat,
+    lng: stay.lng,
+    googleQuery: stay.googleQuery,
   };
 }
 
