@@ -21,6 +21,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ItineraryResults } from "@/components/itinerary-results";
+import { ItineraryReviewDialog } from "@/components/itinerary-review-dialog";
 import {
   createPlannerStay,
   googleMapsStaySearchUrl,
@@ -48,6 +49,7 @@ import {
 } from "@/lib/planner-engine";
 import type {
   AutoPickTheme,
+  FinalDayPreference,
   LuggagePlan,
   PlannerCategoryFilter,
   PlannerDestination,
@@ -108,6 +110,10 @@ type PlannerDraft = {
     googleMapsUrl: string;
     checkInDay: number;
     checkInTime: string;
+    checkOutTime: string;
+    finalDayPreference: FinalDayPreference;
+    departureLocationId: string;
+    departureTime: string;
     luggagePlan: LuggagePlan;
   };
 };
@@ -132,6 +138,13 @@ function isTransportMode(value: unknown): value is TransportMode {
 
 function isAutoPickTheme(value: unknown): value is AutoPickTheme {
   return AUTO_PICK_THEMES.some((theme) => theme.value === value);
+}
+
+function isFinalDayPreference(value: unknown): value is FinalDayPreference {
+  return value === "relax"
+    || value === "pasalubong"
+    || value === "easy-stop"
+    || value === "sightseeing";
 }
 
 function matchesCategory(destination: PlannerDestination, filter: PlannerCategoryFilter) {
@@ -190,6 +203,10 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [stayMapError, setStayMapError] = useState("");
   const [checkInDay, setCheckInDay] = useState(0);
   const [checkInTime, setCheckInTime] = useState("14:00");
+  const [checkOutTime, setCheckOutTime] = useState("");
+  const [finalDayPreference, setFinalDayPreference] = useState<FinalDayPreference>("relax");
+  const [departureLocationId, setDepartureLocationId] = useState("");
+  const [departureTime, setDepartureTime] = useState("");
   const [luggagePlan, setLuggagePlan] = useState<LuggagePlan>("carry");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [preference, setPreference] = useState<TravelPreference>(DEFAULT_PLANNER_SETTINGS.preference);
@@ -199,6 +216,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [query, setQuery] = useState("");
   const [activeStep, setActiveStep] = useState(1);
   const [result, setResult] = useState<PlannedItinerary | null>(null);
+  const [reviewResult, setReviewResult] = useState<PlannedItinerary | null>(null);
   const [activeDay, setActiveDay] = useState(0);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -266,6 +284,10 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           if (typeof draft.stay.googleMapsUrl === "string") setStayMapsUrl(draft.stay.googleMapsUrl);
           if (Number.isInteger(draft.stay.checkInDay)) setCheckInDay(Math.max(0, draft.stay.checkInDay));
           if (typeof draft.stay.checkInTime === "string") setCheckInTime(draft.stay.checkInTime);
+          if (typeof draft.stay.checkOutTime === "string") setCheckOutTime(draft.stay.checkOutTime);
+          if (isFinalDayPreference(draft.stay.finalDayPreference)) setFinalDayPreference(draft.stay.finalDayPreference);
+          if (typeof draft.stay.departureLocationId === "string") setDepartureLocationId(draft.stay.departureLocationId);
+          if (typeof draft.stay.departureTime === "string") setDepartureTime(draft.stay.departureTime);
           if (draft.stay.luggagePlan === "carry" || draft.stay.luggagePlan === "property-drop") setLuggagePlan(draft.stay.luggagePlan);
         }
       }
@@ -293,7 +315,13 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
             setStayMapsUrl(pending.stay.googleMapsUrl);
             setCheckInDay(pending.stay.checkInDay);
             setCheckInTime(pending.stay.checkInTime);
+            setCheckOutTime(pending.stay.checkOutTime || "");
+            setFinalDayPreference(pending.stay.finalDayPreference || "relax");
             setLuggagePlan(pending.stay.luggagePlan);
+          }
+          if (pending.departure) {
+            setDepartureLocationId(pending.departure.location.id);
+            setDepartureTime(pending.departure.time || "");
           }
         } else if (pending && typeof pending === "object" && Array.isArray((pending as { stops?: unknown[] }).stops)) {
           const legacyIds = (pending as { stops: { id?: string }[] }).stops.map((stop) => stop.id ?? "").filter((id) => Boolean(getPlannerDestinationById(id)));
@@ -314,9 +342,9 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
   useEffect(() => {
     if (!restored) return;
-    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, luggagePlan } };
+    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, checkOutTime, finalDayPreference, departureLocationId, departureTime, luggagePlan } };
     try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)); } catch { /* Storage is optional. */ }
-  }, [autoPickTheme, availableHours, checkInDay, checkInTime, includeStay, luggagePlan, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
+  }, [autoPickTheme, availableHours, checkInDay, checkInTime, checkOutTime, departureLocationId, departureTime, finalDayPreference, includeStay, luggagePlan, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
 
   useEffect(() => {
     setCheckInDay((current) => Math.min(current, numberOfDays - 1));
@@ -457,6 +485,11 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     if (generating) return;
     let stay: PlannerRequest["stay"];
     if (includeStay) {
+      if (parseTimeToMinutes(checkOutTime) === null) {
+        setError("Enter the checkout time provided by your hotel or host.");
+        scrollToStep("trip-details");
+        return;
+      }
       try {
         setGenerating(true);
         const place = currentVerifiedStay ?? await resolveGoogleMapsPlaceUrl(stayMapsUrl);
@@ -464,7 +497,17 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
         setStayMapState("verified");
         setStayMapError("");
         if (place.name) setStayName(place.name);
-        stay = createPlannerStay({ kind: stayKind, name: place.name || stayName, googleMapsUrl: place.normalizedUrl, checkInDay, checkInTime, luggagePlan });
+        stay = createPlannerStay({
+          kind: stayKind,
+          name: place.name || stayName,
+          googleMapsUrl: place.normalizedUrl,
+          checkInDay,
+          checkInTime,
+          checkOutDay: numberOfDays - 1,
+          checkOutTime,
+          finalDayPreference,
+          luggagePlan,
+        });
       } catch (stayError) {
         setGenerating(false);
         setStayMapState("error");
@@ -474,7 +517,30 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
         return;
       }
     }
-    const request: PlannerRequest = { start: selectedStart, destinations: selectedDestinations, date: tripDate, numberOfDays, availableMinutes: availableHours * 60, travelers, modes, preference, startTime, ...(stay ? { stay } : {}) };
+    const market = getPlannerDestinationById("baguio-city-market");
+    const planDestinations = stay?.finalDayPreference === "pasalubong"
+      && market
+      && !selectedDestinations.some((destination) => destination.id === market.id)
+      ? [...selectedDestinations, market]
+      : selectedDestinations;
+    const departureLocation = departureLocationId
+      ? getPlannerStartLocationById(departureLocationId)
+      : undefined;
+    const request: PlannerRequest = {
+      start: selectedStart,
+      destinations: planDestinations,
+      date: tripDate,
+      numberOfDays,
+      availableMinutes: availableHours * 60,
+      travelers,
+      modes,
+      preference,
+      startTime,
+      ...(stay ? { stay } : {}),
+      ...(departureLocation
+        ? { departure: { location: departureLocation, dayIndex: numberOfDays - 1, ...(departureTime ? { time: departureTime } : {}) } }
+        : {}),
+    };
     const issues = validatePlannerRequest(request);
     if (issues.length) {
       setGenerating(false);
@@ -488,18 +554,36 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     setGenerating(true);
     window.setTimeout(() => {
       const next = generateItinerary(request);
-      setResult(next);
-      setActiveDay(0);
-      try {
-        localStorage.setItem(ITINERARY_STORAGE_KEY, JSON.stringify(next));
-        setSaved(true);
-        window.dispatchEvent(new Event(ITINERARY_CHANGE_EVENT));
-      } catch {
-        setSaved(false);
-      }
+      setReviewResult(next);
       setGenerating(false);
-      router.push("/plan/itinerary");
     }, 900);
+  }
+
+  function confirmReviewedPlan() {
+    if (!reviewResult) return;
+    setResult(reviewResult);
+    setActiveDay(0);
+    try {
+      localStorage.setItem(ITINERARY_STORAGE_KEY, JSON.stringify(reviewResult));
+      setSaved(true);
+      window.dispatchEvent(new Event(ITINERARY_CHANGE_EVENT));
+    } catch {
+      setSaved(false);
+    }
+    setReviewResult(null);
+    router.push("/plan/itinerary");
+  }
+
+  function editReviewedPlan(destinationId?: string) {
+    if (destinationId) {
+      setSelectedIds((current) => current.filter((id) => id !== destinationId));
+      if (destinationId === "baguio-city-market" && finalDayPreference === "pasalubong") {
+        setFinalDayPreference("easy-stop");
+      }
+      setToast("Place removed. Generate again to rebalance the route.");
+    }
+    setReviewResult(null);
+    window.setTimeout(() => scrollToStep("destinations"), 40);
   }
 
   function savePlan() {
@@ -555,6 +639,23 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
               <div className="stay-schedule-grid">
                 <label className="planner-field"><span>Check-in day</span><select value={checkInDay} onChange={(event) => setCheckInDay(Number(event.target.value))}>{Array.from({ length: numberOfDays }, (_, index) => <option value={index} key={index}>Day {index + 1}</option>)}</select></label>
                 <label className="planner-field"><span>Check-in time</span><input type="time" value={checkInTime} onChange={(event) => setCheckInTime(event.target.value)} /></label>
+                <label className="planner-field"><span>Checkout day</span><input type="text" value={`Day ${numberOfDays}`} readOnly aria-label={`Checkout on Day ${numberOfDays}`} /></label>
+                <label className="planner-field"><span>Checkout time</span><input type="time" required value={checkOutTime} onChange={(event) => setCheckOutTime(event.target.value)} /><small className="field-hint">Enter the time provided by your hotel or host.</small></label>
+              </div>
+              <fieldset className="final-day-picker">
+                <legend>How should your final day feel?</legend>
+                <div>
+                  {([
+                    ["relax", "☕", "Slow morning", "Enjoy the stay and keep checkout calm."],
+                    ["pasalubong", "🧺", "Pasalubong muna", "Adds Baguio City Market after checkout."],
+                    ["easy-stop", "📍", "One easy stop", "Choose one nearby selected place."],
+                    ["sightseeing", "🗺️", "Sulitin ang Baguio", "Keep sightseeing if the clock allows."],
+                  ] as const).map(([value, icon, label, description]) => <button type="button" key={value} className={finalDayPreference === value ? "active" : ""} aria-pressed={finalDayPreference === value} onClick={() => setFinalDayPreference(value)}><span>{icon}</span><strong>{label}</strong><small>{description}</small></button>)}
+                </div>
+              </fieldset>
+              <div className="departure-fields">
+                <label className="planner-field"><span>Final departure point <small>optional</small></span><select value={departureLocationId} onChange={(event) => setDepartureLocationId(event.target.value)}><option value="">Not decided yet</option>{PLANNER_START_LOCATIONS.map((location) => <option value={location.id} key={location.id}>{location.name}</option>)}</select></label>
+                <label className="planner-field"><span>Bus / departure time <small>optional</small></span><input type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} disabled={!departureLocationId} /></label>
               </div>
               <label className="stay-luggage-choice"><input type="checkbox" checked={luggagePlan === "property-drop"} onChange={(event) => setLuggagePlan(event.target.checked ? "property-drop" : "carry")} /><span><strong>I can leave my bags at the property before check-in</strong><small>We will still remind you to confirm this arrangement.</small></span></label>
               {stayMapsUrl ? <p className={`stay-map-status ${stayMapState === "verified" ? "valid" : stayMapState === "checking" ? "checking" : "invalid"}`} aria-live="polite">{stayMapState === "checking" ? <><LoaderCircle className="spin" size={14} /> Checking the exact Google Maps place…</> : stayMapState === "verified" && currentVerifiedStay ? <><Check size={14} /> {currentVerifiedStay.name} — exact pin confirmed.</> : <>{stayMapError || "Paste the exact place or Share link from Google Maps."}</>}</p> : <p className="stay-map-help"><MapPin size={14} /> Find the property in Google Maps, tap Share, then paste its link here.</p>}
@@ -618,6 +719,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
       {initialView === "itinerary" && restored && result ? <ItineraryResults itinerary={result} activeDay={activeDay} saved={saved} onActiveDayChange={setActiveDay} onEdit={() => router.push("/plan")} onSave={savePlan} /> : null}
       {initialView === "itinerary" && !restored ? <div className="loading-card itinerary-loading">Opening your itinerary…</div> : null}
+      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} onConfirm={confirmReviewedPlan} onEdit={() => editReviewedPlan()} onRemove={editReviewedPlan} /> : null}
       {toast ? <div className="planner-toast" role="status">{toast}</div> : null}
     </div>
   );

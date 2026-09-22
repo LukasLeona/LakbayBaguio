@@ -9,6 +9,7 @@
 import type {
   Coordinates,
   FareSettings,
+  FinalDayPreference,
   PlannerStay,
   PlannerArea,
   PlannerDestination,
@@ -70,6 +71,16 @@ export type PlannerRequest = {
   startMinutes?: number;
   /** Optional fixed-time accommodation check-in added to the route. */
   stay?: PlannerStay;
+  /** Optional final-day terminal and departure time. */
+  departure?: PlannerDeparture;
+};
+
+export type PlannerDeparture = {
+  location: PlannerStartLocation;
+  /** Zero-based trip day; normally the final day. */
+  dayIndex: number;
+  /** Optional service departure time in local 24-hour HH:mm format. */
+  time?: string;
 };
 
 export type PlannerValidationCode =
@@ -96,7 +107,7 @@ export type PlannedTransport = {
 };
 
 export type PlannedStop = {
-  kind: "destination" | "check-in";
+  kind: "destination" | "check-in" | "check-out" | "departure";
   number: number;
   destination: PlannerDestination;
   arrivalMinutes: number;
@@ -150,6 +161,7 @@ export type PlannedItinerary = {
   selectedCount: number;
   selectedDestinationIds: string[];
   stay?: PlannerStay;
+  departure?: PlannerDeparture;
   totals: ItineraryTotals;
   disclaimer: string;
 };
@@ -162,7 +174,9 @@ type DayBuildOptions = {
   modes: readonly TransportMode[];
   fareSettings: FareSettings;
   startMinutes: number;
-  stay?: PlannerStay;
+  checkInStay?: PlannerStay;
+  checkOutStay?: PlannerStay;
+  departure?: PlannerDeparture;
 };
 
 type TransportOptions = Pick<
@@ -178,6 +192,12 @@ const VALID_PREFERENCES = new Set<TravelPreference>([
 ]);
 
 const VALID_MODES = new Set<TransportMode>(["walk", "jeepney", "taxi"]);
+const VALID_FINAL_DAY_PREFERENCES = new Set<FinalDayPreference>([
+  "relax",
+  "pasalubong",
+  "easy-stop",
+  "sightseeing",
+]);
 
 const GENERIC_ROUTE_GUIDE: PlannerRouteGuide = {
   modeLabel: "Local jeepney",
@@ -404,11 +424,75 @@ export function validatePlannerRequest(
         message: "Check-in time must use HH:mm format.",
       });
     }
+    if (
+      !Number.isInteger(stay.checkOutDay) ||
+      stay.checkOutDay < stay.checkInDay ||
+      stay.checkOutDay >= request.numberOfDays
+    ) {
+      issues.push({
+        field: "stay.checkOutDay",
+        code: "range",
+        message: "Checkout must fall between check-in and the final trip day.",
+      });
+    }
+    if (parseTimeToMinutes(stay.checkOutTime) === null) {
+      issues.push({
+        field: "stay.checkOutTime",
+        code: "invalid",
+        message: "Checkout time must use HH:mm format.",
+      });
+    }
+    const checkInValue = parseTimeToMinutes(stay.checkInTime);
+    const checkOutValue = parseTimeToMinutes(stay.checkOutTime);
+    if (
+      stay.checkOutDay === stay.checkInDay &&
+      checkInValue !== null &&
+      checkOutValue !== null &&
+      checkOutValue <= checkInValue
+    ) {
+      issues.push({
+        field: "stay.checkOutDay",
+        code: "range",
+        message: "A stay needs at least two trip days when checkout is earlier than check-in.",
+      });
+    }
+    if (!VALID_FINAL_DAY_PREFERENCES.has(stay.finalDayPreference)) {
+      issues.push({
+        field: "stay.finalDayPreference",
+        code: "invalid",
+        message: "Choose how you want to spend your final day.",
+      });
+    }
     if (stay.luggagePlan !== "carry" && stay.luggagePlan !== "property-drop") {
       issues.push({
         field: "stay.luggagePlan",
         code: "invalid",
         message: "Choose how you plan to handle luggage before check-in.",
+      });
+    }
+  }
+
+  if (request?.departure) {
+    validateLocation(request.departure.location, "departure.location", issues);
+    if (
+      !Number.isInteger(request.departure.dayIndex) ||
+      request.departure.dayIndex < 0 ||
+      request.departure.dayIndex >= request.numberOfDays
+    ) {
+      issues.push({
+        field: "departure.dayIndex",
+        code: "range",
+        message: "Choose a departure day within your trip.",
+      });
+    }
+    if (
+      request.departure.time &&
+      parseTimeToMinutes(request.departure.time) === null
+    ) {
+      issues.push({
+        field: "departure.time",
+        code: "invalid",
+        message: "Departure time must use HH:mm format.",
       });
     }
   }
@@ -465,7 +549,9 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     buildDayItinerary(dayStarts[dayIndex], bucket, {
       ...dayOptions,
       dayIndex,
-      ...(request.stay?.checkInDay === dayIndex ? { stay: request.stay } : {}),
+      ...(request.stay?.checkInDay === dayIndex ? { checkInStay: request.stay } : {}),
+      ...(request.stay?.checkOutDay === dayIndex ? { checkOutStay: request.stay } : {}),
+      ...(request.departure?.dayIndex === dayIndex ? { departure: request.departure } : {}),
     }),
   );
 
@@ -493,6 +579,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
       fareSettings,
       startMinutes,
       stay: request.stay,
+      departure: request.departure,
     }),
   );
 
@@ -515,6 +602,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     selectedCount: destinations.length,
     selectedDestinationIds: destinations.map((destination) => destination.id),
     ...(request.stay ? { stay: request.stay } : {}),
+    ...(request.departure ? { departure: request.departure } : {}),
     totals,
     disclaimer: PLANNING_DISCLAIMER,
   };
@@ -657,6 +745,49 @@ function minimumClusterDistance(
   );
 }
 
+function rebalanceBucketCounts(
+  buckets: PlannerDestination[][],
+  usableDays: number,
+): void {
+  if (usableDays < 2) return;
+
+  for (let pass = 0; pass < 12; pass += 1) {
+    const counts = buckets.slice(0, usableDays).map(
+      (bucket) => bucket.filter((destination) => destination.timeSlot !== "night").length,
+    );
+    const fullest = counts.indexOf(Math.max(...counts));
+    const lightest = counts.indexOf(Math.min(...counts));
+    if (counts[fullest] - counts[lightest] <= 2) return;
+
+    const targetStops = buckets[lightest].filter(
+      (destination) => destination.timeSlot !== "night",
+    );
+    const candidates = buckets[fullest].filter(
+      (destination) =>
+        destination.timeSlot !== "night" &&
+        destination.area !== "Atok Side Trip",
+    );
+    if (!candidates.length) return;
+
+    const candidate = [...candidates].sort((first, second) => {
+      const firstDistance = targetStops.length
+        ? Math.min(...targetStops.map((stop) => haversineKm(first, stop)))
+        : 0;
+      const secondDistance = targetStops.length
+        ? Math.min(...targetStops.map((stop) => haversineKm(second, stop)))
+        : 0;
+      const firstAreaFit = targetStops.some((stop) => stop.area === first.area) ? -1.5 : 0;
+      const secondAreaFit = targetStops.some((stop) => stop.area === second.area) ? -1.5 : 0;
+      return firstDistance + firstAreaFit - (secondDistance + secondAreaFit);
+    })[0];
+
+    buckets[fullest] = buckets[fullest].filter(
+      (destination) => destination.id !== candidate.id,
+    );
+    buckets[lightest].push(candidate);
+  }
+}
+
 /**
  * Groups stops by Baguio travel corridor before assigning them to days.
  * Corridor boundaries are kept intact unless a group is too large or there
@@ -679,6 +810,12 @@ export function buildDayBuckets(
   const nightStops = destinations.filter(
     (destination) => destination.timeSlot === "night",
   );
+  const protectedFinalDay = Boolean(
+    stay &&
+    numberOfDays > 1 &&
+    stay.checkOutDay === numberOfDays - 1 &&
+    stay.finalDayPreference !== "sightseeing",
+  );
   const atokStops = destinations.filter(
     (destination) =>
       destination.area === "Atok Side Trip" &&
@@ -690,7 +827,7 @@ export function buildDayBuckets(
       destination.area !== "Atok Side Trip",
   );
 
-  if (atokStops.length && numberOfDays > 1) {
+  if (atokStops.length && numberOfDays > 1 && !protectedFinalDay) {
     buckets[numberOfDays - 1].push(...atokStops);
   } else if (atokStops.length) {
     regularStops.push(...atokStops);
@@ -698,8 +835,13 @@ export function buildDayBuckets(
 
   const targetPerDay = Math.max(180, availableMinutes - 45);
   const finalRegularDay =
-    atokStops.length && numberOfDays > 1 ? numberOfDays - 2 : numberOfDays - 1;
-  const regularDayCount = Math.max(1, finalRegularDay + 1);
+    atokStops.length && numberOfDays > 1 && !protectedFinalDay
+      ? numberOfDays - 2
+      : numberOfDays - 1;
+  const regularDayCount = Math.max(
+    1,
+    finalRegularDay + 1 - (protectedFinalDay ? 1 : 0),
+  );
   const byArea = new Map<
     PlannerArea,
     { destinations: PlannerDestination[]; firstIndex: number }
@@ -819,6 +961,36 @@ export function buildDayBuckets(
     buckets[bestDay].push(destination);
   });
 
+  rebalanceBucketCounts(buckets, regularDayCount);
+
+  if (protectedFinalDay && stay) {
+    const finalBucket = buckets[stay.checkOutDay];
+    const movable = buckets
+      .slice(0, regularDayCount)
+      .flatMap((bucket) => bucket)
+      .filter((destination) => destination.timeSlot !== "night");
+    let finalChoice: PlannerDestination | undefined;
+
+    if (stay.finalDayPreference === "pasalubong") {
+      finalChoice = movable.find((destination) => destination.id === "baguio-city-market")
+        ?? movable.find((destination) => destination.tags.includes("pasalubong"))
+        ?? movable.find((destination) => destination.category === "Food & shopping");
+    } else if (stay.finalDayPreference === "easy-stop") {
+      finalChoice = [...movable].sort(
+        (first, second) => haversineKm(stay, first) - haversineKm(stay, second),
+      )[0];
+    }
+
+    if (finalChoice) {
+      for (let index = 0; index < regularDayCount; index += 1) {
+        buckets[index] = buckets[index].filter(
+          (destination) => destination.id !== finalChoice?.id,
+        );
+      }
+      finalBucket.push(finalChoice);
+    }
+  }
+
   return buckets;
 }
 
@@ -887,6 +1059,125 @@ export function optimizeRoute(
   return route;
 }
 
+function routeDistanceWithAnchor(
+  start: PlannerLocation,
+  route: readonly PlannerDestination[],
+  anchor: PlannerLocation,
+): number {
+  let total = 0;
+  let current = start;
+  route.forEach((destination) => {
+    total += haversineKm(current, destination);
+    current = destination;
+  });
+  return total + haversineKm(current, anchor);
+}
+
+/** Orders a route that must finish at a fixed place, such as hotel check-in. */
+function optimizeRouteToAnchor(
+  start: PlannerLocation,
+  destinations: readonly PlannerDestination[],
+  anchor: PlannerLocation,
+): PlannerDestination[] {
+  if (destinations.length < 2) return [...destinations];
+  let best: PlannerDestination[] = [];
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  destinations.forEach((first) => {
+    const route = [first];
+    const remaining = destinations.filter((destination) => destination.id !== first.id);
+    let current: PlannerLocation = first;
+
+    while (remaining.length) {
+      let bestIndex = 0;
+      let bestScore = Number.POSITIVE_INFINITY;
+      remaining.forEach((destination, index) => {
+        const anchorWeight = remaining.length === 1 ? 1 : 0.18;
+        const score = haversineKm(current, destination)
+          + haversineKm(destination, anchor) * anchorWeight;
+        if (score < bestScore) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      });
+      const [next] = remaining.splice(bestIndex, 1);
+      route.push(next);
+      current = next;
+    }
+
+    const distance = routeDistanceWithAnchor(start, route, anchor);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = route;
+    }
+  });
+
+  return best;
+}
+
+function estimateAnchoredRouteMinutes(
+  start: PlannerLocation,
+  route: readonly PlannerDestination[],
+  anchor: PlannerLocation,
+): number {
+  return route.reduce(
+    (minutes, destination) => minutes + destination.duration + 8,
+    estimateTravelMinutes(routeDistanceWithAnchor(start, route, anchor), "taxi"),
+  );
+}
+
+function partitionAroundCheckIn(
+  start: PlannerLocation,
+  destinations: readonly PlannerDestination[],
+  stay: PlannerStay,
+  startMinutes: number,
+  checkInMinutes: number,
+): { before: PlannerDestination[]; after: PlannerDestination[] } {
+  if (!destinations.length) return { before: [], after: [] };
+  const budget = Math.max(0, checkInMinutes - startMinutes - 15);
+  const groups = new Map<PlannerArea, PlannerDestination[]>();
+  destinations.forEach((destination) => {
+    const group = groups.get(destination.area) ?? [];
+    group.push(destination);
+    groups.set(destination.area, group);
+  });
+
+  const candidates = [...groups.values()].map((group) => {
+    const route = optimizeRouteToAnchor(start, group, stay);
+    const minutes = estimateAnchoredRouteMinutes(start, route, stay);
+    const centroid = destinationCentroid(group, group[0].area);
+    return {
+      route,
+      minutes,
+      score: minutes + haversineKm(centroid, stay) * 10,
+    };
+  }).filter((candidate) => candidate.minutes <= budget);
+
+  let before = candidates.sort((first, second) => second.score - first.score)[0]?.route ?? [];
+  if (!before.length) {
+    const fallback = optimizeRouteToAnchor(start, destinations, stay);
+    let used = 0;
+    let current = start;
+    before = fallback.filter((destination) => {
+      const next = used
+        + estimateTravelMinutes(haversineKm(current, destination), "taxi")
+        + destination.duration
+        + estimateTravelMinutes(haversineKm(destination, stay), "taxi");
+      if (next > budget) return false;
+      used += estimateTravelMinutes(haversineKm(current, destination), "taxi")
+        + destination.duration;
+      current = destination;
+      return true;
+    });
+  }
+
+  const beforeIds = new Set(before.map((destination) => destination.id));
+  return {
+    before,
+    after: destinations.filter((destination) => !beforeIds.has(destination.id)),
+  };
+}
+
 export function buildDayItinerary(
   start: PlannerLocation,
   bucket: readonly PlannerDestination[],
@@ -898,129 +1189,181 @@ export function buildDayItinerary(
   const daytime = bucket.filter(
     (destination) => destination.timeSlot !== "night",
   );
-  const ordered = optimizeRoute(
-    start,
-    daytime,
-    options.preference,
-    options.startMinutes,
-  );
   const items: PlannedStop[] = [];
   const unscheduled: PlannerDestination[] = [];
   const notices: string[] = [];
   let current: PlannerLocation = start;
   let cursor = options.startMinutes;
   const dayEnd = options.startMinutes + options.availableMinutes;
-  const stayDestination = options.stay
-    ? stayToDestination(options.stay)
+  const stayDestination = options.checkInStay
+    ? stayToDestination(options.checkInStay)
     : null;
-  const checkInMinutes = options.stay
-    ? parseTimeToMinutes(options.stay.checkInTime) ?? dayEnd
+  const checkInMinutes = options.checkInStay
+    ? parseTimeToMinutes(options.checkInStay.checkInTime) ?? dayEnd
     : null;
-  let stayAdded = false;
+  const checkoutDestination = options.checkOutStay
+    ? stayToCheckoutDestination(options.checkOutStay)
+    : null;
+  const checkoutMinutes = options.checkOutStay
+    ? parseTimeToMinutes(options.checkOutStay.checkOutTime) ?? options.startMinutes
+    : null;
+  const departureDestination = options.departure
+    ? departureToDestination(options.departure)
+    : null;
+  const departureMinutes = options.departure?.time
+    ? (parseTimeToMinutes(options.departure.time) ?? null)
+    : null;
+
+  const appendFixedStop = (
+    kind: "check-in" | "check-out" | "departure",
+    destination: PlannerDestination,
+    fixedMinutes: number | null,
+    placeMapUrl?: string,
+  ) => {
+    const distance = haversineKm(current, destination);
+    const transport = chooseTransport(current, destination, distance, options);
+    const afterTravel = cursor + transport.minutes;
+    const scheduledArrival = fixedMinutes === null
+      ? afterTravel
+      : Math.max(afterTravel, fixedMinutes);
+    const wait = fixedMinutes === null ? 0 : Math.max(0, fixedMinutes - afterTravel);
+    items.push(createPlannedStop({
+      kind,
+      destination,
+      from: current,
+      arrivalMinutes: scheduledArrival,
+      waitMinutes: wait,
+      distance,
+      transport,
+      number: items.length + 1,
+      placeMapUrl,
+    }));
+    cursor = scheduledArrival + destination.duration;
+    current = destination;
+    return scheduledArrival;
+  };
+
+  if (checkoutDestination && options.checkOutStay && checkoutMinutes !== null) {
+    const arrival = appendFixedStop(
+      "check-out",
+      checkoutDestination,
+      checkoutMinutes,
+      options.checkOutStay.googleMapsUrl,
+    );
+    notices.push(
+      options.checkOutStay.finalDayPreference === "relax"
+        ? `The morning is protected for a slow start at ${options.checkOutStay.name}, with checkout at ${minutesToTime(checkoutMinutes)}.`
+        : `${options.checkOutStay.name} checkout is held at ${minutesToTime(checkoutMinutes)} before the final-day route.`,
+    );
+    if (arrival > checkoutMinutes + 10) {
+      notices.push("Checkout may run late; shorten the morning before leaving the property.");
+    }
+  }
 
   const appendStayCheckIn = () => {
-    if (!stayDestination || !options.stay || checkInMinutes === null || stayAdded) return;
-
-    const distance = haversineKm(current, stayDestination);
-    const transport = chooseTransport(current, stayDestination, distance, options);
-    const afterTravel = cursor + transport.minutes;
-    const scheduledArrival = Math.max(afterTravel, checkInMinutes);
-    const wait = Math.max(0, checkInMinutes - afterTravel);
-
-    items.push(
-      createPlannedStop({
-        kind: "check-in",
-        destination: stayDestination,
-        from: current,
-        arrivalMinutes: scheduledArrival,
-        waitMinutes: wait,
-        distance,
-        transport,
-        number: items.length + 1,
-        placeMapUrl: options.stay.googleMapsUrl,
-      }),
+    if (!stayDestination || !options.checkInStay || checkInMinutes === null) return;
+    const scheduledArrival = appendFixedStop(
+      "check-in",
+      stayDestination,
+      checkInMinutes,
+      options.checkInStay.googleMapsUrl,
     );
-    cursor = scheduledArrival + stayDestination.duration;
-    current = stayDestination;
-    stayAdded = true;
 
     if (scheduledArrival > checkInMinutes + 15) {
       notices.push(
-        `${options.stay.name} check-in is estimated at ${minutesToTime(scheduledArrival)}, after the selected ${minutesToTime(checkInMinutes)} time. Consider removing an earlier stop.`,
+        `${options.checkInStay.name} check-in is estimated at ${minutesToTime(scheduledArrival)}, after the selected ${minutesToTime(checkInMinutes)} time. Consider removing an earlier stop.`,
       );
     } else {
       notices.push(
-        `${options.stay.name} check-in is held at ${minutesToTime(checkInMinutes)}; the route is arranged around it.`,
+        `${options.checkInStay.name} check-in is held at ${minutesToTime(checkInMinutes)}; the morning finishes one corridor before the afternoon restarts near the stay.`,
       );
     }
-    if (options.stay.locationPrecision === "approximate") {
+    if (options.checkInStay.locationPrecision === "approximate") {
       notices.push(
-        `The shortened Google Maps link for ${options.stay.name} does not expose its pin coordinates, so travel estimates use central Baguio. Open the saved Maps link for exact navigation.`,
+        `The shortened Google Maps link for ${options.checkInStay.name} does not expose its pin coordinates, so travel estimates use central Baguio. Open the saved Maps link for exact navigation.`,
       );
     }
   };
 
-  ordered.forEach((destination) => {
-    let distance = haversineKm(current, destination);
-    let transport = chooseTransport(
-      current,
-      destination,
-      distance,
-      options,
-    );
-    let arrival = cursor + transport.minutes;
+  const scheduleDestination = (
+    destination: PlannerDestination,
+    deadline: number | null,
+  ) => {
+    const distance = haversineKm(current, destination);
+    const transport = chooseTransport(current, destination, distance, options);
+    const arrival = cursor + transport.minutes;
     const { open, close } = openingWindow(destination);
-    let scheduledArrival = Math.max(arrival, open);
-    let wait = Math.max(0, open - arrival);
+    const scheduledArrival = Math.max(arrival, open);
+    const wait = Math.max(0, open - arrival);
+    const onwardMinutes = deadline !== null && stayDestination
+      ? chooseTransport(
+          destination,
+          stayDestination,
+          haversineKm(destination, stayDestination),
+          options,
+        ).minutes
+      : 0;
+    const travelToDeparture = departureDestination
+      ? chooseTransport(
+          destination,
+          departureDestination,
+          haversineKm(destination, departureDestination),
+          options,
+        ).minutes
+      : 0;
 
-    if (stayDestination && !stayAdded && checkInMinutes !== null) {
-      const distanceToStay = haversineKm(destination, stayDestination);
-      const travelToStay = chooseTransport(
-        destination,
-        stayDestination,
-        distanceToStay,
-        options,
-      );
-      const wouldMissCheckIn =
-        cursor >= checkInMinutes ||
-        scheduledArrival + destination.duration + travelToStay.minutes > checkInMinutes + 15;
-
-      if (wouldMissCheckIn) {
-        appendStayCheckIn();
-        distance = haversineKm(current, destination);
-        transport = chooseTransport(current, destination, distance, options);
-        arrival = cursor + transport.minutes;
-        scheduledArrival = Math.max(arrival, open);
-        wait = Math.max(0, open - arrival);
-      }
-    }
-
-    // Preserve the legacy 90-minute grace period for an arrival just beyond the
-    // chosen day window, but never schedule a visit after the attraction closes.
     if (
       scheduledArrival + destination.duration > close ||
-      scheduledArrival > dayEnd + 90
+      scheduledArrival > dayEnd + 90 ||
+      (deadline !== null && scheduledArrival + destination.duration + onwardMinutes > deadline + 15) ||
+      (departureMinutes !== null && scheduledArrival + destination.duration + travelToDeparture > departureMinutes - 30)
     ) {
       unscheduled.push(destination);
-      return;
+      return false;
     }
 
-    items.push(
-      createPlannedStop({
-        destination,
-        from: current,
-        arrivalMinutes: scheduledArrival,
-        waitMinutes: wait,
-        distance,
-        transport,
-        number: items.length + 1,
-      }),
-    );
+    items.push(createPlannedStop({
+      destination,
+      from: current,
+      arrivalMinutes: scheduledArrival,
+      waitMinutes: wait,
+      distance,
+      transport,
+      number: items.length + 1,
+    }));
     cursor = scheduledArrival + destination.duration;
     current = destination;
-  });
+    return true;
+  };
 
-  appendStayCheckIn();
+  if (stayDestination && options.checkInStay && checkInMinutes !== null) {
+    const partition = partitionAroundCheckIn(
+      start,
+      daytime,
+      options.checkInStay,
+      options.startMinutes,
+      checkInMinutes,
+    );
+    partition.before.forEach((destination) => {
+      scheduleDestination(destination, checkInMinutes);
+    });
+    appendStayCheckIn();
+    const postCheckIn = optimizeRoute(
+      current,
+      partition.after,
+      options.preference,
+      cursor,
+    );
+    postCheckIn.forEach((destination) => scheduleDestination(destination, null));
+  } else {
+    const ordered = optimizeRoute(
+      current,
+      daytime,
+      options.preference,
+      cursor,
+    );
+    ordered.forEach((destination) => scheduleDestination(destination, null));
+  }
 
   nightStops.forEach((destination) => {
     const distance = haversineKm(current, destination);
@@ -1034,11 +1377,24 @@ export function buildDayItinerary(
     const { open, close } = openingWindow(destination);
     const scheduledArrival = Math.max(afterTravel, open);
     const wait = Math.max(0, scheduledArrival - afterTravel);
+    const travelToDeparture = departureDestination
+      ? chooseTransport(
+          destination,
+          departureDestination,
+          haversineKm(destination, departureDestination),
+          options,
+        ).minutes
+      : 0;
 
-    if (scheduledArrival + destination.duration > close) {
+    if (
+      scheduledArrival + destination.duration > close ||
+      (departureMinutes !== null && scheduledArrival + destination.duration + travelToDeparture > departureMinutes - 30)
+    ) {
       unscheduled.push(destination);
       notices.push(
-        `${destination.name} cannot fit before its estimated closing time.`,
+        departureMinutes !== null
+          ? `${destination.name} cannot fit without risking the selected departure time.`
+          : `${destination.name} cannot fit before its estimated closing time.`,
       );
       return;
     }
@@ -1064,6 +1420,23 @@ export function buildDayItinerary(
     cursor = scheduledArrival + destination.duration;
     current = destination;
   });
+
+  if (departureDestination && options.departure) {
+    const arrivalTarget = departureMinutes === null
+      ? null
+      : Math.max(options.startMinutes, departureMinutes - 30);
+    const arrival = appendFixedStop(
+      "departure",
+      departureDestination,
+      arrivalTarget,
+      googleSearchUrl(options.departure.location.googleQuery || options.departure.location.name),
+    );
+    notices.push(
+      departureMinutes === null
+        ? `The route finishes at ${options.departure.location.name}. Confirm your departure schedule before travelling.`
+        : `The route aims to reach ${options.departure.location.name} by ${minutesToTime(arrivalTarget ?? arrival)}, 30 minutes before the ${minutesToTime(departureMinutes)} departure.`,
+    );
+  }
 
   if (unscheduled.length) {
     notices.push(
@@ -1273,15 +1646,18 @@ export function buildDayRouteUrls(
   start: PlannerLocation,
   day: Pick<PlannedDay, "items">,
 ): string[] {
-  if (!day.items.length) {
+  const routeItems = day.items.filter(
+    (item) => !(item.kind === "check-out" && item.distance < 0.05),
+  );
+  if (!routeItems.length) {
     return [googleSearchUrl(start.googleQuery || start.name)];
   }
 
   const routeUrls: string[] = [];
   let segmentOrigin: PlannerLocation = start;
 
-  for (let index = 0; index < day.items.length; index += 4) {
-    const segment = day.items.slice(index, index + 4);
+  for (let index = 0; index < routeItems.length; index += 4) {
+    const segment = routeItems.slice(index, index + 4);
     const destinations = segment.map((item) =>
       locationForDirections(item.destination),
     );
@@ -1312,7 +1688,10 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     `Estimated travel: ${formatDuration(itinerary.totals.travelMinutes)}`,
     `Estimated transport: ${formatCurrency(itinerary.totals.fare)}`,
     ...(itinerary.stay
-      ? [`Stay: ${itinerary.stay.name} (${itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"}), check-in Day ${itinerary.stay.checkInDay + 1} at ${minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)}`]
+      ? [`Stay: ${itinerary.stay.name} (${itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"}), check-in Day ${itinerary.stay.checkInDay + 1} at ${minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)}, checkout Day ${(itinerary.stay.checkOutDay ?? itinerary.numberOfDays - 1) + 1} at ${minutesToTime(parseTimeToMinutes(itinerary.stay.checkOutTime || "11:00") ?? 660)}`]
+      : []),
+    ...(itinerary.departure
+      ? [`Departure: ${itinerary.departure.location.name}${itinerary.departure.time ? ` at ${minutesToTime(parseTimeToMinutes(itinerary.departure.time) ?? 0)}` : ""}`]
       : []),
     "",
   ];
@@ -1325,7 +1704,7 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     day.notices.forEach((notice) => lines.push(`Note: ${notice}`));
     day.items.forEach((item, index) => {
       lines.push(
-        `${index + 1}. ${minutesToTime(item.arrivalMinutes)} - ${item.destination.name}${item.kind === "check-in" ? " (fixed check-in)" : ""}`,
+        `${index + 1}. ${minutesToTime(item.arrivalMinutes)} - ${item.destination.name}${item.kind === "check-in" ? " (fixed check-in)" : item.kind === "check-out" ? " (fixed checkout)" : item.kind === "departure" ? " (departure)" : ""}`,
       );
       lines.push(
         `   ${transportLabel(item.transport.mode)} from ${item.from.name}, about ${formatDuration(item.transport.minutes)} (${item.distance.toFixed(1)} km est.).`,
@@ -1446,7 +1825,7 @@ function createPlannedStop({
   eveningAddOn,
   placeMapUrl,
 }: {
-  kind?: "destination" | "check-in";
+  kind?: "destination" | "check-in" | "check-out" | "departure";
   destination: PlannerDestination;
   from: PlannerLocation;
   arrivalMinutes: number;
@@ -1545,6 +1924,67 @@ function stayToDestination(stay: PlannerStay): PlannerDestination {
   };
 }
 
+function stayToCheckoutDestination(stay: PlannerStay): PlannerDestination {
+  const isHotel = stay.kind === "hotel";
+  return {
+    ...stayToDestination(stay),
+    id: `${stay.id}-check-out`,
+    name: `${stay.name} checkout`,
+    duration: 20,
+    open: stay.checkOutTime,
+    description: `Pack up, return the key if needed, and complete checkout without rushing the final day.`,
+    activities: [
+      "Check drawers and charging outlets",
+      "Confirm luggage storage if needed",
+      "Keep the booking receipt and property contact",
+    ],
+    tags: ["stay", "check-out", stay.kind],
+    icon: isHotel ? "🧳" : "🔑",
+    routeGuide: {
+      ...GENERIC_ROUTE_GUIDE,
+      modeLabel: `${isHotel ? "Hotel" : "Airbnb"} checkout`,
+      loadingQuery: `${stay.name}, Baguio City`,
+      signboard: `the route closest to ${stay.name}`,
+      returnHint: "Confirm luggage storage before leaving the property.",
+    },
+  };
+}
+
+function departureToDestination(departure: PlannerDeparture): PlannerDestination {
+  return {
+    id: `departure-${departure.location.id}`,
+    name: `Depart from ${departure.location.name}`,
+    area: departure.location.area,
+    duration: 0,
+    open: "00:00",
+    close: "23:59",
+    category: "Stay",
+    popular: false,
+    description: departure.time
+      ? "Arrive with a practical boarding allowance before leaving Baguio."
+      : "Finish the itinerary at your chosen departure point.",
+    activities: [
+      "Confirm the platform or loading bay",
+      "Keep tickets and identification ready",
+      "Allow extra time for Baguio traffic",
+    ],
+    tags: ["departure", "terminal"],
+    icon: "🚌",
+    image: "/assets/img/favicon.svg",
+    googleQuery: departure.location.googleQuery,
+    routeGuide: {
+      ...GENERIC_ROUTE_GUIDE,
+      modeLabel: "Departure transfer",
+      loadingQuery: departure.location.googleQuery,
+      signboard: departure.location.name,
+      returnHint: "Confirm your service and boarding instructions with the operator.",
+    },
+    scope: "Baguio City",
+    lat: departure.location.lat,
+    lng: departure.location.lng,
+  };
+}
+
 function startLocationForDay(
   tripStart: PlannerLocation,
   stay: PlannerStay | undefined,
@@ -1596,7 +2036,7 @@ function openingWindow(destination: PlannerDestination): {
 function summarizeDays(days: readonly PlannedDay[]): ItineraryTotals {
   return {
     scheduledStops: days.reduce(
-      (sum, day) => sum + day.items.filter((item) => item.kind !== "check-in").length,
+      (sum, day) => sum + day.items.filter((item) => item.kind === "destination").length,
       0,
     ),
     unscheduledStops: days.reduce(

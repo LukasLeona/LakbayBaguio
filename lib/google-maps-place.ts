@@ -1,4 +1,5 @@
 import type {
+  FinalDayPreference,
   LuggagePlan,
   PlannerStay,
   StayKind,
@@ -135,6 +136,9 @@ export function createPlannerStay(input: {
   googleMapsUrl: string;
   checkInDay: number;
   checkInTime: string;
+  checkOutDay: number;
+  checkOutTime: string;
+  finalDayPreference: FinalDayPreference;
   luggagePlan: LuggagePlan;
 }): PlannerStay {
   const parsed = parseGoogleMapsPlaceUrl(input.googleMapsUrl);
@@ -153,6 +157,9 @@ export function createPlannerStay(input: {
     googleQuery: `${name}, Baguio City, Philippines`,
     checkInDay: input.checkInDay,
     checkInTime: input.checkInTime,
+    checkOutDay: input.checkOutDay,
+    checkOutTime: input.checkOutTime,
+    finalDayPreference: input.finalDayPreference,
     luggagePlan: input.luggagePlan,
     lat: parsed.lat as number,
     lng: parsed.lng as number,

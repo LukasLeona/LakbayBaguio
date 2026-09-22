@@ -1549,7 +1549,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stay-kind-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; align-self: end; }
 .stay-kind-picker button { height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #d8c8b6; border-radius: 13px; color: #725d48; background: #fffdf8; cursor: pointer; font-size: .65rem; font-weight: 750; }
 .stay-kind-picker button.active { color: white; border-color: #594532; background: #594532; box-shadow: 0 7px 14px rgba(75,54,35,.14); }
-.stay-map-field, .stay-schedule-grid, .stay-luggage-choice, .stay-map-status, .stay-map-help { grid-column: 1 / -1; }
+.stay-map-field, .stay-schedule-grid, .final-day-picker, .departure-fields, .stay-luggage-choice, .stay-map-status, .stay-map-help { grid-column: 1 / -1; }
 .stay-map-field > div { height: 48px; display: grid; grid-template-columns: 20px minmax(0,1fr) 42px; align-items: center; gap: 6px; padding-left: 12px; border: 1px solid var(--line); border-radius: 13px; background: #fffdf8; }
 .stay-map-field > div:focus-within { border-color: var(--pine-700); box-shadow: 0 0 0 3px rgba(63,118,105,.1); }
 .stay-map-field > div > svg { color: #8a6e51; }
@@ -1557,6 +1557,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stay-map-field input:focus { box-shadow: none; }
 .stay-map-field a { width: 42px; height: 100%; display: grid; place-items: center; border-left: 1px solid var(--line); color: var(--pine-800); }
 .stay-schedule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stay-schedule-grid input[readonly] { color: #765d43; background: #f3eadf; cursor: default; }
+.stay-schedule-grid .field-hint { margin-top: 4px; color: #817260; font-size: .49rem; line-height: 1.35; }
+.final-day-picker { margin: 0; padding: 13px; border: 1px solid rgba(105,80,56,.13); border-radius: 16px; background: rgba(255,255,255,.64); }
+.final-day-picker legend { padding: 0 6px; color: #594532; font-size: .61rem; font-weight: 850; }
+.final-day-picker > div { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+.final-day-picker button { min-height: 88px; display: grid; grid-template-columns: 28px minmax(0,1fr); align-content: center; gap: 2px 8px; padding: 10px; border: 1px solid #e0d2c1; border-radius: 14px; color: #4e4337; background: #fffdf8; cursor: pointer; text-align: left; }
+.final-day-picker button > span { width: 28px; height: 28px; grid-row: 1 / 3; display: grid; place-items: center; border-radius: 9px; background: #f0e8dc; }
+.final-day-picker button strong { align-self: end; font-size: .59rem; }
+.final-day-picker button small { color: #817260; font-size: .49rem; line-height: 1.35; }
+.final-day-picker button.active { color: #fff; border-color: var(--pine-900); background: var(--pine-900); box-shadow: 0 8px 18px rgba(8,49,38,.14); }
+.final-day-picker button.active > span { background: var(--lime); }
+.final-day-picker button.active small { color: rgba(255,255,255,.68); }
+.departure-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.departure-fields .planner-field > span small { color: #938574; font-weight: 600; }
 .stay-luggage-choice { display: flex; align-items: start; gap: 9px; padding: 12px; border: 1px solid rgba(105,80,56,.13); border-radius: 14px; background: rgba(255,255,255,.64); cursor: pointer; }
 .stay-luggage-choice input { margin-top: 2px; accent-color: var(--pine-700); }
 .stay-luggage-choice span { display: grid; gap: 2px; }
@@ -1571,6 +1585,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stay-check-in-stop .route-stop-content { padding: 14px; border: 1px solid #e4d4bd; border-radius: 18px; background: linear-gradient(140deg, #fffaf1, #f5ede2); }
 .stay-check-in-stop .visit-time { color: #5f4934; background: #eadcc8; }
 .stay-check-in-stop .stop-ideas li::marker { color: #9a7044; }
+.departure-stop .route-stop-marker { color: #fff; background: var(--pine-700); }
+.departure-stop .route-stop-content { padding: 14px; border: 1px solid #cddfd5; border-radius: 18px; background: linear-gradient(140deg, #f6fbf7, #e8f1ec); }
+.departure-stop .visit-time { color: #fff; background: var(--pine-700); }
 
 @media screen and (max-width: 760px) {
   .stay-planner-card { margin-top: 18px; border-radius: 20px; }
@@ -1580,9 +1597,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .stay-planner-card > header p { font-size: .54rem; }
   .stay-toggle { grid-column: 2; justify-self: start; min-height: 32px; margin-top: 1px; padding: 6px 10px; }
   .stay-planner-fields { grid-template-columns: 1fr; gap: 11px; padding: 14px; }
-  .stay-kind-picker, .stay-name-field, .stay-map-field, .stay-schedule-grid, .stay-luggage-choice, .stay-map-status, .stay-map-help { grid-column: 1; }
+  .stay-kind-picker, .stay-name-field, .stay-map-field, .stay-schedule-grid, .final-day-picker, .departure-fields, .stay-luggage-choice, .stay-map-status, .stay-map-help { grid-column: 1; }
   .stay-kind-picker button, .stay-map-field > div { height: 46px; }
   .stay-luggage-choice { padding: 11px; }
+  .final-day-picker > div { grid-template-columns: 1fr 1fr; }
+  .final-day-picker button { min-height: 80px; }
   .stay-check-in-stop .route-stop-content { padding: 11px; border-radius: 16px; }
 }
 
@@ -1591,6 +1610,76 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .stay-planner-fields { padding: 12px; }
   .stay-map-field > div { grid-template-columns: 17px minmax(0,1fr) 38px; padding-left: 9px; }
   .stay-map-field a { width: 38px; }
+  .departure-fields { grid-template-columns: 1fr; }
+}
+
+/* Itinerary review before a route is saved */
+.itinerary-review-backdrop { position: fixed; inset: 0; z-index: 250; display: grid; place-items: center; padding: 20px; background: rgba(4,28,22,.7); backdrop-filter: blur(14px); }
+.itinerary-review-dialog { width: min(1050px, 100%); max-height: min(92vh, 900px); overflow: auto; padding: 24px; border: 1px solid rgba(255,255,255,.55); border-radius: 30px; background: #f8f5ea; box-shadow: 0 34px 90px rgba(0,20,15,.32); }
+.itinerary-review-header { display: flex; align-items: start; justify-content: space-between; gap: 24px; }
+.itinerary-review-header > div > span { display: flex; align-items: center; gap: 7px; color: var(--pine-700); font-size: .53rem; font-weight: 900; letter-spacing: .13em; }
+.itinerary-review-header h2 { margin: 7px 0 5px; font-size: clamp(1.7rem,4vw,2.6rem); line-height: 1; letter-spacing: -.055em; }
+.itinerary-review-header p { max-width: 620px; margin: 0; color: var(--muted); font-size: .67rem; line-height: 1.5; }
+.itinerary-review-header > button { width: 42px; height: 42px; flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 50%; color: var(--pine-900); background: #e7ede5; cursor: pointer; }
+.itinerary-review-header > button svg { width: 17px; }
+.review-health { display: flex; align-items: center; gap: 12px; margin: 19px 0; padding: 13px 15px; border-radius: 17px; }
+.review-health > svg { width: 34px; height: 34px; flex: 0 0 auto; padding: 8px; border-radius: 11px; }
+.review-health strong { display: block; font-size: .69rem; }
+.review-health p { margin: 2px 0 0; font-size: .57rem; line-height: 1.4; }
+.review-health.comfortable { color: #194b3e; background: #e4efe8; }
+.review-health.comfortable > svg { color: #fff; background: #337560; }
+.review-health.warning { color: #6d4717; background: #fff0c6; }
+.review-health.warning > svg { color: #6d4717; background: #f7d266; }
+.review-day-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 13px; }
+.review-day-card { overflow: hidden; border: 1px solid #dedccd; border-radius: 22px; background: #fffef9; }
+.review-day-card > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 15px 10px; }
+.review-day-card > header div { display: grid; }
+.review-day-card > header small { color: var(--pine-700); font-size: .46rem; font-weight: 900; letter-spacing: .13em; }
+.review-day-card > header strong { font-size: .76rem; }
+.review-day-card > header > span { display: flex; align-items: center; gap: 5px; padding: 7px 9px; border-radius: 999px; color: #665d50; background: #f0eee5; font-size: .51rem; font-weight: 750; }
+.review-area-line { display: flex; align-items: center; gap: 5px; margin: 0 15px 9px; color: #736b5e; font-size: .52rem; }
+.review-day-card ol { display: grid; gap: 6px; margin: 0; padding: 0 12px 12px; list-style: none; }
+.review-stop { min-height: 47px; display: grid; grid-template-columns: 29px minmax(0,1fr) 30px; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 13px; background: #f5f3eb; }
+.review-stop > span { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 9px; color: #fff; background: var(--pine-700); }
+.review-stop > div { display: grid; gap: 1px; }
+.review-stop strong { overflow: hidden; font-size: .59rem; text-overflow: ellipsis; white-space: nowrap; }
+.review-stop small { color: #786f62; font-size: .49rem; }
+.review-stop > button { width: 29px; height: 29px; display: grid; place-items: center; border: 0; border-radius: 9px; color: #8b4d43; background: #f3e5df; cursor: pointer; }
+.review-stop > button svg { width: 13px; }
+.review-stop.check-in, .review-stop.check-out { background: #f2e8d9; }
+.review-stop.check-in > span, .review-stop.check-out > span { color: #4c3826; background: #e7c879; }
+.review-stop.departure { background: #e4eee9; }
+.review-day-card > footer { display: flex; justify-content: space-between; gap: 10px; padding: 10px 14px; border-top: 1px solid #ebe8dc; color: #746b5e; font-size: .5rem; font-weight: 700; }
+.review-excluded { margin-top: 14px; padding: 14px; border: 1px solid #efd39a; border-radius: 19px; background: #fff8e5; }
+.review-excluded > header { display: flex; align-items: center; gap: 9px; color: #714c1a; }
+.review-excluded > header strong { display: block; font-size: .66rem; }
+.review-excluded > header p { margin: 1px 0 0; font-size: .51rem; }
+.review-excluded > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; margin-top: 10px; }
+.review-excluded article { display: flex; align-items: center; justify-content: space-between; gap: 9px; padding: 9px 10px; border-radius: 12px; background: rgba(255,255,255,.7); }
+.review-excluded article span { display: grid; }
+.review-excluded article strong { font-size: .56rem; }
+.review-excluded article small { color: #76674f; font-size: .47rem; }
+.review-excluded article button { display: flex; align-items: center; gap: 4px; padding: 6px 8px; border: 0; border-radius: 9px; color: #8b4d43; background: #f5e4df; cursor: pointer; font-size: .49rem; font-weight: 800; }
+.itinerary-review-actions { position: sticky; bottom: -24px; display: flex; justify-content: end; gap: 9px; margin: 18px -24px -24px; padding: 14px 24px 20px; border-top: 1px solid rgba(32,67,56,.1); background: rgba(248,245,234,.94); backdrop-filter: blur(12px); }
+.itinerary-review-actions button { min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 18px; border-radius: 14px; cursor: pointer; font-size: .61rem; font-weight: 850; }
+.itinerary-review-actions button svg { width: 16px; }
+.review-edit-button { border: 1px solid #ced7d0; color: var(--pine-900); background: #fff; }
+.review-confirm-button { border: 0; color: #fff; background: var(--pine-900); box-shadow: 0 9px 20px rgba(8,49,38,.18); }
+
+@media screen and (max-width: 760px) {
+  .itinerary-review-backdrop { align-items: end; padding: 0; }
+  .itinerary-review-dialog { max-height: 94dvh; padding: 17px 12px; border-radius: 25px 25px 0 0; }
+  .itinerary-review-header { padding: 0 3px; }
+  .itinerary-review-header h2 { font-size: 1.65rem; }
+  .itinerary-review-header p { font-size: .56rem; }
+  .itinerary-review-header > button { width: 37px; height: 37px; }
+  .review-health { margin: 14px 0; padding: 11px; }
+  .review-day-grid, .review-excluded > div { grid-template-columns: 1fr; }
+  .review-day-card > header { padding: 12px 12px 8px; }
+  .review-area-line { margin-inline: 12px; }
+  .review-stop { min-height: 44px; }
+  .itinerary-review-actions { bottom: -17px; margin: 14px -12px -17px; padding: 11px 12px calc(13px + env(safe-area-inset-bottom)); }
+  .itinerary-review-actions button { flex: 1; min-height: 44px; padding-inline: 10px; }
 }
 
 /* Unified Nearby + Messages */

@@ -45,6 +45,11 @@ export type TransportMode = "walk" | "jeepney" | "taxi";
 export type StayKind = "hotel" | "airbnb";
 export type StayLocationPrecision = "pin" | "approximate";
 export type LuggagePlan = "carry" | "property-drop";
+export type FinalDayPreference =
+  | "relax"
+  | "pasalubong"
+  | "easy-stop"
+  | "sightseeing";
 
 export interface Coordinates {
   readonly lat: number;
@@ -103,6 +108,11 @@ export interface PlannerStay extends Coordinates {
   readonly checkInDay: number;
   /** Local 24-hour time in HH:mm format. */
   readonly checkInTime: string;
+  /** Zero-based trip day containing checkout. */
+  readonly checkOutDay: number;
+  /** Local 24-hour time in HH:mm format. */
+  readonly checkOutTime: string;
+  readonly finalDayPreference: FinalDayPreference;
   readonly luggagePlan: LuggagePlan;
   readonly locationPrecision: StayLocationPrecision;
 }
