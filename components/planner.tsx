@@ -666,10 +666,21 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
               <label className="planner-field stay-name-field"><span>Property name</span><input type="text" value={stayName} onChange={(event) => setStayName(event.target.value)} placeholder={stayKind === "hotel" ? "Example: G1 Lodge" : "Example: Pine View Airbnb"} /></label>
               <label className="planner-field stay-map-field"><span>Google Maps place or share link</span><div><MapPin size={17} /><input type="url" value={stayMapsUrl} onChange={(event) => { setStayMapsUrl(event.target.value); setVerifiedStayMap(null); setSaved(false); }} placeholder="https://maps.app.goo.gl/..." /><a href={googleMapsStaySearchUrl(stayKind, stayName)} target="_blank" rel="noreferrer" aria-label="Find this stay in Google Maps" title="Find in Google Maps"><ExternalLink size={17} /></a></div></label>
               <div className="stay-schedule-grid">
-                <label className="planner-field"><span>Check-in day</span><select value={checkInDay} onChange={(event) => setCheckInDay(Number(event.target.value))}>{Array.from({ length: numberOfDays }, (_, index) => <option value={index} key={index}>Day {index + 1}</option>)}</select></label>
-                <label className="planner-field"><span>Check-in time</span><input type="time" value={checkInTime} onChange={(event) => setCheckInTime(event.target.value)} /></label>
-                <label className="planner-field"><span>Checkout day</span><input type="text" value={`Day ${numberOfDays}`} readOnly aria-label={`Checkout on Day ${numberOfDays}`} /></label>
-                <label className="planner-field"><span>Checkout time</span><input type="time" required value={checkOutTime} onChange={(event) => setCheckOutTime(event.target.value)} /><small className="field-hint">Enter the time provided by your hotel or host.</small></label>
+                <section className="stay-schedule-group">
+                  <header><strong>Check-in</strong><small>We will arrive at the property at this time.</small></header>
+                  <div>
+                    <label className="planner-field"><span>Day</span><select value={checkInDay} onChange={(event) => setCheckInDay(Number(event.target.value))}>{Array.from({ length: numberOfDays }, (_, index) => <option value={index} key={index}>Day {index + 1}</option>)}</select></label>
+                    <label className="planner-field"><span>Time</span><input type="time" value={checkInTime} onChange={(event) => setCheckInTime(event.target.value)} /></label>
+                  </div>
+                </section>
+                <section className="stay-schedule-group checkout">
+                  <header><strong>Checkout</strong><small>Your final-day route starts around this time.</small></header>
+                  <div>
+                    <label className="planner-field"><span>Day</span><input type="text" value={`Day ${numberOfDays}`} readOnly aria-label={`Checkout on Day ${numberOfDays}`} /></label>
+                    <label className="planner-field"><span>Time</span><input type="time" required value={checkOutTime} onChange={(event) => setCheckOutTime(event.target.value)} /></label>
+                  </div>
+                  <p className="field-hint">Use the checkout time provided by your hotel or host.</p>
+                </section>
               </div>
               <fieldset className="final-day-picker">
                 <legend>How should your final day feel?</legend>

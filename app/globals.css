@@ -1564,8 +1564,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stay-map-field input:focus { box-shadow: none; }
 .stay-map-field a { width: 42px; height: 100%; display: grid; place-items: center; border-left: 1px solid var(--line); color: var(--pine-800); }
 .stay-schedule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stay-schedule-group { min-width: 0; padding: 13px; border: 1px solid rgba(105,80,56,.13); border-radius: 16px; background: rgba(255,255,255,.66); }
+.stay-schedule-group.checkout { background: rgba(247,240,229,.82); }
+.stay-schedule-group > header { display: grid; gap: 2px; min-height: 37px; margin-bottom: 9px; }
+.stay-schedule-group > header strong { color: #594532; font-size: .65rem; }
+.stay-schedule-group > header small { color: #817260; font-size: .5rem; line-height: 1.35; }
+.stay-schedule-group > div { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; }
+.stay-schedule-group .planner-field { min-width: 0; }
+.stay-schedule-group .planner-field input, .stay-schedule-group .planner-field select { width: 100%; min-width: 0; }
 .stay-schedule-grid input[readonly] { color: #765d43; background: #f3eadf; cursor: default; }
-.stay-schedule-grid .field-hint { margin-top: 4px; color: #817260; font-size: .49rem; line-height: 1.35; }
+.stay-schedule-grid .field-hint { margin: 7px 1px 0; color: #817260; font-size: .49rem; line-height: 1.35; }
 .final-day-picker { margin: 0; padding: 13px; border: 1px solid rgba(105,80,56,.13); border-radius: 16px; background: rgba(255,255,255,.64); }
 .final-day-picker legend { padding: 0 6px; color: #594532; font-size: .61rem; font-weight: 850; }
 .final-day-picker > div { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
@@ -1607,13 +1615,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .stay-kind-picker, .stay-name-field, .stay-map-field, .stay-schedule-grid, .final-day-picker, .departure-fields, .stay-luggage-choice, .stay-map-status, .stay-map-help { grid-column: 1; }
   .stay-kind-picker button, .stay-map-field > div { height: 46px; }
   .stay-luggage-choice { padding: 11px; }
+  .stay-schedule-grid { grid-template-columns: 1fr; }
+  .stay-schedule-group > header { min-height: 0; }
   .final-day-picker > div { grid-template-columns: 1fr 1fr; }
   .final-day-picker button { min-height: 80px; }
   .stay-check-in-stop .route-stop-content { padding: 11px; border-radius: 16px; }
 }
 
 @media screen and (max-width: 400px) {
-  .stay-schedule-grid { grid-template-columns: 1fr 1fr; gap: 7px; }
+  .stay-schedule-grid { gap: 8px; }
+  .stay-schedule-group { padding: 11px; }
+  .stay-schedule-group > div { gap: 7px; }
   .stay-planner-fields { padding: 12px; }
   .stay-map-field > div { grid-template-columns: 17px minmax(0,1fr) 38px; padding-left: 9px; }
   .stay-map-field a { width: 38px; }
