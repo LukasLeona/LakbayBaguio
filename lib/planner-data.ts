@@ -82,12 +82,12 @@ export const PLANNER_ROUTE_GUIDES = {
 export const PLANNER_START_LOCATIONS = [
   {
     "id": "victory-liner",
-    "name": "Victory Liner Baguio Terminal",
-    "lat": 16.40179,
-    "lng": 120.59903,
+    "name": "Victory Liner Inc. Baguio City",
+    "lat": 16.40571,
+    "lng": 120.60252,
     "area": "City Center",
     "terminal": true,
-    "googleQuery": "Victory Liner Baguio Terminal"
+    "googleQuery": "Victory Liner Inc. Baguio City, CJ43+72J, PNR, Utility Rd, Baguio, Benguet"
   },
   {
     "id": "gov-pack",
