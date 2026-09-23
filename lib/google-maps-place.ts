@@ -143,7 +143,7 @@ export function createPlannerStay(input: {
 }): PlannerStay {
   const parsed = parseGoogleMapsPlaceUrl(input.googleMapsUrl);
   if (!parsed) throw new Error("Paste a valid Google Maps place or share link for your stay.");
-  if (!parsed.name || parsed.locationPrecision !== "pin") {
+  if ((!parsed.name && !input.name.trim()) || parsed.locationPrecision !== "pin") {
     throw new Error("We could not confirm the exact property pin. Open the place in Google Maps, tap Share, and paste that link.");
   }
 

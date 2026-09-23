@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { consumeRateLimit } from "@/lib/api-rate-limit";
 import {
-  fetchStaySuggestions,
+  fetchGeoapifyStaySuggestions,
   normalizeStayQuery,
   searchCuratedStays,
-  validSessionToken,
-} from "@/lib/google-places";
+} from "@/lib/stay-places";
 
 export async function GET(request: Request) {
   const limit = consumeRateLimit(request, "places-autocomplete", 45, 60_000);
@@ -18,24 +17,20 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const input = normalizeStayQuery(url.searchParams.get("input") || "");
-  const sessionToken = url.searchParams.get("sessionToken") || "";
-  if (input.length < 2) return NextResponse.json({ suggestions: [], poweredByGoogle: false });
-  if (!validSessionToken(sessionToken)) {
-    return NextResponse.json({ error: "Invalid accommodation search session." }, { status: 422 });
-  }
+  if (input.length < 2) return NextResponse.json({ suggestions: [], poweredByGeoapify: false });
 
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
+  const apiKey = process.env.GEOAPIFY_API_KEY?.trim();
   if (!apiKey) {
-    return NextResponse.json({ suggestions: searchCuratedStays(input), poweredByGoogle: false, configured: false });
+    return NextResponse.json({ suggestions: searchCuratedStays(input), poweredByGeoapify: false, configured: false });
   }
 
   try {
-    const suggestions = await fetchStaySuggestions(input, sessionToken, apiKey);
+    const suggestions = await fetchGeoapifyStaySuggestions(input, apiKey);
     return NextResponse.json(
-      { suggestions, poweredByGoogle: suggestions.some((item) => item.source === "google"), configured: true },
+      { suggestions, poweredByGeoapify: suggestions.some((item) => item.source === "geoapify"), configured: true },
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch {
-    return NextResponse.json({ suggestions: searchCuratedStays(input), poweredByGoogle: false, configured: true });
+    return NextResponse.json({ suggestions: searchCuratedStays(input), poweredByGeoapify: false, configured: true });
   }
 }
