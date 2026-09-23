@@ -152,11 +152,6 @@ export function ItineraryResults({
               <span className="result-kicker"><i /> {variant === "shared" ? "Itinerary shared with you" : "Your generated plan"}</span>
               <h1 id="generated-plan-title">{itinerary.title}</h1>
             </div>
-            <div className="plan-route-stamp" aria-label={`${itinerary.numberOfDays}-day route with ${itinerary.totals.scheduledStops} scheduled stops`}>
-              <Route aria-hidden="true" />
-              <strong>{itinerary.numberOfDays}</strong>
-              <span>{itinerary.numberOfDays === 1 ? "day" : "days"}</span>
-            </div>
           </div>
 
           <div className="plan-context-row">
@@ -165,23 +160,28 @@ export function ItineraryResults({
             {itinerary.stay ? <span><BedDouble /> {itinerary.stay.name}</span> : null}
           </div>
 
-          <div className="plan-progress" aria-label={`${itinerary.numberOfDays}-day itinerary from ${itinerary.date ? formatDayDate(itinerary.date, 0) : "day 1"} to ${itinerary.date ? formatDayDate(itinerary.date, itinerary.numberOfDays - 1) : `day ${itinerary.numberOfDays}`}`}>
-            <div className="plan-progress-labels">
-              <span>{itinerary.date ? formatDayDate(itinerary.date, 0) : "Day 1"}</span>
-              <strong>{itinerary.totals.scheduledStops} stops arranged</strong>
-              <span>{itinerary.date ? formatDayDate(itinerary.date, itinerary.numberOfDays - 1) : `Day ${itinerary.numberOfDays}`}</span>
+          <div className="plan-journey" aria-label={`Baguio journey from ${itinerary.date ? formatDayDate(itinerary.date, 0) : "the first day"} to ${itinerary.date ? formatDayDate(itinerary.date, itinerary.numberOfDays - 1) : "the final day"}`}>
+            <div className="plan-journey-labels">
+              <span>Start</span>
+              <strong>Baguio route</strong>
+              <span>Finish</span>
             </div>
-            <div className="plan-progress-track" aria-hidden="true">
-              <span><Check /></span><i /><span><Route /></span><i /><span><MapPin /></span>
+            <div className="plan-journey-track" aria-hidden="true">
+              <span><MapPin /></span><i /><span className="journey-ride"><BusFront /></span><i /><span><Navigation /></span>
+            </div>
+            <div className="plan-journey-dates">
+              <span>{itinerary.date ? formatDayDate(itinerary.date, 0) : "Day 1"}</span>
+              <span>Route ready</span>
+              <span>{itinerary.date ? formatDayDate(itinerary.date, itinerary.numberOfDays - 1) : `Day ${itinerary.numberOfDays}`}</span>
             </div>
           </div>
         </header>
 
         <div className="trip-metrics" aria-label="Itinerary summary">
-          <article><i><CalendarDays /></i><div><span>Travel days</span><strong>{itinerary.numberOfDays}</strong><small>{itinerary.numberOfDays === 1 ? "day planned" : "days planned"}</small></div></article>
-          <article><i><MapPin /></i><div><span>Scheduled stops</span><strong>{itinerary.totals.scheduledStops}</strong><small>{itinerary.stay ? "including stay anchors" : "places arranged"}</small></div></article>
-          <article><i><Clock3 /></i><div><span>Travel time</span><strong>{formatDuration(itinerary.totals.travelMinutes)}</strong><small>estimated between stops</small></div></article>
-          <article><i><WalletCards /></i><div><span>Transport</span><strong>{formatCurrency(itinerary.totals.fare)}</strong><small>planning estimate</small></div></article>
+          <article aria-label={`${itinerary.numberOfDays} travel ${itinerary.numberOfDays === 1 ? "day" : "days"}`}><div><i><CalendarDays /></i><strong>{itinerary.numberOfDays}</strong></div><span>Travel days</span></article>
+          <article aria-label={`${itinerary.totals.scheduledStops} scheduled stops`}><div><i><MapPin /></i><strong>{itinerary.totals.scheduledStops}</strong></div><span>Scheduled stops</span></article>
+          <article aria-label={`${formatDuration(itinerary.totals.travelMinutes)} estimated travel time`}><div><i><Clock3 /></i><strong>{formatDuration(itinerary.totals.travelMinutes)}</strong></div><span>Travel time</span></article>
+          <article aria-label={`${formatCurrency(itinerary.totals.fare)} estimated transport fare`}><div><i><WalletCards /></i><strong>{formatCurrency(itinerary.totals.fare)}</strong></div><span>Transport</span></article>
         </div>
       </section>
 

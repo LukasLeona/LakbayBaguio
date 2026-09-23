@@ -719,7 +719,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .generated-plan-header { position: relative; overflow: hidden; padding: 25px 28px 21px; color: white; background: radial-gradient(circle at 88% 12%, rgba(201,226,48,.24), transparent 29%), linear-gradient(128deg, #0d4938, #062e24 72%); }
 .generated-plan-header::after { content: ""; position: absolute; right: -70px; bottom: -115px; width: 300px; height: 300px; border: 1px solid rgba(255,255,255,.09); border-radius: 50%; box-shadow: 0 0 0 38px rgba(255,255,255,.025), 0 0 0 76px rgba(255,255,255,.02); }
 .generated-plan-header > * { position: relative; z-index: 1; }
-.plan-title-row { display: flex; align-items: start; justify-content: space-between; gap: 22px; }
+.plan-title-row { display: block; }
 .plan-heading-copy { min-width: 0; }
 .result-kicker { display: flex; align-items: center; gap: 8px; color: #d8e6dc; font-size: .58rem; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
 .result-kicker i { width: 18px; border-top: 2px solid var(--lime); }
@@ -727,35 +727,32 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .plan-context-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
 .plan-context-row > span { max-width: 310px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid rgba(255,255,255,.13); border-radius: 999px; color: rgba(255,255,255,.84); background: rgba(255,255,255,.07); font-size: .5rem; font-weight: 700; }
 .plan-context-row svg { width: 13px; height: 13px; flex: 0 0 auto; color: var(--lime); }
-.plan-route-stamp { flex: 0 0 auto; min-width: 64px; height: 64px; display: grid; grid-template-columns: auto auto; grid-template-rows: 1fr auto; place-content: center; align-items: end; column-gap: 5px; border: 1px solid rgba(255,255,255,.18); border-radius: 20px; background: rgba(255,255,255,.1); backdrop-filter: blur(8px); box-shadow: inset 0 1px rgba(255,255,255,.13); }
-.plan-route-stamp svg { width: 17px; height: 17px; align-self: center; color: var(--lime); }
-.plan-route-stamp strong { color: white; font-size: 1.55rem; line-height: .9; }
-.plan-route-stamp span { grid-column: 1 / -1; margin-top: 3px; color: rgba(255,255,255,.68); font-size: .43rem; font-weight: 800; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
-.plan-progress { margin-top: 15px; }
-.plan-progress-labels { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; color: rgba(255,255,255,.7); font-size: .48rem; font-weight: 700; }
-.plan-progress-labels strong { color: white; font-size: .5rem; text-align: center; }
-.plan-progress-labels span:last-child { text-align: right; }
-.plan-progress-track { display: grid; grid-template-columns: auto 1fr auto 1fr auto; align-items: center; margin-top: 6px; }
-.plan-progress-track > span { width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; color: var(--pine-950); background: var(--lime); }
-.plan-progress-track > span:nth-of-type(2) { color: white; background: #3e755f; }
-.plan-progress-track > span:last-of-type { color: white; background: transparent; }
-.plan-progress-track svg { width: 10px; height: 10px; stroke-width: 3; }
-.plan-progress-track > i { border-top: 2px dotted rgba(255,255,255,.42); }
+.plan-journey { margin-top: 15px; }
+.plan-journey-labels, .plan-journey-dates { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; color: rgba(255,255,255,.66); font-size: .44rem; font-weight: 700; }
+.plan-journey-labels { text-transform: uppercase; letter-spacing: .08em; }
+.plan-journey-labels strong { color: white; font-size: .48rem; text-align: center; }
+.plan-journey-labels span:last-child, .plan-journey-dates span:last-child { text-align: right; }
+.plan-journey-track { display: grid; grid-template-columns: auto 1fr auto 1fr auto; align-items: center; margin: 5px 1px 4px; }
+.plan-journey-track > span { width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; color: var(--pine-950); background: var(--lime); }
+.plan-journey-track > span.journey-ride { width: 25px; height: 25px; color: white; border-color: rgba(255,255,255,.35); background: #3e755f; box-shadow: 0 0 0 4px rgba(255,255,255,.07); }
+.plan-journey-track > span:last-of-type { color: white; background: transparent; }
+.plan-journey-track svg { width: 10px; height: 10px; stroke-width: 2.7; }
+.plan-journey-track .journey-ride svg { width: 13px; height: 13px; }
+.plan-journey-track > i { height: 2px; background: linear-gradient(90deg, rgba(201,226,48,.95), rgba(255,255,255,.32)); }
+.plan-journey-track > i:nth-of-type(2) { background: linear-gradient(90deg, rgba(255,255,255,.32), rgba(255,255,255,.72)); }
+.plan-journey-dates span:nth-child(2) { color: var(--lime); text-align: center; }
 .result-action { min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 11px; background: white; cursor: pointer; font-size: .62rem; font-weight: 800; }
 .result-action.strong { color: white; border-color: #8ba79e; background: #8ba79e; }
 .result-action.save { color: white; border-color: var(--pine-800); background: var(--pine-800); }
 .result-action.save.saved { color: white; border-color: var(--pine-950); background: var(--pine-950); }
-.trip-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; padding: 8px; background: #f7f8ef; }
-.trip-metrics article { position: relative; min-width: 0; min-height: 82px; display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 9px; overflow: hidden; padding: 10px; border: 1px solid rgba(8,44,34,.07); border-radius: 17px; background: #fff; box-shadow: 0 5px 14px rgba(35,75,59,.045); }
-.trip-metrics article > i { position: relative; z-index: 1; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; color: var(--pine-950); background: var(--lime); font-style: normal; }
-.trip-metrics article:nth-child(2) > i { background: #f8c86d; }
-.trip-metrics article:nth-child(3) > i { background: #c7ded0; }
-.trip-metrics article:nth-child(4) > i { color: white; background: var(--pine-800); }
-.trip-metrics article > i svg { width: 16px; height: 16px; }
-.trip-metrics article > div { position: relative; z-index: 1; min-width: 0; display: grid; }
-.trip-metrics span { color: var(--muted); font-size: .48rem; font-weight: 700; }
-.trip-metrics strong { overflow: hidden; margin-top: 2px; font-size: .92rem; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
-.trip-metrics small { margin-top: 3px; color: var(--pine-700); font-size: .43rem; }
+.trip-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 9px 7px; background: #f7f8ef; }
+.trip-metrics article { position: relative; min-width: 0; min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 7px 9px; text-align: center; }
+.trip-metrics article:not(:last-child)::after { content: ""; position: absolute; top: 10px; right: 0; bottom: 10px; border-right: 1px solid rgba(8,44,34,.1); }
+.trip-metrics article > div { min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.trip-metrics article i { display: grid; place-items: center; color: var(--pine-700); font-style: normal; }
+.trip-metrics article i svg { width: 17px; height: 17px; stroke-width: 2.3; }
+.trip-metrics strong { overflow: hidden; color: var(--pine-950); font-size: 1rem; line-height: 1; text-overflow: ellipsis; white-space: nowrap; }
+.trip-metrics span { color: var(--muted); font-size: .46rem; font-weight: 750; }
 .itinerary-day-selector { margin: 18px 0; padding: 12px; border: 1px solid rgba(8,44,34,.09); border-radius: 23px; background: rgba(252,251,244,.92); }
 .itinerary-day-selector > header { display: flex; align-items: end; justify-content: space-between; gap: 12px; padding: 2px 5px 10px; }
 .itinerary-day-selector > header div { display: grid; gap: 2px; }
@@ -877,28 +874,23 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .itinerary-page .planner-section { padding-top: 13px; }
   .itinerary-overview { border-radius: 22px; }
   .generated-plan-header { padding: 18px 16px 15px; }
-  .plan-title-row { gap: 12px; }
-  .generated-plan-header h1 { max-width: 285px; font-size: clamp(1.45rem, 6.6vw, 1.82rem); }
+  .generated-plan-header h1 { max-width: 330px; font-size: clamp(1.45rem, 6.6vw, 1.82rem); }
   .result-kicker { font-size: .48rem; }
   .plan-context-row { flex-wrap: nowrap; gap: 5px; margin: 11px -2px 0; padding: 0 2px 2px; overflow-x: auto; scrollbar-width: none; }
   .plan-context-row::-webkit-scrollbar { display: none; }
   .plan-context-row > span { max-width: none; flex: 0 0 auto; padding: 5px 7px; font-size: .44rem; }
-  .plan-route-stamp { min-width: 55px; height: 55px; border-radius: 17px; }
-  .plan-route-stamp svg { width: 14px; height: 14px; }
-  .plan-route-stamp strong { font-size: 1.32rem; }
-  .plan-route-stamp span { font-size: .38rem; }
-  .plan-progress { margin-top: 11px; }
-  .plan-progress-labels { font-size: .42rem; }
-  .plan-progress-labels strong { font-size: .44rem; }
-  .plan-progress-track > span { width: 16px; height: 16px; }
-  .trip-metrics { gap: 5px; padding: 6px; }
-  .trip-metrics article { min-height: 76px; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 7px 3px; border-radius: 14px; text-align: center; }
-  .trip-metrics article > i { width: 28px; height: 28px; border-radius: 9px; }
-  .trip-metrics article > i svg { width: 14px; height: 14px; }
-  .trip-metrics article > div { justify-items: center; }
-  .trip-metrics span { font-size: .4rem; line-height: 1.1; }
-  .trip-metrics strong { margin-top: 1px; font-size: .78rem; }
-  .trip-metrics small { display: none; }
+  .plan-journey { margin-top: 11px; }
+  .plan-journey-labels, .plan-journey-dates { font-size: .39rem; }
+  .plan-journey-labels strong { font-size: .42rem; }
+  .plan-journey-track > span { width: 16px; height: 16px; }
+  .plan-journey-track > span.journey-ride { width: 22px; height: 22px; }
+  .trip-metrics { padding: 6px 2px; }
+  .trip-metrics article { min-height: 57px; gap: 4px; padding: 6px 2px; }
+  .trip-metrics article:not(:last-child)::after { top: 8px; bottom: 8px; }
+  .trip-metrics article > div { gap: 4px; }
+  .trip-metrics article i svg { width: 14px; height: 14px; }
+  .trip-metrics strong { font-size: .82rem; }
+  .trip-metrics span { font-size: .38rem; line-height: 1.1; }
   .itinerary-day-selector { margin-block: 12px; padding: 9px; border-radius: 20px; }
   .itinerary-day-selector > header { padding-inline: 3px; }
   .itinerary-day-tabs { margin-block: 0; border-radius: 15px; }
