@@ -73,7 +73,11 @@ export type PlannerRequest = {
   stay?: PlannerStay;
   /** Optional final-day terminal and departure time. */
   departure?: PlannerDeparture;
+  /** Optional preview-only day constraints keyed by destination id. */
+  dayAssignments?: PlannerDayAssignments;
 };
+
+export type PlannerDayAssignments = Readonly<Record<string, number>>;
 
 export type PlannerDeparture = {
   location: PlannerStartLocation;
@@ -164,6 +168,12 @@ export type PlannedItinerary = {
   departure?: PlannerDeparture;
   totals: ItineraryTotals;
   disclaimer: string;
+};
+
+export type ItineraryMoveEvaluation = {
+  allowed: boolean;
+  reason: string;
+  itinerary?: PlannedItinerary;
 };
 
 type DayBuildOptions = {
@@ -522,7 +532,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
   const fareSettings = mergeFareSettings(request.fareSettings);
   const modes = uniqueModes(request.modes);
   const destinations = [...request.destinations];
-  const buckets = buildDayBuckets(
+  const automaticBuckets = buildDayBuckets(
     request.start,
     destinations,
     request.numberOfDays,
@@ -530,6 +540,12 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     request.preference,
     startMinutes,
     request.stay,
+  );
+  const buckets = applyDayAssignments(
+    automaticBuckets,
+    destinations,
+    request.dayAssignments,
+    request.numberOfDays,
   );
 
   const dayOptions = {
@@ -580,6 +596,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
       startMinutes,
       stay: request.stay,
       departure: request.departure,
+      dayAssignments: request.dayAssignments,
     }),
   );
 
@@ -605,6 +622,185 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     ...(request.departure ? { departure: request.departure } : {}),
     totals,
     disclaimer: PLANNING_DISCLAIMER,
+  };
+}
+
+function applyDayAssignments(
+  automaticBuckets: readonly PlannerDestination[][],
+  destinations: readonly PlannerDestination[],
+  assignments: PlannerDayAssignments | undefined,
+  numberOfDays: number,
+): PlannerDestination[][] {
+  if (!assignments || !Object.keys(assignments).length) {
+    return automaticBuckets.map((bucket) => [...bucket]);
+  }
+
+  const assignedIds = new Set(
+    destinations
+      .filter((destination) => {
+        const dayIndex = assignments[destination.id];
+        return Number.isInteger(dayIndex) && dayIndex >= 0 && dayIndex < numberOfDays;
+      })
+      .map((destination) => destination.id),
+  );
+  const buckets = automaticBuckets.map((bucket) =>
+    bucket.filter((destination) => !assignedIds.has(destination.id)),
+  );
+
+  destinations.forEach((destination) => {
+    if (!assignedIds.has(destination.id)) return;
+    buckets[assignments[destination.id]].push(destination);
+  });
+
+  return buckets;
+}
+
+function itineraryDestinations(itinerary: PlannedItinerary): PlannerDestination[] {
+  const byId = new Map<string, PlannerDestination>();
+  itinerary.days.forEach((day) => {
+    day.items.forEach((item) => {
+      if (item.kind === "destination") byId.set(item.destination.id, item.destination);
+    });
+    day.unscheduled.forEach((destination) => byId.set(destination.id, destination));
+  });
+  return itinerary.selectedDestinationIds
+    .map((id) => byId.get(id))
+    .filter((destination): destination is PlannerDestination => Boolean(destination));
+}
+
+export function getItineraryDayAssignments(itinerary: PlannedItinerary): Record<string, number> {
+  const assignments: Record<string, number> = {};
+  itinerary.days.forEach((day) => {
+    day.items.forEach((item) => {
+      if (item.kind === "destination") assignments[item.destination.id] = day.index;
+    });
+    day.unscheduled.forEach((destination) => {
+      assignments[destination.id] = day.index;
+    });
+  });
+  return assignments;
+}
+
+function scheduledDestinationIds(itinerary: PlannedItinerary): Set<string> {
+  return new Set(
+    itinerary.days.flatMap((day) =>
+      day.items
+        .filter((item) => item.kind === "destination")
+        .map((item) => item.destination.id),
+    ),
+  );
+}
+
+function activeDayMinutes(day: PlannedDay): number {
+  return day.items.reduce(
+    (total, item) => total + item.transport.minutes + item.destination.duration,
+    0,
+  );
+}
+
+/**
+ * Dry-runs a review-screen move through the production planner. A destination
+ * only moves when it remains geographically coherent, fits its opening hours,
+ * preserves fixed anchors, and does not displace another scheduled place.
+ */
+export function evaluateItineraryMove(
+  itinerary: PlannedItinerary,
+  destinationId: string,
+  targetDayIndex: number,
+): ItineraryMoveEvaluation {
+  if (!Number.isInteger(targetDayIndex) || targetDayIndex < 0 || targetDayIndex >= itinerary.days.length) {
+    return { allowed: false, reason: "Choose a day within this trip." };
+  }
+
+  const destinations = itineraryDestinations(itinerary);
+  const destination = destinations.find((place) => place.id === destinationId);
+  if (!destination) {
+    return { allowed: false, reason: "This place is no longer part of the itinerary preview." };
+  }
+
+  const assignments = getItineraryDayAssignments(itinerary);
+  const sourceDayIndex = assignments[destinationId];
+  if (sourceDayIndex === targetDayIndex) {
+    return { allowed: false, reason: `${destination.name} is already assigned to Day ${targetDayIndex + 1}.` };
+  }
+
+  const targetDay = itinerary.days[targetDayIndex];
+  const targetPlaces = targetDay.items
+    .filter((item) => item.kind === "destination" && item.destination.id !== destinationId)
+    .map((item) => item.destination);
+  const targetHasSideTrip = targetPlaces.some((place) => place.area === "Atok Side Trip");
+  const movingSideTrip = destination.area === "Atok Side Trip";
+  if (targetPlaces.length && targetHasSideTrip !== movingSideTrip) {
+    return {
+      allowed: false,
+      reason: `${destination.name} cannot be mixed with Day ${targetDayIndex + 1}'s ${targetHasSideTrip ? "Atok side trip" : "Baguio city route"}.`,
+    };
+  }
+
+  const sharesArea = targetPlaces.some((place) => place.area === destination.area);
+  const nearestTargetKm = targetPlaces.length
+    ? Math.min(...targetPlaces.map((place) => haversineKm(place, destination)))
+    : haversineKm(startLocationForDay(itinerary.start, itinerary.stay, targetDayIndex), destination);
+  if (targetPlaces.length && !sharesArea && nearestTargetKm > 2.5) {
+    return {
+      allowed: false,
+      reason: `${destination.name} is too far from Day ${targetDayIndex + 1}'s route (${nearestTargetKm.toFixed(1)} km from its nearest stop).`,
+    };
+  }
+
+  assignments[destinationId] = targetDayIndex;
+  const next = generateItinerary({
+    start: itinerary.start,
+    destinations,
+    date: itinerary.date,
+    numberOfDays: itinerary.numberOfDays,
+    availableMinutes: itinerary.availableMinutes,
+    travelers: itinerary.travelers,
+    modes: itinerary.modes,
+    preference: itinerary.preference,
+    fareSettings: itinerary.fareSettings,
+    startMinutes: itinerary.startMinutes,
+    ...(itinerary.stay ? { stay: itinerary.stay } : {}),
+    ...(itinerary.departure ? { departure: itinerary.departure } : {}),
+    dayAssignments: assignments,
+  });
+  const nextTargetDay = next.days[targetDayIndex];
+  const movedStop = nextTargetDay.items.find(
+    (item) => item.kind === "destination" && item.destination.id === destinationId,
+  );
+  if (!movedStop) {
+    return {
+      allowed: false,
+      reason: `${destination.name} cannot fit Day ${targetDayIndex + 1}'s opening hours, travel time, and fixed commitments.`,
+    };
+  }
+
+  const beforeScheduled = scheduledDestinationIds(itinerary);
+  const afterScheduled = scheduledDestinationIds(next);
+  const displaced = destinations.find(
+    (place) => place.id !== destinationId && beforeScheduled.has(place.id) && !afterScheduled.has(place.id),
+  );
+  if (displaced) {
+    return {
+      allowed: false,
+      reason: `Moving ${destination.name} would push ${displaced.name} outside Day ${targetDayIndex + 1}'s safe schedule.`,
+    };
+  }
+
+  const nextActiveMinutes = activeDayMinutes(nextTargetDay);
+  const currentActiveMinutes = activeDayMinutes(targetDay);
+  const relaxedLimit = Math.max(180, itinerary.availableMinutes - 30);
+  if (nextActiveMinutes > relaxedLimit && nextActiveMinutes > currentActiveMinutes + 15) {
+    return {
+      allowed: false,
+      reason: `Day ${targetDayIndex + 1} would become too compressed. Keep at least 30 minutes of breathing room.`,
+    };
+  }
+
+  return {
+    allowed: true,
+    reason: `${destination.name} fits Day ${targetDayIndex + 1}. Route order, times, distance, and fare will be recalculated.`,
+    itinerary: next,
   };
 }
 

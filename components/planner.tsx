@@ -42,10 +42,13 @@ import {
 } from "@/lib/planner-data";
 import { LTFRB_FARE_POLICY } from "@/lib/fare-policy";
 import {
+  evaluateItineraryMove,
   generateItinerary,
+  getItineraryDayAssignments,
   googleSearchUrl,
   parseTimeToMinutes,
   validatePlannerRequest,
+  type ItineraryMoveEvaluation,
   type PlannedItinerary,
   type PlannerRequest,
 } from "@/lib/planner-engine";
@@ -609,12 +612,29 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       startMinutes: reviewResult.startMinutes,
       ...(nextStay ? { stay: nextStay } : {}),
       ...(reviewResult.departure ? { departure: reviewResult.departure } : {}),
+      dayAssignments: getItineraryDayAssignments(reviewResult),
     });
 
     setSelectedIds((current) => current.filter((id) => id !== destinationId));
     if (removedAutomaticMarket) setFinalDayPreference("easy-stop");
     setReviewResult(next);
     setSaved(false);
+  }
+
+  function evaluateReviewedMove(destinationId: string, targetDayIndex: number): ItineraryMoveEvaluation {
+    if (!reviewResult) {
+      return { allowed: false, reason: "The itinerary preview is no longer open." };
+    }
+    return evaluateItineraryMove(reviewResult, destinationId, targetDayIndex);
+  }
+
+  function moveReviewedDestination(destinationId: string, targetDayIndex: number): ItineraryMoveEvaluation {
+    const evaluation = evaluateReviewedMove(destinationId, targetDayIndex);
+    if (evaluation.allowed && evaluation.itinerary) {
+      setReviewResult(evaluation.itinerary);
+      setSaved(false);
+    }
+    return evaluation;
   }
 
   function savePlan() {
@@ -779,7 +799,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
       {initialView === "itinerary" && restored && result ? <ItineraryResults itinerary={result} activeDay={activeDay} saved={saved} onActiveDayChange={setActiveDay} onEdit={() => router.push("/plan")} onSave={savePlan} /> : null}
       {initialView === "itinerary" && !restored ? <div className="loading-card itinerary-loading">Opening your itinerary…</div> : null}
-      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} onConfirm={confirmReviewedPlan} onEdit={editReviewedPlan} onRemove={removeReviewedDestination} /> : null}
+      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} onConfirm={confirmReviewedPlan} onEdit={editReviewedPlan} onRemove={removeReviewedDestination} onEvaluateMove={evaluateReviewedMove} onMove={moveReviewedDestination} /> : null}
       {toast ? <div className="planner-toast" role="status">{toast}</div> : null}
     </div>
   );
