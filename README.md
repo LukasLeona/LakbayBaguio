@@ -40,7 +40,7 @@ The product is designed around three goals:
 | --- | --- |
 | **Home** | See trip highlights, return to a pending itinerary, discover restaurants and stays, and ask Kabsat for quick help. |
 | **Explore** | Browse parks, attractions, restaurants, and hotels through clearly separated place categories. |
-| **Itinerary** | Choose destinations, add an optional hotel or Airbnb from Google Maps, and generate a practical multi-day route arranged around check-in time. |
+| **Itinerary** | Choose destinations, find an optional hotel or Airbnb by name or Google Maps link, and generate a practical multi-day route arranged around check-in and checkout. |
 | **Wall** | Share text or an album of up to five photos anonymously, browse familiar social-style post layouts, and react to other travelers’ stories. |
 | **Chat** | Use the traveler radar in Baguio and start an anonymous, time-limited conversation with someone nearby. |
 | **Suggestions** | Propose improvements for Baguio Buddy and upvote ideas from the community. |
@@ -48,7 +48,7 @@ The product is designed around three goals:
 ### A trip from idea to route
 
 1. **Discover** places that match the traveler’s interests.
-2. **Choose** destinations, dates, pace, transport preferences, available time, and an optional hotel or Airbnb Google Maps link.
+2. **Choose** destinations, dates, pace, transport preferences, available time, and an optional hotel or Airbnb through Baguio-focused autocomplete or an exact Google Maps link.
 3. **Generate** a day-by-day route with stop order, directions, time, fare estimates, and a fixed check-in agenda item.
 4. **Keep or share** the plan through local saving, copying, printing/PDF, or a private share link and QR code.
 5. **Travel with context** using map links, place details, and a pending-plan reminder across the experience.
@@ -105,7 +105,7 @@ Anonymous participation hides the account identity from other users; it cannot p
 - **Frontend:** Next.js 16 App Router, React 19, and TypeScript
 - **Design:** Poppins, Lucide icons, responsive custom CSS, and a mobile bottom-navigation pattern
 - **Data and realtime:** Supabase Postgres, Authentication, Storage, Realtime, PostGIS, Row Level Security, and narrow RPCs
-- **Maps:** MapLibre GL with verified Google Maps place links, named route waypoints, and mobile-safe route segments for turn-by-turn handoff
+- **Maps:** MapLibre GL with verified Google Maps place links, server-side Places autocomplete for accommodations, named route waypoints, and mobile-safe route segments for turn-by-turn handoff
 - **Abuse protection:** Cloudflare Turnstile, server validation, honeypots, database constraints, and rate limits
 - **Notifications:** EmailJS
 - **Deployment:** Vercel
@@ -142,6 +142,7 @@ The committed [<code>.env.example</code>](.env.example) contains blank placehold
 | <code>NEXT_PUBLIC_TURNSTILE_SITE_KEY</code> | Browser-visible | Turnstile widget configuration |
 | <code>TURNSTILE_SECRET_KEY</code> | **Server secret** | Server-side Turnstile verification |
 | <code>NEXT_PUBLIC_MAP_STYLE_URL</code> | Browser-visible | Optional MapLibre-compatible map style |
+| <code>GOOGLE_PLACES_API_KEY</code> | **Server secret** | Places API (New) autocomplete and exact accommodation pins |
 | <code>EMAILJS_SERVICE_ID</code> | Server configuration | Contact notification service |
 | <code>EMAILJS_TEMPLATE_ID</code> | Server configuration | Contact notification template |
 | <code>EMAILJS_PUBLIC_KEY</code> | Public identifier | EmailJS account identifier |
@@ -151,6 +152,19 @@ The committed [<code>.env.example</code>](.env.example) contains blank placehold
 | <code>NEXT_PUBLIC_EMAILJS_PUBLIC_KEY</code> | Browser-visible | EmailJS public identifier |
 
 Never add a service-role key, Turnstile secret, EmailJS private key, database password, or personal access token to a <code>NEXT_PUBLIC_*</code> variable.
+
+<details>
+<summary><strong>Configure accommodation autocomplete</strong></summary>
+
+1. Enable **Places API (New)** in a Google Cloud project with billing enabled.
+2. Create an API key and restrict its API access to **Places API (New)**.
+3. Add the key as <code>GOOGLE_PLACES_API_KEY</code> in <code>.env.local</code> and in the Vercel project's encrypted environment variables.
+4. Set conservative Places API quotas and a Google Cloud billing-budget alert before production use.
+5. Restart or redeploy the app.
+
+The key is used only by Baguio Buddy's server routes; it is never included in the browser bundle. Searches are debounced, geographically restricted around Baguio, and rate-limited. Without the key, the interface continues to offer the curated Baguio Buddy stay list and the exact Google Maps link fallback.
+
+</details>
 
 ### Public repository safety
 
