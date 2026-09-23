@@ -147,20 +147,33 @@ export function ItineraryResults({
     <section className="generated-plan" id="itinerary-result" aria-labelledby="generated-plan-title">
       <section className="itinerary-overview" aria-label="Itinerary overview">
         <header className="generated-plan-header">
-          <div>
-            <span className="result-kicker"><i /> {variant === "shared" ? "Itinerary shared with you" : "Your generated plan"}</span>
-            <h1 id="generated-plan-title">{itinerary.title}</h1>
-            <p>A calmer route shaped around nearby stops, practical travel time, and the moments that matter.</p>
-            <div className="plan-context-row">
-              <span><MapPin /> From {canonicalStart.name}</span>
-              {itinerary.date ? <span><CalendarDays /> Starts {formatTripDate(itinerary.date)}</span> : null}
-              {itinerary.stay ? <span><BedDouble /> {itinerary.stay.name}</span> : null}
+          <div className="plan-title-row">
+            <div className="plan-heading-copy">
+              <span className="result-kicker"><i /> {variant === "shared" ? "Itinerary shared with you" : "Your generated plan"}</span>
+              <h1 id="generated-plan-title">{itinerary.title}</h1>
+            </div>
+            <div className="plan-route-stamp" aria-label={`${itinerary.numberOfDays}-day route with ${itinerary.totals.scheduledStops} scheduled stops`}>
+              <Route aria-hidden="true" />
+              <strong>{itinerary.numberOfDays}</strong>
+              <span>{itinerary.numberOfDays === 1 ? "day" : "days"}</span>
             </div>
           </div>
-          <div className="plan-route-stamp" aria-label={`${itinerary.numberOfDays}-day route with ${itinerary.totals.scheduledStops} scheduled stops`}>
-            <Route aria-hidden="true" />
-            <strong>{itinerary.numberOfDays}</strong>
-            <span>day route</span>
+
+          <div className="plan-context-row">
+            <span><MapPin /> From {canonicalStart.name}</span>
+            {itinerary.date ? <span><CalendarDays /> Starts {formatTripDate(itinerary.date)}</span> : null}
+            {itinerary.stay ? <span><BedDouble /> {itinerary.stay.name}</span> : null}
+          </div>
+
+          <div className="plan-progress" aria-label={`${itinerary.numberOfDays}-day itinerary from ${itinerary.date ? formatDayDate(itinerary.date, 0) : "day 1"} to ${itinerary.date ? formatDayDate(itinerary.date, itinerary.numberOfDays - 1) : `day ${itinerary.numberOfDays}`}`}>
+            <div className="plan-progress-labels">
+              <span>{itinerary.date ? formatDayDate(itinerary.date, 0) : "Day 1"}</span>
+              <strong>{itinerary.totals.scheduledStops} stops arranged</strong>
+              <span>{itinerary.date ? formatDayDate(itinerary.date, itinerary.numberOfDays - 1) : `Day ${itinerary.numberOfDays}`}</span>
+            </div>
+            <div className="plan-progress-track" aria-hidden="true">
+              <span><Check /></span><i /><span><Route /></span><i /><span><MapPin /></span>
+            </div>
           </div>
         </header>
 
