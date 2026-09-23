@@ -234,7 +234,15 @@ export function ItineraryResults({
                     </header>
                     <p className="stop-description">{stop.destination.description}</p>
 
-                    <section className={`transport-card mode-${stop.transport.mode}`} aria-label={`Travel to ${stop.destination.name}`}>
+                    {stop.stationary ? <section className="checkout-reminder-card" aria-label={`Checkout reminder for ${stop.destination.name}`}>
+                      <span className="checkout-reminder-icon"><Clock3 /></span>
+                      <div>
+                        <strong>Checkout reminder</strong>
+                        <p>You are already at your stay—no travel leg is needed. Pack up, return the key if needed, and check out without rushing.</p>
+                        <small>We hope you enjoyed your stay in Baguio.</small>
+                      </div>
+                      <a href={stop.placeMapUrl} target="_blank" rel="noreferrer"><BedDouble size={14} /> Open saved stay <ExternalLink size={12} /></a>
+                    </section> : <section className={`transport-card mode-${stop.transport.mode}`} aria-label={`Travel to ${stop.destination.name}`}>
                       <header>
                         <span className="transport-icon"><TransportIcon mode={stop.transport.mode} /></span>
                         <div><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong><small>{stop.destination.routeGuide.modeLabel}</small></div>
@@ -251,7 +259,7 @@ export function ItineraryResults({
                         <a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)} target="_blank" rel="noreferrer"><Navigation size={14} /> Open this leg <ExternalLink size={12} /></a>
                         <a href={stop.placeMapUrl} target="_blank" rel="noreferrer"><Route size={14} /> {stop.kind === "check-in" || stop.kind === "check-out" ? "Open saved stay" : stop.kind === "departure" ? "Open departure point" : "View place"} <ExternalLink size={12} /></a>
                       </div>
-                    </section>
+                    </section>}
 
                     <section className="stop-ideas">
                       <strong>{stop.kind !== "destination" ? <BedDouble size={15} /> : <Lightbulb size={15} />} {stop.kind === "check-in" ? "Check-in checklist" : stop.kind === "check-out" ? "Checkout checklist" : stop.kind === "departure" ? "Before leaving Baguio" : "Make the most of this stop"}</strong>
@@ -326,9 +334,11 @@ export function ItineraryResults({
               <section key={stop.destination.id}>
                 <h3>{stop.number}. {minutesToTime(stop.arrivalMinutes)} — {stop.destination.name}</h3>
                 <p className="print-place-meta">{fixedStopMeta(stop, itinerary)}{stop.destination.duration ? ` · ${formatDuration(stop.destination.duration)}` : ""}</p>
-                <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
-                <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
-                <p className="print-map-link"><a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)}>Open this leg in Google Maps</a></p>
+                {stop.stationary ? <p className="print-leg"><strong>Checkout reminder:</strong> You are already at your stay. Pack up, return the key if needed, and check out without rushing. We hope you enjoyed your stay in Baguio.</p> : <>
+                  <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
+                  <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
+                  <p className="print-map-link"><a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)}>Open this leg in Google Maps</a></p>
+                </>}
               </section>
             ))}
           </article>

@@ -1964,8 +1964,9 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
       lines.push(
         `${index + 1}. ${minutesToTime(item.arrivalMinutes)} - ${item.destination.name}${item.kind === "check-in" ? " (fixed check-in)" : item.kind === "check-out" ? " (fixed checkout)" : item.kind === "departure" ? " (departure)" : ""}`,
       );
-      lines.push(
-        `   ${transportLabel(item.transport.mode)} from ${item.from.name}, about ${formatDuration(item.transport.minutes)} (${item.distance.toFixed(1)} km est.).`,
+      lines.push(item.stationary
+        ? "   Checkout reminder: You are already at your stay. Pack up, return the key if needed, and check out without rushing."
+        : `   ${transportLabel(item.transport.mode)} from ${item.from.name}, about ${formatDuration(item.transport.minutes)} (${item.distance.toFixed(1)} km est.).`,
       );
       if (item.transport.mode !== "walk") {
         const fare =
