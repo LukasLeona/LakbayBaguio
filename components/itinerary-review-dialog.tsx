@@ -7,6 +7,7 @@ import {
   Check,
   Clock3,
   GripVertical,
+  LoaderCircle,
   MapPin,
   MoveRight,
   Pencil,
@@ -26,6 +27,7 @@ import {
 
 type ItineraryReviewDialogProps = {
   itinerary: PlannedItinerary;
+  confirming: boolean;
   onConfirm: () => void;
   onEdit: () => void;
   onDefer: (destinationId: string) => void;
@@ -60,6 +62,7 @@ function stopIcon(stop: PlannedStop) {
 
 export function ItineraryReviewDialog({
   itinerary,
+  confirming,
   onConfirm,
   onEdit,
   onDefer,
@@ -155,7 +158,7 @@ export function ItineraryReviewDialog({
       if (moving) {
         setMoving(null);
         setMoveFeedback(null);
-      } else {
+      } else if (!confirming) {
         onEdit();
       }
     };
@@ -165,18 +168,18 @@ export function ItineraryReviewDialog({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [moving, onEdit]);
+  }, [confirming, moving, onEdit]);
 
   return (
-    <div className="itinerary-review-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onEdit(); }}>
-      <section className="itinerary-review-dialog" role="dialog" aria-modal="true" aria-labelledby="itinerary-review-title">
+    <div className="itinerary-review-backdrop" role="presentation" onMouseDown={(event) => { if (!confirming && event.target === event.currentTarget) onEdit(); }}>
+      <section className={`itinerary-review-dialog ${confirming ? "is-confirming" : ""}`} role="dialog" aria-modal="true" aria-labelledby="itinerary-review-title" aria-busy={confirming}>
         <header className="itinerary-review-header">
           <div>
             <span><CalendarCheck size={15} /> BEFORE WE LOCK IT IN</span>
             <h2 id="itinerary-review-title">Your Baguio route, at a glance</h2>
             <p>Check the pace and areas first. Nothing is saved until you approve this version.</p>
           </div>
-          <button type="button" onClick={onEdit} aria-label="Close preview and edit choices"><X /></button>
+          <button type="button" onClick={onEdit} disabled={confirming} aria-label="Close preview and edit choices"><X /></button>
         </header>
 
         <div className={`review-health ${overloaded ? "warning" : "comfortable"}`}>
@@ -286,9 +289,10 @@ export function ItineraryReviewDialog({
         ) : null}
 
         <footer className="itinerary-review-actions">
-          <button type="button" className="review-edit-button" onClick={onEdit}><Pencil /> Edit choices</button>
-          <button type="button" className="review-confirm-button" onClick={onConfirm}><Check /> Use this itinerary</button>
+          <button type="button" className="review-edit-button" onClick={onEdit} disabled={confirming}><Pencil /> Edit choices</button>
+          <button type="button" className="review-confirm-button" onClick={onConfirm} disabled={confirming}>{confirming ? <LoaderCircle className="spin" /> : <Check />} {confirming ? "Finalizing itinerary…" : "Use this itinerary"}</button>
         </footer>
+        {confirming ? <div className="review-finalizing" role="status" aria-live="polite"><LoaderCircle className="spin" /><strong>Finalizing your Baguio itinerary…</strong><span>Rechecking the route, schedule, and travel time.</span></div> : null}
       </section>
     </div>
   );

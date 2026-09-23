@@ -1699,7 +1699,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 /* Itinerary review before a route is saved */
 .itinerary-review-backdrop { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; padding: 20px; background: rgba(4,28,22,.7); backdrop-filter: blur(14px); }
-.itinerary-review-dialog { width: min(1050px, 100%); max-height: min(92vh, 900px); overflow: auto; padding: 24px; border: 1px solid rgba(255,255,255,.55); border-radius: 30px; background: #f8f5ea; box-shadow: 0 34px 90px rgba(0,20,15,.32); }
+.itinerary-review-dialog { position: relative; width: min(1050px, 100%); max-height: min(92vh, 900px); overflow: auto; padding: 24px; border: 1px solid rgba(255,255,255,.55); border-radius: 30px; background: #f8f5ea; box-shadow: 0 34px 90px rgba(0,20,15,.32); }
+.itinerary-review-dialog.is-confirming > :not(.review-finalizing) { pointer-events: none; filter: saturate(.75); }
+.review-finalizing { position: fixed; z-index: 2003; left: 50%; top: 50%; width: min(360px, calc(100vw - 36px)); display: grid; justify-items: center; gap: 8px; padding: 25px; border: 1px solid rgba(255,255,255,.72); border-radius: 22px; color: var(--pine-950); background: rgba(255,254,248,.96); box-shadow: 0 24px 70px rgba(0,28,20,.3); text-align: center; transform: translate(-50%,-50%); backdrop-filter: blur(18px); }
+.review-finalizing svg { width: 28px; height: 28px; color: var(--pine-700); }
+.review-finalizing strong { font-size: .85rem; }
+.review-finalizing span { color: var(--muted); font-size: .6rem; line-height: 1.5; }
 .itinerary-review-header { display: flex; align-items: start; justify-content: space-between; gap: 24px; }
 .itinerary-review-header > div > span { display: flex; align-items: center; gap: 7px; color: var(--pine-700); font-size: .53rem; font-weight: 900; letter-spacing: .13em; }
 .itinerary-review-header h2 { margin: 7px 0 5px; font-size: clamp(1.7rem,4vw,2.6rem); line-height: 1; letter-spacing: -.055em; }
@@ -1772,6 +1777,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .itinerary-review-actions { position: sticky; bottom: -24px; display: flex; justify-content: end; gap: 9px; margin: 18px -24px -24px; padding: 14px 24px 20px; border-top: 1px solid rgba(32,67,56,.1); background: rgba(248,245,234,.94); backdrop-filter: blur(12px); }
 .itinerary-review-actions button { min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 18px; border-radius: 14px; cursor: pointer; font-size: .61rem; font-weight: 850; }
 .itinerary-review-actions button svg { width: 16px; }
+.itinerary-review-actions button:disabled { cursor: wait; opacity: .72; }
 .review-edit-button { border: 1px solid #ced7d0; color: var(--pine-900); background: #fff; }
 .review-confirm-button { border: 0; color: #fff; background: var(--pine-900); box-shadow: 0 9px 20px rgba(8,49,38,.18); }
 

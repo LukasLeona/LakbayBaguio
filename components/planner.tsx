@@ -229,6 +229,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [toast, setToast] = useState("");
   const [locating, setLocating] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [restored, setRestored] = useState(false);
 
   const selectedDestinations = useMemo(
@@ -567,18 +568,23 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   }
 
   function confirmReviewedPlan() {
-    if (!reviewResult) return;
-    setResult(reviewResult);
-    setActiveDay(0);
-    try {
-      localStorage.setItem(ITINERARY_STORAGE_KEY, JSON.stringify(reviewResult));
-      setSaved(true);
-      window.dispatchEvent(new Event(ITINERARY_CHANGE_EVENT));
-    } catch {
-      setSaved(false);
-    }
-    setReviewResult(null);
-    router.push("/plan/itinerary");
+    if (!reviewResult || confirming) return;
+    const approvedItinerary = reviewResult;
+    setConfirming(true);
+    window.setTimeout(() => {
+      setResult(approvedItinerary);
+      setActiveDay(0);
+      try {
+        localStorage.setItem(ITINERARY_STORAGE_KEY, JSON.stringify(approvedItinerary));
+        setSaved(true);
+        window.dispatchEvent(new Event(ITINERARY_CHANGE_EVENT));
+      } catch {
+        setSaved(false);
+      }
+      setReviewResult(null);
+      setConfirming(false);
+      router.push("/plan/itinerary");
+    }, 2000);
   }
 
   function editReviewedPlan() {
@@ -807,7 +813,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
       {initialView === "itinerary" && restored && result ? <ItineraryResults itinerary={result} activeDay={activeDay} saved={saved} onActiveDayChange={setActiveDay} onEdit={() => router.push("/plan")} onSave={savePlan} /> : null}
       {initialView === "itinerary" && !restored ? <div className="loading-card itinerary-loading">Opening your itinerary…</div> : null}
-      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} onConfirm={confirmReviewedPlan} onEdit={editReviewedPlan} onDefer={removeReviewedDestination} onDelete={deleteReviewedDestination} onEvaluateMove={evaluateReviewedMove} onMove={moveReviewedDestination} /> : null}
+      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} confirming={confirming} onConfirm={confirmReviewedPlan} onEdit={editReviewedPlan} onDefer={removeReviewedDestination} onDelete={deleteReviewedDestination} onEvaluateMove={evaluateReviewedMove} onMove={moveReviewedDestination} /> : null}
       {toast ? <div className="planner-toast" role="status">{toast}</div> : null}
     </div>
   );
