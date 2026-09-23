@@ -108,6 +108,19 @@ export function ItineraryResults({
     ? canonicalRouteLocation(firstStop.from)
     : canonicalStart;
   const routeLinks = day ? buildDayRouteUrls(dayRouteStart, day) : [];
+  const allJourneyStops = [...new Map(
+    itinerary.days
+      .flatMap((tripDay) => tripDay.items)
+      .filter((stop) => stop.kind === "destination")
+      .map((stop) => [stop.destination.id, stop]),
+  ).values()];
+  const journeyStops = allJourneyStops.length <= 3
+    ? allJourneyStops
+    : [
+        allJourneyStops[0],
+        allJourneyStops[Math.floor((allJourneyStops.length - 1) / 2)],
+        allJourneyStops[allJourneyStops.length - 1],
+      ];
 
   async function copyPlan() {
     const value = itineraryToText(currentItinerary);
@@ -161,21 +174,22 @@ export function ItineraryResults({
             {itinerary.stay ? <span><BedDouble /> {itinerary.stay.name}</span> : null}
           </div>
 
-          <div className="plan-journey" aria-label={`Baguio journey from ${itinerary.date ? formatDayDate(itinerary.date, 0) : "the first day"} to ${itinerary.date ? formatDayDate(itinerary.date, itinerary.numberOfDays - 1) : "the final day"}`}>
-            <div className="plan-journey-labels">
-              <span>Start</span>
-              <strong>Baguio route</strong>
-              <span>Finish</span>
+          {journeyStops.length ? <div className="plan-journey" aria-label={`Trip route from ${canonicalStart.name} to ${journeyStops[journeyStops.length - 1].destination.name}`}>
+            <div className="journey-point journey-start">
+              <span><MapPin /></span><strong>Start</strong><small>{canonicalStart.name}</small>
             </div>
-            <div className="plan-journey-track" aria-hidden="true">
-              <span><MapPin /></span><i /><span className="journey-ride"><BusFront /></span><i /><span><Navigation /></span>
-            </div>
-            <div className="plan-journey-dates">
-              <span>{itinerary.date ? formatDayDate(itinerary.date, 0) : "Day 1"}</span>
-              <span>Route ready</span>
-              <span>{itinerary.date ? formatDayDate(itinerary.date, itinerary.numberOfDays - 1) : `Day ${itinerary.numberOfDays}`}</span>
-            </div>
-          </div>
+            {journeyStops.map((stop, index) => <div className="journey-step" key={stop.destination.id}>
+              <div className={`journey-segment mode-${stop.transport.mode}`} aria-label={`${transportLabel(stop.transport.mode)} to ${stop.destination.name}`}>
+                <i />
+                <span className="journey-moving-icon"><TransportIcon mode={stop.transport.mode} /></span>
+              </div>
+              <div className={`journey-point ${index === journeyStops.length - 1 ? "journey-finish" : ""}`}>
+                <span>{index === journeyStops.length - 1 ? <Navigation /> : <MapPin />}</span>
+                <strong>{index === journeyStops.length - 1 ? "Finish" : `Stop ${index + 1}`}</strong>
+                <small>{stop.destination.name}</small>
+              </div>
+            </div>)}
+          </div> : null}
         </header>
 
         <div className="trip-metrics" aria-label="Itinerary summary">
