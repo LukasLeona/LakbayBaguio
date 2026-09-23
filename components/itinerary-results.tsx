@@ -11,6 +11,7 @@ import {
   Copy,
   ExternalLink,
   Footprints,
+  Heart,
   Lightbulb,
   MapPin,
   Navigation,
@@ -279,6 +280,11 @@ export function ItineraryResults({
               <div>{day.unscheduled.map((place) => <span key={place.id}>{place.name} · {place.open}–{place.close}</span>)}</div>
             </details>
           ) : null}
+
+          {day?.index === itinerary.days.length - 1 ? <section className="itinerary-farewell">
+            <span><Heart /></span>
+            <div><small>INGAT SA BIYAHE</small><strong>Agyaman kami iti panagbisita yo ditoy Baguio. Agsubli kayo manen!</strong><p>Thank you for visiting Baguio. We hope to welcome you back again.</p></div>
+          </section> : null}
         </article>
 
         <aside className="route-map-panel">
@@ -341,6 +347,7 @@ export function ItineraryResults({
                 </>}
               </section>
             ))}
+            {printDay.index === itinerary.days.length - 1 ? <p className="print-farewell"><strong>Agyaman kami iti panagbisita yo ditoy Baguio. Agsubli kayo manen!</strong><br />Thank you for visiting Baguio. We hope to welcome you back again.</p> : null}
           </article>
         ))}
         <footer>{itinerary.disclaimer}</footer>

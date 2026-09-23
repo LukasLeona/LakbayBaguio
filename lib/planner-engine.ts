@@ -1988,6 +1988,9 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     lines.push("");
   });
 
+  lines.push("Agyaman kami iti panagbisita yo ditoy Baguio. Agsubli kayo manen!");
+  lines.push("Thank you for visiting Baguio. We hope to welcome you back again.");
+  lines.push("");
   lines.push(PLANNING_DISCLAIMER);
   return lines.join("\n");
 }

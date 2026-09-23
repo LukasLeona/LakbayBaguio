@@ -818,6 +818,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .unscheduled-stops { margin: 0 20px 20px; padding: 11px; border: 1px solid #f0ca69; border-radius: 11px; background: #fff7d9; }
 .unscheduled-stops summary { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: .58rem; font-weight: 800; }
 .unscheduled-stops > div { display: grid; gap: 4px; margin-top: 9px; color: var(--muted); font-size: .53rem; }
+.itinerary-farewell { display: grid; grid-template-columns: 42px minmax(0,1fr); align-items: center; gap: 12px; margin: 0 20px 20px; padding: 15px; border-radius: 17px; color: white; background: linear-gradient(135deg,#0d4939,#174f3f 60%,#376b50); box-shadow: 0 12px 25px rgba(9,54,41,.13); }
+.itinerary-farewell > span { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; color: var(--pine-950); background: var(--lime); }
+.itinerary-farewell svg { width: 19px; }
+.itinerary-farewell div { display: grid; gap: 3px; }
+.itinerary-farewell small { color: #d9ea84; font-size: .47rem; font-weight: 900; letter-spacing: .12em; }
+.itinerary-farewell strong { font-size: .69rem; line-height: 1.35; }
+.itinerary-farewell p { margin: 0; color: rgba(255,255,255,.7); font-size: .52rem; line-height: 1.45; }
 .empty-route-day { display: grid; place-items: center; padding: 70px 25px; color: var(--muted); text-align: center; }
 .empty-route-day h3 { margin: 10px 0 3px; color: var(--ink); font-size: .8rem; }
 .empty-route-day p { font-size: .6rem; }
