@@ -2,31 +2,25 @@
 
 import { BedDouble, Check, LoaderCircle, MapPin, Search } from "lucide-react";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
-import type { GoogleStayDetails, StaySuggestion } from "@/lib/google-places";
+import type { StayPlaceDetails, StaySuggestion } from "@/lib/stay-places";
 import type { StayKind } from "@/lib/planner-types";
 
 type StayAutocompleteProps = {
   kind: StayKind;
   value: string;
   onValueChange: (value: string) => void;
-  onSelect: (place: GoogleStayDetails) => void;
+  onSelect: (place: StayPlaceDetails) => void;
 };
-
-function createSessionToken() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID().replaceAll("-", "");
-  return `${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
-}
 
 export function StayAutocomplete({ kind, value, onValueChange, onSelect }: StayAutocompleteProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const committedValueRef = useRef("");
-  const [sessionToken, setSessionToken] = useState(createSessionToken);
   const [suggestions, setSuggestions] = useState<StaySuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectingId, setSelectingId] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [poweredByGoogle, setPoweredByGoogle] = useState(false);
+  const [poweredByGeoapify, setPoweredByGeoapify] = useState(false);
   const [configured, setConfigured] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -59,18 +53,18 @@ export function StayAutocomplete({ kind, value, onValueChange, onSelect }: StayA
       setLoading(true);
       setMessage("");
       try {
-        const query = new URLSearchParams({ input, sessionToken });
+        const query = new URLSearchParams({ input });
         const response = await fetch(`/api/places/autocomplete?${query}`, { cache: "no-store", signal: controller.signal });
         const payload = await response.json().catch(() => null) as {
           suggestions?: StaySuggestion[];
-          poweredByGoogle?: boolean;
+          poweredByGeoapify?: boolean;
           configured?: boolean;
           error?: string;
         } | null;
         if (!response.ok) throw new Error(payload?.error || "Accommodation search is unavailable.");
         const nextSuggestions = payload?.suggestions ?? [];
         setSuggestions(nextSuggestions);
-        setPoweredByGoogle(Boolean(payload?.poweredByGoogle));
+        setPoweredByGeoapify(Boolean(payload?.poweredByGeoapify));
         setConfigured(payload?.configured !== false);
         setMessage(nextSuggestions.length ? "" : "No matching Baguio stay yet. You can paste its exact Google Maps link below.");
         setActiveIndex(nextSuggestions.length ? 0 : -1);
@@ -89,33 +83,22 @@ export function StayAutocomplete({ kind, value, onValueChange, onSelect }: StayA
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [sessionToken, value]);
+  }, [value]);
 
   async function chooseSuggestion(suggestion: StaySuggestion) {
     setSelectingId(suggestion.id);
     setMessage("");
     try {
-      let place: GoogleStayDetails;
-      if (suggestion.location) {
-        place = {
-          placeId: suggestion.id,
-          name: suggestion.name,
-          address: suggestion.address,
-          ...suggestion.location,
-        };
-      } else {
-        if (!suggestion.placeId) throw new Error("That stay does not have a valid place ID.");
-        const query = new URLSearchParams({ placeId: suggestion.placeId, sessionToken });
-        const response = await fetch(`/api/places/details?${query}`, { cache: "no-store" });
-        const payload = await response.json().catch(() => null) as { place?: GoogleStayDetails; error?: string } | null;
-        if (!response.ok || !payload?.place) throw new Error(payload?.error || "We could not open that accommodation.");
-        place = payload.place;
-      }
+      const place: StayPlaceDetails = {
+        placeId: suggestion.placeId || suggestion.id,
+        name: suggestion.name,
+        address: suggestion.address,
+        ...suggestion.location,
+      };
       committedValueRef.current = place.name;
       onSelect(place);
       setSuggestions([]);
       setOpen(false);
-      setSessionToken(createSessionToken());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "We could not open that accommodation.");
       setOpen(true);
@@ -188,8 +171,8 @@ export function StayAutocomplete({ kind, value, onValueChange, onSelect }: StayA
             </ul>
           ) : message ? <p className="stay-suggestion-message">{message}</p> : null}
           <footer>
-            {!configured ? <span>Showing Baguio Buddy stays. Paste a Maps link for other properties.</span> : <span>Select a result to fill its exact map pin.</span>}
-            {poweredByGoogle ? <img src="https://maps.gstatic.com/mapfiles/api-3/images/powered-by-google-on-white3.png" alt="Powered by Google" /> : null}
+            {!configured ? <span>Showing Baguio Buddy stays. You can also type a name and paste its Maps link.</span> : <span>Select a result to fill its exact map pin.</span>}
+            {poweredByGeoapify ? <span className="stay-data-credit">Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">Geoapify</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a></span> : null}
           </footer>
         </div>
       ) : null}

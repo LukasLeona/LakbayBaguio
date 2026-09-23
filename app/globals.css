@@ -1602,7 +1602,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stay-suggestion-popover li em { padding: 4px 6px; border-radius: 999px; color: #4c7165; background: #e6eee2; font-size: .42rem; font-style: normal; font-weight: 800; white-space: nowrap; }
 .stay-suggestion-message { margin: 0; padding: 16px; color: #766858; font-size: .56rem; line-height: 1.5; }
 .stay-suggestion-popover > footer { min-height: 33px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 11px; border-top: 1px solid #eee7db; color: #817260; background: #faf8f1; font-size: .44rem; }
-.stay-suggestion-popover footer img { width: 98px; height: auto; }
+.stay-data-credit { margin-left: auto; white-space: nowrap; }
+.stay-data-credit a { color: #426f62; font-weight: 800; text-decoration: none; }
+.stay-data-credit a:hover { text-decoration: underline; }
+.stay-map-field > span small { color: #9a8873; font-size: .47rem; font-weight: 600; }
 .stay-map-field > div { height: 48px; display: grid; grid-template-columns: 20px minmax(0,1fr) 42px; align-items: center; gap: 6px; padding-left: 12px; border: 1px solid var(--line); border-radius: 13px; background: #fffdf8; }
 .stay-map-field > div:focus-within { border-color: var(--pine-700); box-shadow: 0 0 0 3px rgba(63,118,105,.1); }
 .stay-map-field > div > svg { color: #8a6e51; }
@@ -1662,6 +1665,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .stay-kind-picker button, .stay-map-field > div { height: 46px; }
   .stay-autocomplete-input { height: 46px; }
   .stay-suggestion-popover { right: -1px; left: -1px; }
+  .stay-suggestion-popover > footer { align-items: flex-start; flex-direction: column; }
+  .stay-data-credit { margin-left: 0; }
   .stay-luggage-choice { padding: 11px; }
   .stay-schedule-grid { grid-template-columns: 1fr; }
   .stay-schedule-group > header { min-height: 0; }

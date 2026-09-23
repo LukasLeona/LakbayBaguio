@@ -368,9 +368,10 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       setStayMapError("Paste a valid Google Maps place or share link.");
       return;
     }
-    if (local.name && local.locationPrecision === "pin") {
-      setVerifiedStayMap({ sourceUrl, place: local });
-      setStayName(local.name);
+    const localName = local.name || stayName.trim();
+    if (localName && local.locationPrecision === "pin") {
+      setVerifiedStayMap({ sourceUrl, place: { ...local, name: localName, query: localName } });
+      setStayName(localName);
       setStayMapState("verified");
       setStayMapError("");
       return;
@@ -398,7 +399,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [includeStay, stayMapsUrl]);
+  }, [includeStay, stayMapsUrl, stayName]);
 
   useEffect(() => {
     const updateStep = () => {
@@ -669,11 +670,6 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                 value={stayName}
                 onValueChange={(value) => {
                   setStayName(value);
-                  if (stayMapsUrl) {
-                    setStayMapsUrl("");
-                    setVerifiedStayMap(null);
-                    setStayMapState("idle");
-                  }
                   setSaved(false);
                 }}
                 onSelect={(place) => {
@@ -684,7 +680,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                   setSaved(false);
                 }}
               />
-              <label className="planner-field stay-map-field"><span>Google Maps place or share link</span><div><MapPin size={17} /><input type="url" value={stayMapsUrl} onChange={(event) => { setStayMapsUrl(event.target.value); setVerifiedStayMap(null); setSaved(false); }} placeholder="https://maps.app.goo.gl/..." /><a href={googleMapsStaySearchUrl(stayKind, stayName)} target="_blank" rel="noreferrer" aria-label="Find this stay in Google Maps" title="Find in Google Maps"><ExternalLink size={17} /></a></div></label>
+              <label className="planner-field stay-map-field"><span>Google Maps place or share link <small>optional with a suggestion</small></span><div><MapPin size={17} /><input type="url" value={stayMapsUrl} onChange={(event) => { setStayMapsUrl(event.target.value); setVerifiedStayMap(null); setSaved(false); }} placeholder="https://maps.app.goo.gl/..." /><a href={googleMapsStaySearchUrl(stayKind, stayName)} target="_blank" rel="noreferrer" aria-label="Find this stay in Google Maps" title="Find in Google Maps"><ExternalLink size={17} /></a></div></label>
               <div className="stay-schedule-grid">
                 <section className="stay-schedule-group">
                   <header><strong>Check-in</strong><small>We will arrive at the property at this time.</small></header>
