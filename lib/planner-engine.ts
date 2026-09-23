@@ -75,6 +75,8 @@ export type PlannerRequest = {
   departure?: PlannerDeparture;
   /** Optional preview-only day constraints keyed by destination id. */
   dayAssignments?: PlannerDayAssignments;
+  /** Places intentionally held outside the route while the user reviews it. */
+  deferredDestinationIds?: readonly string[];
 };
 
 export type PlannerDayAssignments = Readonly<Record<string, number>>;
@@ -164,6 +166,7 @@ export type PlannedItinerary = {
   startMinutes: number;
   selectedCount: number;
   selectedDestinationIds: string[];
+  deferredDestinationIds?: string[];
   stay?: PlannerStay;
   departure?: PlannerDeparture;
   totals: ItineraryTotals;
@@ -532,9 +535,13 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
   const fareSettings = mergeFareSettings(request.fareSettings);
   const modes = uniqueModes(request.modes);
   const destinations = [...request.destinations];
+  const deferredDestinationIds = [...new Set(request.deferredDestinationIds ?? [])]
+    .filter((id) => destinations.some((destination) => destination.id === id));
+  const deferredIds = new Set(deferredDestinationIds);
+  const routeDestinations = destinations.filter((destination) => !deferredIds.has(destination.id));
   const automaticBuckets = buildDayBuckets(
     request.start,
-    destinations,
+    routeDestinations,
     request.numberOfDays,
     request.availableMinutes,
     request.preference,
@@ -543,7 +550,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
   );
   const buckets = applyDayAssignments(
     automaticBuckets,
-    destinations,
+    routeDestinations,
     request.dayAssignments,
     request.numberOfDays,
   );
@@ -561,15 +568,22 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     startLocationForDay(request.start, request.stay, dayIndex),
   );
 
-  const daysWithoutRoutes = buckets.map((bucket, dayIndex) =>
-    buildDayItinerary(dayStarts[dayIndex], bucket, {
+  const daysWithoutRoutes = buckets.map((bucket, dayIndex) => {
+    const day = buildDayItinerary(dayStarts[dayIndex], bucket, {
       ...dayOptions,
       dayIndex,
       ...(request.stay?.checkInDay === dayIndex ? { checkInStay: request.stay } : {}),
       ...(request.stay?.checkOutDay === dayIndex ? { checkOutStay: request.stay } : {}),
       ...(request.departure?.dayIndex === dayIndex ? { departure: request.departure } : {}),
-    }),
-  );
+    });
+    const heldForThisDay = destinations.filter((destination) =>
+      deferredIds.has(destination.id)
+      && (request.dayAssignments?.[destination.id] ?? 0) === dayIndex,
+    );
+    return heldForThisDay.length
+      ? { ...day, unscheduled: [...day.unscheduled, ...heldForThisDay] }
+      : day;
+  });
 
   const days = daysWithoutRoutes.map((day) => {
     const routeMapUrls = buildDayRouteUrls(dayStarts[day.index], day);
@@ -597,6 +611,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
       stay: request.stay,
       departure: request.departure,
       dayAssignments: request.dayAssignments,
+      deferredDestinationIds,
     }),
   );
 
@@ -618,6 +633,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     startMinutes,
     selectedCount: destinations.length,
     selectedDestinationIds: destinations.map((destination) => destination.id),
+    ...(deferredDestinationIds.length ? { deferredDestinationIds } : {}),
     ...(request.stay ? { stay: request.stay } : {}),
     ...(request.departure ? { departure: request.departure } : {}),
     totals,
@@ -720,7 +736,8 @@ export function evaluateItineraryMove(
 
   const assignments = getItineraryDayAssignments(itinerary);
   const sourceDayIndex = assignments[destinationId];
-  if (sourceDayIndex === targetDayIndex) {
+  const isDeferred = itinerary.deferredDestinationIds?.includes(destinationId) ?? false;
+  if (sourceDayIndex === targetDayIndex && !isDeferred) {
     return { allowed: false, reason: `${destination.name} is already assigned to Day ${targetDayIndex + 1}.` };
   }
 
@@ -763,6 +780,7 @@ export function evaluateItineraryMove(
     ...(itinerary.stay ? { stay: itinerary.stay } : {}),
     ...(itinerary.departure ? { departure: itinerary.departure } : {}),
     dayAssignments: assignments,
+    deferredDestinationIds: itinerary.deferredDestinationIds?.filter((id) => id !== destinationId),
   });
   const nextTargetDay = next.days[targetDayIndex];
   const movedStop = nextTargetDay.items.find(
@@ -802,6 +820,35 @@ export function evaluateItineraryMove(
     reason: `${destination.name} fits Day ${targetDayIndex + 1}. Route order, times, distance, and fare will be recalculated.`,
     itinerary: next,
   };
+}
+
+/** Keeps a removed preview stop selected and available to restore later. */
+export function deferItineraryDestination(
+  itinerary: PlannedItinerary,
+  destinationId: string,
+): PlannedItinerary {
+  const destinations = itineraryDestinations(itinerary);
+  if (!destinations.some((destination) => destination.id === destinationId)) return itinerary;
+
+  return generateItinerary({
+    start: itinerary.start,
+    destinations,
+    date: itinerary.date,
+    numberOfDays: itinerary.numberOfDays,
+    availableMinutes: itinerary.availableMinutes,
+    travelers: itinerary.travelers,
+    modes: itinerary.modes,
+    preference: itinerary.preference,
+    fareSettings: itinerary.fareSettings,
+    startMinutes: itinerary.startMinutes,
+    ...(itinerary.stay ? { stay: itinerary.stay } : {}),
+    ...(itinerary.departure ? { departure: itinerary.departure } : {}),
+    dayAssignments: getItineraryDayAssignments(itinerary),
+    deferredDestinationIds: [...new Set([
+      ...(itinerary.deferredDestinationIds ?? []),
+      destinationId,
+    ])],
+  });
 }
 
 type DestinationCluster = {

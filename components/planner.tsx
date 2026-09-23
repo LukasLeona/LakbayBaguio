@@ -42,6 +42,7 @@ import {
 } from "@/lib/planner-data";
 import { LTFRB_FARE_POLICY } from "@/lib/fare-policy";
 import {
+  deferItineraryDestination,
   evaluateItineraryMove,
   generateItinerary,
   getItineraryDayAssignments,
@@ -587,37 +588,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
   function removeReviewedDestination(destinationId: string) {
     if (!reviewResult) return;
-    const remainingIds = reviewResult.selectedDestinationIds.filter((id) => id !== destinationId);
-    const remainingDestinations = PLANNER_DESTINATIONS.filter((destination) => remainingIds.includes(destination.id));
-    if (remainingDestinations.length < 2) return;
-
-    const removedAutomaticMarket = destinationId === "baguio-city-market"
-      && reviewResult.stay?.finalDayPreference === "pasalubong";
-    const nextStay = reviewResult.stay
-      ? {
-          ...reviewResult.stay,
-          ...(removedAutomaticMarket ? { finalDayPreference: "easy-stop" as const } : {}),
-        }
-      : undefined;
-    const next = generateItinerary({
-      start: reviewResult.start,
-      destinations: remainingDestinations,
-      date: reviewResult.date,
-      numberOfDays: reviewResult.numberOfDays,
-      availableMinutes: reviewResult.availableMinutes,
-      travelers: reviewResult.travelers,
-      modes: reviewResult.modes,
-      preference: reviewResult.preference,
-      fareSettings: reviewResult.fareSettings,
-      startMinutes: reviewResult.startMinutes,
-      ...(nextStay ? { stay: nextStay } : {}),
-      ...(reviewResult.departure ? { departure: reviewResult.departure } : {}),
-      dayAssignments: getItineraryDayAssignments(reviewResult),
-    });
-
-    setSelectedIds((current) => current.filter((id) => id !== destinationId));
-    if (removedAutomaticMarket) setFinalDayPreference("easy-stop");
-    setReviewResult(next);
+    setReviewResult(deferItineraryDestination(reviewResult, destinationId));
     setSaved(false);
   }
 

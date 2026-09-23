@@ -245,7 +245,7 @@ export function ItineraryReviewDialog({
                       <div className="review-stop-copy"><strong>{stop.destination.name}</strong><small>{minutesToTime(stop.arrivalMinutes)} · {stopLabel(stop)}</small></div>
                       {stop.kind === "destination" ? <div className="review-stop-actions">
                         <button type="button" className="review-grab-button" onClick={() => beginMove(stop.destination.id, stop.destination.name, day.index)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Move ${stop.destination.name}`} title="Move to another day"><GripVertical /></button>
-                        <button type="button" className="review-remove-button" onClick={() => onRemove(stop.destination.id)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Remove ${stop.destination.name}`} title="Remove and rebalance"><Trash2 /></button>
+                        <button type="button" className="review-remove-button" onClick={() => onRemove(stop.destination.id)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Move ${stop.destination.name} out of Day ${day.index + 1}`} title="Move out of this day"><Trash2 /></button>
                       </div> : null}
                     </li>
                   ))}
