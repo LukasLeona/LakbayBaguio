@@ -105,7 +105,7 @@ Anonymous participation hides the account identity from other users; it cannot p
 - **Frontend:** Next.js 16 App Router, React 19, and TypeScript
 - **Design:** Poppins, Lucide icons, responsive custom CSS, and a mobile bottom-navigation pattern
 - **Data and realtime:** Supabase Postgres, Authentication, Storage, Realtime, PostGIS, Row Level Security, and narrow RPCs
-- **Maps:** MapLibre GL with verified Google Maps place links, server-side Places autocomplete for accommodations, named route waypoints, and mobile-safe route segments for turn-by-turn handoff
+- **Maps:** MapLibre GL with Geoapify-powered accommodation suggestions, optional verified Google Maps place links, named route waypoints, and mobile-safe Google Maps route segments
 - **Abuse protection:** Cloudflare Turnstile, server validation, honeypots, database constraints, and rate limits
 - **Notifications:** EmailJS
 - **Deployment:** Vercel
@@ -142,7 +142,7 @@ The committed [<code>.env.example</code>](.env.example) contains blank placehold
 | <code>NEXT_PUBLIC_TURNSTILE_SITE_KEY</code> | Browser-visible | Turnstile widget configuration |
 | <code>TURNSTILE_SECRET_KEY</code> | **Server secret** | Server-side Turnstile verification |
 | <code>NEXT_PUBLIC_MAP_STYLE_URL</code> | Browser-visible | Optional MapLibre-compatible map style |
-| <code>GOOGLE_PLACES_API_KEY</code> | **Server secret** | Places API (New) autocomplete and exact accommodation pins |
+| <code>GEOAPIFY_API_KEY</code> | **Server secret** | Free Baguio accommodation suggestions through Geoapify |
 | <code>EMAILJS_SERVICE_ID</code> | Server configuration | Contact notification service |
 | <code>EMAILJS_TEMPLATE_ID</code> | Server configuration | Contact notification template |
 | <code>EMAILJS_PUBLIC_KEY</code> | Public identifier | EmailJS account identifier |
@@ -154,15 +154,14 @@ The committed [<code>.env.example</code>](.env.example) contains blank placehold
 Never add a service-role key, Turnstile secret, EmailJS private key, database password, or personal access token to a <code>NEXT_PUBLIC_*</code> variable.
 
 <details>
-<summary><strong>Configure accommodation autocomplete</strong></summary>
+<summary><strong>Configure accommodation suggestions</strong></summary>
 
-1. Enable **Places API (New)** in a Google Cloud project with billing enabled.
-2. Create an API key and restrict its API access to **Places API (New)**.
-3. Add the key as <code>GOOGLE_PLACES_API_KEY</code> in <code>.env.local</code> and in the Vercel project's encrypted environment variables.
-4. Set conservative Places API quotas and a Google Cloud billing-budget alert before production use.
-5. Restart or redeploy the app.
+1. Create a free [Geoapify](https://www.geoapify.com/) account; its free plan does not require a credit card.
+2. Create a project and copy its API key.
+3. Add the key as <code>GEOAPIFY_API_KEY</code> in <code>.env.local</code> and in the Vercel project's encrypted environment variables.
+4. Restart or redeploy the app.
 
-The key is used only by Baguio Buddy's server routes; it is never included in the browser bundle. Searches are debounced, geographically restricted around Baguio, and rate-limited. Without the key, the interface continues to offer the curated Baguio Buddy stay list and the exact Google Maps link fallback.
+The key is used only by Baguio Buddy's server route; it is never included in the browser bundle. Searches are debounced, geographically restricted around Baguio, rate-limited, and visibly attributed to Geoapify and OpenStreetMap. Selecting a result stores its exact coordinates and creates a key-free Google Maps URL for navigation. Travelers can always type the property name themselves and paste an exact Google Maps share link. Without a Geoapify key, the interface continues to offer the curated Baguio Buddy stay list and the manual fields.
 
 </details>
 
