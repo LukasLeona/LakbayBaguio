@@ -592,6 +592,43 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     setSaved(false);
   }
 
+  function deleteReviewedDestination(destinationId: string) {
+    if (!reviewResult) return;
+    const remainingIds = reviewResult.selectedDestinationIds.filter((id) => id !== destinationId);
+    const remainingDestinations = PLANNER_DESTINATIONS.filter((destination) => remainingIds.includes(destination.id));
+    if (remainingDestinations.length < 2) return;
+
+    const removedAutomaticMarket = destinationId === "baguio-city-market"
+      && reviewResult.stay?.finalDayPreference === "pasalubong";
+    const nextStay = reviewResult.stay
+      ? {
+          ...reviewResult.stay,
+          ...(removedAutomaticMarket ? { finalDayPreference: "easy-stop" as const } : {}),
+        }
+      : undefined;
+    const next = generateItinerary({
+      start: reviewResult.start,
+      destinations: remainingDestinations,
+      date: reviewResult.date,
+      numberOfDays: reviewResult.numberOfDays,
+      availableMinutes: reviewResult.availableMinutes,
+      travelers: reviewResult.travelers,
+      modes: reviewResult.modes,
+      preference: reviewResult.preference,
+      fareSettings: reviewResult.fareSettings,
+      startMinutes: reviewResult.startMinutes,
+      ...(nextStay ? { stay: nextStay } : {}),
+      ...(reviewResult.departure ? { departure: reviewResult.departure } : {}),
+      dayAssignments: getItineraryDayAssignments(reviewResult),
+      deferredDestinationIds: reviewResult.deferredDestinationIds?.filter((id) => id !== destinationId),
+    });
+
+    setSelectedIds((current) => current.filter((id) => id !== destinationId));
+    if (removedAutomaticMarket) setFinalDayPreference("easy-stop");
+    setReviewResult(next);
+    setSaved(false);
+  }
+
   function evaluateReviewedMove(destinationId: string, targetDayIndex: number): ItineraryMoveEvaluation {
     if (!reviewResult) {
       return { allowed: false, reason: "The itinerary preview is no longer open." };
@@ -770,7 +807,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
       {initialView === "itinerary" && restored && result ? <ItineraryResults itinerary={result} activeDay={activeDay} saved={saved} onActiveDayChange={setActiveDay} onEdit={() => router.push("/plan")} onSave={savePlan} /> : null}
       {initialView === "itinerary" && !restored ? <div className="loading-card itinerary-loading">Opening your itinerary…</div> : null}
-      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} onConfirm={confirmReviewedPlan} onEdit={editReviewedPlan} onRemove={removeReviewedDestination} onEvaluateMove={evaluateReviewedMove} onMove={moveReviewedDestination} /> : null}
+      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} onConfirm={confirmReviewedPlan} onEdit={editReviewedPlan} onDefer={removeReviewedDestination} onDelete={deleteReviewedDestination} onEvaluateMove={evaluateReviewedMove} onMove={moveReviewedDestination} /> : null}
       {toast ? <div className="planner-toast" role="status">{toast}</div> : null}
     </div>
   );

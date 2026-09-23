@@ -28,7 +28,8 @@ type ItineraryReviewDialogProps = {
   itinerary: PlannedItinerary;
   onConfirm: () => void;
   onEdit: () => void;
-  onRemove: (destinationId: string) => void;
+  onDefer: (destinationId: string) => void;
+  onDelete: (destinationId: string) => void;
   onEvaluateMove: (destinationId: string, targetDayIndex: number) => ItineraryMoveEvaluation;
   onMove: (destinationId: string, targetDayIndex: number) => ItineraryMoveEvaluation;
 };
@@ -61,7 +62,8 @@ export function ItineraryReviewDialog({
   itinerary,
   onConfirm,
   onEdit,
-  onRemove,
+  onDefer,
+  onDelete,
   onEvaluateMove,
   onMove,
 }: ItineraryReviewDialogProps) {
@@ -140,8 +142,9 @@ export function ItineraryReviewDialog({
 
   function dayMoveState(dayIndex: number) {
     if (!moving) return "";
+    if (moveOptions[dayIndex]?.allowed) return "move-allowed";
     if (moving.sourceDay === dayIndex) return "move-current";
-    return moveOptions[dayIndex]?.allowed ? "move-allowed" : "move-blocked";
+    return "move-blocked";
   }
 
   useEffect(() => {
@@ -245,7 +248,7 @@ export function ItineraryReviewDialog({
                       <div className="review-stop-copy"><strong>{stop.destination.name}</strong><small>{minutesToTime(stop.arrivalMinutes)} · {stopLabel(stop)}</small></div>
                       {stop.kind === "destination" ? <div className="review-stop-actions">
                         <button type="button" className="review-grab-button" onClick={() => beginMove(stop.destination.id, stop.destination.name, day.index)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Move ${stop.destination.name}`} title="Move to another day"><GripVertical /></button>
-                        <button type="button" className="review-remove-button" onClick={() => onRemove(stop.destination.id)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Move ${stop.destination.name} out of Day ${day.index + 1}`} title="Move out of this day"><Trash2 /></button>
+                        <button type="button" className="review-remove-button" onClick={() => onDefer(stop.destination.id)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Move ${stop.destination.name} out of Day ${day.index + 1}`} title="Move out of this day"><Trash2 /></button>
                       </div> : null}
                     </li>
                   ))}
@@ -258,7 +261,7 @@ export function ItineraryReviewDialog({
 
         {uniqueExcluded.length ? (
           <section className="review-excluded">
-            <header><AlertTriangle size={17} /><div><strong>These places need another time</strong><p>Drag or press and hold to test which day can safely take them.</p></div></header>
+            <header><AlertTriangle size={17} /><div><strong>These places need another time</strong><p>Add one back to its previous day, or test another day that can safely take it.</p></div></header>
             <div>{uniqueExcluded.map((place) => {
               const sourceDay = itinerary.days.find((day) => day.unscheduled.some((item) => item.id === place.id))?.index ?? null;
               return <article
@@ -274,8 +277,8 @@ export function ItineraryReviewDialog({
               >
                 <span><strong>{place.name}</strong><small>{place.area} · {place.open}–{place.close}</small></span>
                 <div className="review-excluded-actions">
-                  <button type="button" className="review-grab-button" onClick={() => beginMove(place.id, place.name, sourceDay)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Move ${place.name}`}><GripVertical /></button>
-                  <button type="button" className="review-remove-button" onClick={() => onRemove(place.id)} onPointerDown={(event) => event.stopPropagation()}><Trash2 size={14} /> Remove</button>
+                  <button type="button" className="review-grab-button" onClick={() => beginMove(place.id, place.name, sourceDay)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Add ${place.name} to a day`} title="Add back to a day"><GripVertical /></button>
+                  <button type="button" className="review-remove-button" onClick={() => onDelete(place.id)} onPointerDown={(event) => event.stopPropagation()}><Trash2 size={14} /> Delete choice</button>
                 </div>
               </article>;
             })}</div>
