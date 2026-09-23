@@ -122,6 +122,8 @@ export type PlannedStop = {
   distance: number;
   transport: PlannedTransport;
   from: PlannerLocation;
+  /** True when a fixed stop happens at the traveler's current property. */
+  stationary?: true;
   eveningAddOn?: true;
   placeMapUrl: string;
   mapPreviewUrl: string;
@@ -1464,12 +1466,24 @@ export function buildDayItinerary(
     placeMapUrl?: string,
   ) => {
     const distance = haversineKm(current, destination);
-    const transport = chooseTransport(current, destination, distance, options);
+    const stationary = kind === "check-out" && distance < 0.05;
+    const transport = stationary
+      ? {
+          mode: "walk" as const,
+          minutes: 0,
+          farePerPerson: 0,
+          vehicleFare: 0,
+          totalFare: 0,
+          instructions: [],
+          loadingMapUrl: null,
+          legMapUrl: placeMapUrl ?? googleSearchUrl(destination.googleQuery || destination.name),
+        }
+      : chooseTransport(current, destination, distance, options);
     const afterTravel = cursor + transport.minutes;
     const scheduledArrival = fixedMinutes === null
       ? afterTravel
       : Math.max(afterTravel, fixedMinutes);
-    const wait = fixedMinutes === null ? 0 : Math.max(0, fixedMinutes - afterTravel);
+    const wait = stationary || fixedMinutes === null ? 0 : Math.max(0, fixedMinutes - afterTravel);
     items.push(createPlannedStop({
       kind,
       destination,
@@ -1480,6 +1494,7 @@ export function buildDayItinerary(
       transport,
       number: items.length + 1,
       placeMapUrl,
+      stationary,
     }));
     cursor = scheduledArrival + destination.duration;
     current = destination;
@@ -2067,6 +2082,7 @@ function createPlannedStop({
   number,
   eveningAddOn,
   placeMapUrl,
+  stationary,
 }: {
   kind?: "destination" | "check-in" | "check-out" | "departure";
   destination: PlannerDestination;
@@ -2078,6 +2094,7 @@ function createPlannedStop({
   number: number;
   eveningAddOn?: true;
   placeMapUrl?: string;
+  stationary?: boolean;
 }): PlannedStop {
   return {
     kind,
@@ -2089,6 +2106,7 @@ function createPlannedStop({
     distance,
     transport,
     from,
+    ...(stationary ? { stationary: true as const } : {}),
     ...(eveningAddOn ? { eveningAddOn } : {}),
     placeMapUrl: placeMapUrl ?? googleSearchUrl(destination.googleQuery || destination.name),
     mapPreviewUrl: googleMapEmbedUrl(
