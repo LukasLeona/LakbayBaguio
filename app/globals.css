@@ -740,11 +740,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .journey-segment { position: absolute; z-index: 2; left: -34px; right: 34px; top: 0; height: 23px; pointer-events: none; }
 .journey-leg-line { display: none; }
 .journey-leg-line::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg,var(--lime),rgba(255,255,255,.75)); transform-origin: left; animation: journey-line 6s ease-in-out infinite; }
-.journey-moving-icon { position: absolute; z-index: 2; top: 1px; left: 0; width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; color: white; background: #3e755f; box-shadow: 0 0 0 3px rgba(255,255,255,.06); transform: translateX(-50%); animation: journey-travel 6s ease-in-out infinite; }
+.journey-moving-icon { position: absolute; z-index: 2; top: 1px; left: 0; width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; color: white; background: #3e755f; box-shadow: 0 0 0 3px rgba(255,255,255,.06); opacity: 0; transform: translateX(-50%); }
 .journey-moving-icon svg { width: 12px; height: 12px; }
-.journey-step:nth-child(3) .journey-moving-icon, .journey-step:nth-child(3) .journey-leg-line::after { animation-delay: .7s; }
-.journey-step:nth-child(4) .journey-moving-icon, .journey-step:nth-child(4) .journey-leg-line::after { animation-delay: 1.4s; }
-@keyframes journey-travel { 0%,8% { left: 0; opacity: .25; } 35%,72% { left: 100%; opacity: 1; } 88%,100% { left: 100%; opacity: .25; } }
+.journey-step-1 .journey-moving-icon { animation: journey-leg-trip 9s ease-in-out infinite; }
+@keyframes journey-leg-trip { 0%,2% { left: 0; opacity: 0; } 4% { left: 0; opacity: 1; } 28% { left: 100%; opacity: 1; } 30%,100% { left: 100%; opacity: 0; } }
 @keyframes journey-line { 0%,8% { transform: scaleX(0); } 35%,100% { transform: scaleX(1); } }
 .result-action { min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 11px; background: white; cursor: pointer; font-size: .62rem; font-weight: 800; }
 .result-action.strong { color: white; border-color: #8ba79e; background: #8ba79e; }
