@@ -745,6 +745,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .journey-step-2 .journey-moving-icon { animation: journey-leg-trip 9s ease-in-out 3s infinite; }
 .journey-step-3 .journey-moving-icon { animation: journey-leg-trip 9s ease-in-out 6s infinite; }
 @keyframes journey-leg-trip { 0%,2% { left: 0; opacity: 0; } 4% { left: 0; opacity: 1; } 28% { left: 100%; opacity: 1; } 30%,100% { left: 100%; opacity: 0; } }
+.journey-step-1 > .journey-point > span { animation: journey-node-arrival 9s ease-out infinite; }
+.journey-step-2 > .journey-point > span { animation: journey-node-arrival 9s ease-out 3s infinite; }
+.journey-step-3 > .journey-point > span { animation: journey-node-arrival 9s ease-out 6s infinite; }
+@keyframes journey-node-arrival { 0%,25%,33%,100% { transform: scale(1); } 29% { transform: scale(1.16); box-shadow: 0 0 0 7px rgba(201,226,48,.14); } }
 .result-action { min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 11px; background: white; cursor: pointer; font-size: .62rem; font-weight: 800; }
 .result-action.strong { color: white; border-color: #8ba79e; background: #8ba79e; }
 .result-action.save { color: white; border-color: var(--pine-800); background: var(--pine-800); }
