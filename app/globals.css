@@ -736,12 +736,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .journey-point small { width: 100%; overflow: hidden; font-size: .4rem; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .journey-finish > span { color: white; background: #39705c; }
 .journey-segment { position: relative; min-width: 24px; flex: 1; height: 23px; }
-.journey-segment > i { position: absolute; left: 0; right: 0; top: 11px; height: 2px; overflow: hidden; background: rgba(255,255,255,.2); }
-.journey-segment > i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg,var(--lime),rgba(255,255,255,.75)); transform-origin: left; animation: journey-line 6s ease-in-out infinite; }
+.journey-leg-line { position: absolute; left: 0; right: 0; top: 11px; height: 2px; overflow: hidden; background: rgba(255,255,255,.2); }
+.journey-leg-line::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg,var(--lime),rgba(255,255,255,.75)); transform-origin: left; animation: journey-line 6s ease-in-out infinite; }
 .journey-moving-icon { position: absolute; z-index: 2; top: 1px; left: 0; width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; color: white; background: #3e755f; box-shadow: 0 0 0 3px rgba(255,255,255,.06); animation: journey-travel 6s ease-in-out infinite; }
 .journey-moving-icon svg { width: 12px; height: 12px; }
-.journey-step:nth-child(3) .journey-moving-icon, .journey-step:nth-child(3) .journey-segment > i::after { animation-delay: .7s; }
-.journey-step:nth-child(4) .journey-moving-icon, .journey-step:nth-child(4) .journey-segment > i::after { animation-delay: 1.4s; }
+.journey-step:nth-child(3) .journey-moving-icon, .journey-step:nth-child(3) .journey-leg-line::after { animation-delay: .7s; }
+.journey-step:nth-child(4) .journey-moving-icon, .journey-step:nth-child(4) .journey-leg-line::after { animation-delay: 1.4s; }
 @keyframes journey-travel { 0%,8% { left: 0; opacity: .25; } 35%,72% { left: calc(100% - 22px); opacity: 1; } 88%,100% { left: calc(100% - 22px); opacity: .25; } }
 @keyframes journey-line { 0%,8% { transform: scaleX(0); } 35%,100% { transform: scaleX(1); } }
 .result-action { min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 11px; background: white; cursor: pointer; font-size: .62rem; font-weight: 800; }
@@ -903,7 +903,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .journey-point strong { font-size: .39rem; }
   .journey-point small { font-size: .34rem; }
   .journey-segment { height: 20px; }
-  .journey-segment > i { top: 9px; }
+  .journey-leg-line { top: 9px; }
   .journey-moving-icon { width: 19px; height: 19px; top: 0; }
   .journey-moving-icon svg { width: 10px; height: 10px; }
   @keyframes journey-travel { 0%,8% { left: 0; opacity: .25; } 35%,72% { left: calc(100% - 19px); opacity: 1; } 88%,100% { left: calc(100% - 19px); opacity: .25; } }
@@ -943,7 +943,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .journey-moving-icon, .journey-segment > i::after { animation: none; }
+  .journey-moving-icon, .journey-leg-line::after { animation: none; }
   .journey-moving-icon { left: 50%; transform: translateX(-50%); }
 }
 

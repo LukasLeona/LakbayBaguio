@@ -178,9 +178,9 @@ export function ItineraryResults({
             <div className="journey-point journey-start">
               <span><MapPin /></span><strong>Start</strong><small>{canonicalStart.name}</small>
             </div>
-            {journeyStops.map((stop, index) => <div className="journey-step" key={stop.destination.id}>
+            {journeyStops.map((stop, index) => <div className={`journey-step journey-step-${index + 1}`} data-journey-leg={index + 1} key={stop.destination.id}>
               <div className={`journey-segment mode-${stop.transport.mode}`} aria-label={`${transportLabel(stop.transport.mode)} to ${stop.destination.name}`}>
-                <i />
+                <i className="journey-leg-line" />
                 <span className="journey-moving-icon"><TransportIcon mode={stop.transport.mode} /></span>
               </div>
               <div className={`journey-point ${index === journeyStops.length - 1 ? "journey-finish" : ""}`}>
