@@ -53,6 +53,8 @@ type ItineraryResultsProps = {
   variant?: "owned" | "shared";
 };
 
+const JOURNEY_PREVIEW_MODES: readonly TransportMode[] = ["jeepney", "walk", "taxi"];
+
 function TransportIcon({ mode }: { mode: TransportMode }) {
   if (mode === "walk") return <Footprints size={19} aria-hidden="true" />;
   if (mode === "jeepney") return <BusFront size={19} aria-hidden="true" />;
@@ -178,17 +180,20 @@ export function ItineraryResults({
             <div className="journey-point journey-start">
               <span><MapPin /></span><strong>Start</strong><small>{canonicalStart.name}</small>
             </div>
-            {journeyStops.map((stop, index) => <div className={`journey-step journey-step-${index + 1}`} data-journey-leg={index + 1} key={stop.destination.id}>
-              <div className={`journey-segment mode-${stop.transport.mode}`} aria-label={`${transportLabel(stop.transport.mode)} to ${stop.destination.name}`}>
-                <i className="journey-leg-line" />
-                <span className="journey-moving-icon"><TransportIcon mode={stop.transport.mode} /></span>
-              </div>
-              <div className={`journey-point ${index === journeyStops.length - 1 ? "journey-finish" : ""}`}>
-                <span>{index === journeyStops.length - 1 ? <Navigation /> : <MapPin />}</span>
-                <strong>{index === journeyStops.length - 1 ? "Finish" : `Stop ${index + 1}`}</strong>
-                <small>{stop.destination.name}</small>
-              </div>
-            </div>)}
+            {journeyStops.map((stop, index) => {
+              const previewMode = JOURNEY_PREVIEW_MODES[index] ?? stop.transport.mode;
+              return <div className={`journey-step journey-step-${index + 1}`} data-journey-leg={index + 1} key={stop.destination.id}>
+                <div className={`journey-segment mode-${previewMode}`} aria-label={`${transportLabel(previewMode)} to ${stop.destination.name}`}>
+                  <i className="journey-leg-line" />
+                  <span className="journey-moving-icon"><TransportIcon mode={previewMode} /></span>
+                </div>
+                <div className={`journey-point ${index === journeyStops.length - 1 ? "journey-finish" : ""}`}>
+                  <span>{index === journeyStops.length - 1 ? <Navigation /> : <MapPin />}</span>
+                  <strong>{index === journeyStops.length - 1 ? "Finish" : `Stop ${index + 1}`}</strong>
+                  <small>{stop.destination.name}</small>
+                </div>
+              </div>;
+            })}
           </div> : null}
         </header>
 
