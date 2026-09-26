@@ -2449,6 +2449,10 @@ export function googleMapEmbedUrl(query: string): string {
   return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
 }
 
+export function googleMapEmbedLocationUrl(location: PlannerLocation): string {
+  return `https://www.google.com/maps?q=${encodeURIComponent(locationForDirections(location))}&output=embed`;
+}
+
 export function buildDayRouteUrl(
   start: PlannerLocation,
   day: Pick<PlannedDay, "items">,
@@ -2712,10 +2716,8 @@ function createPlannedStop({
     ...(stationary ? { stationary: true as const } : {}),
     ...(eveningAddOn ? { eveningAddOn } : {}),
     ...(gapSuggestions?.length ? { gapSuggestions } : {}),
-    placeMapUrl: placeMapUrl ?? googleSearchUrl(destination.googleQuery || destination.name),
-    mapPreviewUrl: googleMapEmbedUrl(
-      destination.googleQuery || destination.name,
-    ),
+    placeMapUrl: placeMapUrl ?? googleLocationUrl(destination),
+    mapPreviewUrl: googleMapEmbedLocationUrl(destination),
   };
 }
 
@@ -2923,6 +2925,13 @@ function locationForDirections(location: PlannerLocation): string {
   const target = location.navigation ?? location;
   if (Number.isFinite(target.lat) && Number.isFinite(target.lng)) {
     return `${target.lat},${target.lng}`;
+  }
+  return location.googleQuery || location.name;
+}
+
+function locationForUrl(location: PlannerLocation): string {
+  if (Number.isFinite(location.lat) && Number.isFinite(location.lng)) {
+    return `${location.lat},${location.lng}`;
   }
   return location.googleQuery || location.name;
 }

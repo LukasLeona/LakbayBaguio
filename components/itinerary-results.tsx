@@ -299,10 +299,11 @@ export function ItineraryResults({
                       {stop.queueMinutes > 0 ? <p className="queue-note"><Clock3 size={14} /> {formatDuration(stop.queueMinutes)} is reserved for entrance, ticketing, or a short queue before the visit.</p> : null}
                       {stop.waitMinutes > 0 ? <p className="wait-note"><Clock3 size={14} /> {stop.kind === "destination" ? `Includes a ${formatDuration(stop.waitMinutes)} wait for opening.` : `${formatDuration(stop.waitMinutes)} is protected before this fixed-time agenda item.`}</p> : null}
                       <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
+                      {stop.destination.navigation ? <p className="verified-pin-note"><ShieldCheck size={14} /> {stop.destination.navigation.entranceLabel} · pin reviewed {formatTripDate(stop.destination.navigation.verifiedAt)}</p> : null}
                       <div className="route-link-row">
                         {stop.transport.loadingMapUrl ? <a href={stop.transport.loadingMapUrl} target="_blank" rel="noreferrer"><MapPin size={14} /> Loading area <ExternalLink size={12} /></a> : null}
                         <a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)} target="_blank" rel="noreferrer"><Navigation size={14} /> Open this leg <ExternalLink size={12} /></a>
-                        <a href={stop.placeMapUrl} target="_blank" rel="noreferrer"><Route size={14} /> {stop.kind === "check-in" || stop.kind === "check-out" ? "Open saved stay" : stop.kind === "departure" ? "Open departure point" : "View place"} <ExternalLink size={12} /></a>
+                        <a href={stop.placeMapUrl} target="_blank" rel="noreferrer"><Route size={14} /> {stop.destination.navigation ? "Exact entrance" : stop.kind === "check-in" || stop.kind === "check-out" ? "Open saved stay" : stop.kind === "departure" ? "Open departure point" : "View place"} <ExternalLink size={12} /></a>
                       </div>
                     </section>}
 
