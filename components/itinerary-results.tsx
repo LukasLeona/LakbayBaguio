@@ -29,7 +29,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { ItineraryShareDialog } from "@/components/itinerary-share-dialog";
-import { getPlannerStartLocationById } from "@/lib/planner-data";
+import { getPlannerDestinationById, getPlannerStartLocationById } from "@/lib/planner-data";
 import {
   arrivalLuggagePlanLabel,
   buildDayRouteUrls,
@@ -39,6 +39,8 @@ import {
   formatDuration,
   formatTripDate,
   googleDirectionsUrl,
+  googleLocationUrl,
+  googleMapEmbedLocationUrl,
   getArrivalLuggagePlan,
   getCheckoutLuggagePlan,
   itineraryToText,
@@ -104,7 +106,33 @@ function isComfortStop(stop: PlannedStop) {
 }
 
 function canonicalRouteLocation(location: PlannerLocation): PlannerLocation {
-  return location.id ? getPlannerStartLocationById(location.id) ?? location : location;
+  return location.id
+    ? getPlannerStartLocationById(location.id) ?? getPlannerDestinationById(location.id) ?? location
+    : location;
+}
+
+function canonicalizeStop(stop: PlannedStop): PlannedStop {
+  const destination = getPlannerDestinationById(stop.destination.id) ?? stop.destination;
+  const from = canonicalRouteLocation(stop.from);
+  if (destination === stop.destination && from === stop.from) return stop;
+
+  return {
+    ...stop,
+    destination,
+    from,
+    transport: {
+      ...stop.transport,
+      legMapUrl: stop.stationary
+        ? stop.transport.legMapUrl
+        : googleDirectionsUrl(from, destination, stop.transport.mode),
+    },
+    placeMapUrl: stop.kind === "destination"
+      ? googleLocationUrl(destination)
+      : stop.placeMapUrl,
+    mapPreviewUrl: stop.kind === "destination"
+      ? googleMapEmbedLocationUrl(destination)
+      : stop.mapPreviewUrl,
+  };
 }
 
 export function ItineraryResults({
@@ -118,20 +146,25 @@ export function ItineraryResults({
 }: ItineraryResultsProps) {
   const [copied, setCopied] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const day = itinerary.days[activeDay] ?? itinerary.days[0];
+  const canonicalStart = getPlannerStartLocationById(itinerary.start.id) ?? itinerary.start;
+  const currentItinerary = {
+    ...itinerary,
+    start: canonicalStart,
+    days: itinerary.days.map((tripDay) => ({
+      ...tripDay,
+      items: tripDay.items.map(canonicalizeStop),
+    })),
+  };
+  const day = currentItinerary.days[activeDay] ?? currentItinerary.days[0];
   const firstStop = day?.items.find((item) => item.kind === "destination")
     ?? day?.items.find((item) => item.kind === "departure")
     ?? day?.items[0];
-  const canonicalStart = getPlannerStartLocationById(itinerary.start.id) ?? itinerary.start;
-  const currentItinerary = canonicalStart === itinerary.start
-    ? itinerary
-    : { ...itinerary, start: canonicalStart };
   const dayRouteStart = firstStop
     ? canonicalRouteLocation(firstStop.from)
     : canonicalStart;
   const routeLinks = day ? buildDayRouteUrls(dayRouteStart, day) : [];
   const allJourneyStops = [...new Map(
-    itinerary.days
+    currentItinerary.days
       .flatMap((tripDay) => tripDay.items)
       .filter((stop) => stop.kind === "destination")
       .map((stop) => [stop.destination.id, stop]),
@@ -380,7 +413,7 @@ export function ItineraryResults({
           <p>Pace: {itinerary.pace === "relaxed" ? "Relaxed" : itinerary.pace === "packed" ? "Packed" : "Comfortable"} · meal, rest, queue, and commute allowances included</p>
           <p>{itinerary.date ? `Trip date: ${formatTripDate(itinerary.date)} · ` : ""}{itinerary.totals.scheduledStops} stops · {formatDuration(itinerary.totals.travelMinutes)} travel · {formatCurrency(itinerary.totals.fare)} transport</p>
         </header>
-        {itinerary.days.map((printDay) => (
+        {currentItinerary.days.map((printDay) => (
           <article key={printDay.index}>
             <h2>Day {printDay.index + 1}{itinerary.date ? ` · ${formatDayDate(itinerary.date, printDay.index)}` : ""}</h2>
             {printDay.notices.map((notice) => <p className="print-notice" key={notice}>Note: {notice}</p>)}
