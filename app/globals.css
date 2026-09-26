@@ -610,6 +610,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .start-input-row { display: grid; grid-template-columns: 1fr 48px; gap: 8px; }
 .start-input-row button { display: grid; place-items: center; border: 1px solid var(--line); border-radius: 13px; color: var(--pine-700); background: #edf1e7; cursor: pointer; }
 .start-input-row button:disabled { opacity: .55; }
+.terminal-identity-card { display: grid; grid-template-columns: minmax(180px,.8fr) minmax(220px,1.2fr); align-items: center; gap: 10px 18px; margin-top: 14px; padding: 15px 17px; border: 1px solid #c9d8cf; border-radius: 17px; background: linear-gradient(135deg,#f1f6ed,#fffaf0); }
+.terminal-identity-heading { display: flex; align-items: center; gap: 10px; }
+.terminal-identity-heading > span, .terminal-branch-badge { flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; color: white; background: var(--pine-700); font-size: .48rem; font-weight: 900; letter-spacing: .08em; }
+.terminal-identity-heading > div { display: grid; }
+.terminal-identity-heading small { color: #5b766d; font-size: .51rem; font-weight: 850; text-transform: uppercase; }
+.terminal-identity-heading strong { font-size: .68rem; line-height: 1.35; }
+.terminal-identity-card > p { display: flex; align-items: flex-start; gap: 7px; margin: 0; color: #52615d; font-size: .61rem; line-height: 1.45; }
+.terminal-identity-card > p svg { flex: 0 0 auto; margin-top: 2px; }
+.terminal-identity-card > p span { display: grid; }
+.terminal-identity-card > p small { color: #72817b; font-size: .52rem; }
+.terminal-identity-card .terminal-ticket-warning { grid-column: 1 / -1; padding: 9px 10px; border-radius: 11px; color: #76551b; background: #fff0bd; font-weight: 750; }
+.terminal-identity-card > a { justify-self: end; display: inline-flex; align-items: center; gap: 4px; color: var(--pine-700); font-size: .55rem; font-weight: 750; }
 
 .arrival-tip-rich { margin-top: 24px; padding: 18px; border: 1px solid #f2ce70; border-radius: 17px; background: linear-gradient(120deg, #fff5ca, #fffaf0); }
 .arrival-tip-rich > header { display: flex; align-items: start; gap: 11px; }
@@ -739,6 +751,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .plan-context-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
 .plan-context-row > span { max-width: 310px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid rgba(255,255,255,.13); border-radius: 999px; color: rgba(255,255,255,.84); background: rgba(255,255,255,.07); font-size: .5rem; font-weight: 700; }
 .plan-context-row svg { width: 13px; height: 13px; flex: 0 0 auto; color: var(--lime); }
+.result-terminal-identity { display: grid; grid-template-columns: auto minmax(0,1fr) minmax(190px,.8fr); align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.15); border-radius: 13px; background: rgba(255,255,255,.08); }
+.result-terminal-identity > div { display: grid; min-width: 0; }
+.result-terminal-identity strong { color: white; font-size: .58rem; }
+.result-terminal-identity p, .result-terminal-identity small { margin: 1px 0 0; color: rgba(255,255,255,.7); font-size: .48rem; line-height: 1.35; }
+.result-terminal-identity .terminal-confirm-warning { display: flex; align-items: flex-start; gap: 5px; color: #fff0a4; font-weight: 700; }
+.result-terminal-identity .terminal-confirm-warning svg { flex: 0 0 auto; }
 .plan-journey { position: relative; display: flex; align-items: flex-start; margin-top: 17px; }
 .plan-journey::before { content: ""; position: absolute; z-index: 0; left: 34px; right: 34px; top: 11px; height: 2px; background: linear-gradient(90deg,var(--lime),rgba(255,255,255,.72)); }
 .journey-step { position: relative; min-width: 0; flex: 1; }
@@ -914,6 +932,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .trip-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .planner-field.start-field { grid-column: 1 / -1; }
   .planner-field input, .planner-field select, .auto-pick-select select { height: 46px; }
+  .terminal-identity-card { grid-template-columns: 1fr; gap: 9px; padding: 13px; }
+  .terminal-identity-card > a { justify-self: start; }
   .arrival-tip-rich > div { grid-template-columns: 1fr; }
   .destination-heading { display: grid; grid-template-columns: 43px 1fr auto; }
   .destination-heading .selected-count { grid-column: 3; grid-row: 1; padding: 7px 9px; }
@@ -935,6 +955,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .plan-context-row { flex-wrap: nowrap; gap: 5px; margin: 11px -2px 0; padding: 0 2px 2px; overflow-x: auto; scrollbar-width: none; }
   .plan-context-row::-webkit-scrollbar { display: none; }
   .plan-context-row > span { max-width: none; flex: 0 0 auto; padding: 5px 7px; font-size: .44rem; }
+  .result-terminal-identity { grid-template-columns: auto minmax(0,1fr); align-items: start; padding: 9px 10px; }
+  .result-terminal-identity .terminal-confirm-warning { grid-column: 1 / -1; }
   .plan-journey { margin: 13px -5px 0; }
   .plan-journey::before { left: 25.5px; right: 25.5px; top: 9px; }
   .journey-point { width: 51px; flex-basis: 51px; }
@@ -1018,6 +1040,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .print-brand span { margin-left: auto; padding: 4px 8px; border: 1px solid #c8d8cf; border-radius: 999px; color: #53776c; font-size: 7pt; font-weight: 700; text-transform: uppercase; }
   .print-itinerary h1 { margin: 0 0 4px; font-size: 23pt; line-height: 1.12; letter-spacing: -.5pt; }
   .print-itinerary > header p { margin: 2px 0; color: #496a61; font-size: 8pt; }
+  .print-itinerary .print-terminal-identity { break-inside: avoid; margin: 4mm 0; padding: 3mm 4mm; border: 1px solid #b8cbb9; border-radius: 3mm; background: #f2f6ef !important; }
+  .print-itinerary .print-terminal-identity p { margin: 1px 0; }
+  .print-itinerary .print-terminal-identity.departure { background: #fff7dc !important; }
   .print-itinerary > article { break-before: page; page-break-before: always; }
   .print-itinerary > article:first-of-type { break-before: auto; page-break-before: auto; }
   .print-itinerary article > h2 { margin: 0 0 7mm; padding: 8mm 0 3mm; border-bottom: 1px solid #b8cbb9; color: #0a392c; font-size: 15pt; line-height: 1.2; }

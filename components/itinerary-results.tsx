@@ -147,9 +147,15 @@ export function ItineraryResults({
   const [copied, setCopied] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const canonicalStart = getPlannerStartLocationById(itinerary.start.id) ?? itinerary.start;
+  const canonicalDeparture = itinerary.departure
+    ? getPlannerStartLocationById(itinerary.departure.location.id) ?? itinerary.departure.location
+    : null;
   const currentItinerary = {
     ...itinerary,
     start: canonicalStart,
+    ...(itinerary.departure && canonicalDeparture
+      ? { departure: { ...itinerary.departure, location: canonicalDeparture } }
+      : {}),
     days: itinerary.days.map((tripDay) => ({
       ...tripDay,
       items: tripDay.items.map(canonicalizeStop),
@@ -228,6 +234,12 @@ export function ItineraryResults({
             {itinerary.date ? <span><CalendarDays /> Starts {formatTripDate(itinerary.date)}</span> : null}
             {itinerary.stay ? <span><BedDouble /> {itinerary.stay.name}</span> : null}
           </div>
+
+          {canonicalStart.terminalIdentity ? <section className="result-terminal-identity" aria-label="Starting terminal details">
+            <span className="terminal-branch-badge">{canonicalStart.terminalIdentity.branchLabel}</span>
+            <div><strong>{canonicalStart.terminalIdentity.officialName}</strong><p>{canonicalStart.terminalIdentity.address}</p><small>{canonicalStart.lat.toFixed(5)}, {canonicalStart.lng.toFixed(5)}</small></div>
+            <p className="terminal-confirm-warning"><AlertTriangle size={14} /> {canonicalStart.terminalIdentity.warning}</p>
+          </section> : null}
 
           {journeyStops.length ? <div className="plan-journey" aria-label={`Trip route from ${canonicalStart.name} to ${journeyStops[journeyStops.length - 1].destination.name}`}>
             <div className="journey-point journey-start">
@@ -409,9 +421,11 @@ export function ItineraryResults({
           <div className="print-brand"><img src="/assets/img/favicon.svg" alt="" /><strong>Baguio Buddy</strong><span>{variant === "shared" ? "Shared route" : "Personal itinerary"}</span></div>
           <h1>{itinerary.title}</h1>
           <p>Starting point: {canonicalStart.name}</p>
+          {canonicalStart.terminalIdentity ? <div className="print-terminal-identity"><p><strong>{canonicalStart.terminalIdentity.branchLabel} — {canonicalStart.terminalIdentity.officialName}</strong></p><p>{canonicalStart.terminalIdentity.address}</p><p>Coordinates: {canonicalStart.lat.toFixed(5)}, {canonicalStart.lng.toFixed(5)}</p><p><strong>Ticket reminder:</strong> {canonicalStart.terminalIdentity.warning}</p></div> : null}
           {itinerary.stay ? <><p>Stay: {itinerary.stay.name} · {itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"} · Check-in Day {itinerary.stay.checkInDay + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)} · Checkout Day {(itinerary.stay.checkOutDay ?? itinerary.numberOfDays - 1) + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkOutTime || "11:00") ?? 660)}</p><p>Luggage: {arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))} · {checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}</p></> : null}
           <p>Pace: {itinerary.pace === "relaxed" ? "Relaxed" : itinerary.pace === "packed" ? "Packed" : "Comfortable"} · meal, rest, queue, and commute allowances included</p>
           <p>{itinerary.date ? `Trip date: ${formatTripDate(itinerary.date)} · ` : ""}{itinerary.totals.scheduledStops} stops · {formatDuration(itinerary.totals.travelMinutes)} travel · {formatCurrency(itinerary.totals.fare)} transport</p>
+          {canonicalDeparture?.terminalIdentity ? <div className="print-terminal-identity departure"><p><strong>Departure: {canonicalDeparture.terminalIdentity.branchLabel} — {canonicalDeparture.terminalIdentity.officialName}</strong></p><p>{canonicalDeparture.terminalIdentity.address}</p><p>Coordinates: {canonicalDeparture.lat.toFixed(5)}, {canonicalDeparture.lng.toFixed(5)}</p><p><strong>Ticket reminder:</strong> {canonicalDeparture.terminalIdentity.warning}</p></div> : null}
         </header>
         {currentItinerary.days.map((printDay) => (
           <article key={printDay.index}>

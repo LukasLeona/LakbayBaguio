@@ -4,13 +4,16 @@ import {
   buildDayRouteUrls,
   googleDirectionsUrl,
   googleLocationUrl,
+  terminalIdentityTextLines,
   type PlannedDay,
 } from "../lib/planner-engine";
+import type { StartLocation } from "../lib/planner-types";
 
-const origin = PLANNER_START_LOCATIONS[0];
+const startLocations = PLANNER_START_LOCATIONS as readonly StartLocation[];
+const origin = startLocations[0];
 const coordinatePattern = /^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/;
 
-const victoryBranches = PLANNER_START_LOCATIONS.filter(
+const victoryBranches = startLocations.filter(
   ({ terminalIdentity }) => terminalIdentity?.operator === "Victory Liner",
 );
 assert.equal(victoryBranches.length, 2, "Both official Victory Liner Baguio branches must be selectable");
@@ -22,6 +25,11 @@ victoryBranches.forEach((branch) => {
   assert.ok(branch.terminalIdentity?.address, `${branch.name} needs its full official address`);
   assert.ok(branch.terminalIdentity?.warning, `${branch.name} needs a ticket-terminal warning`);
   assert.ok(branch.navigation, `${branch.name} needs an exact navigation target`);
+  const sharedText = terminalIdentityTextLines(branch, "Starting terminal").join("\n");
+  assert.ok(sharedText.includes(branch.terminalIdentity!.branchLabel));
+  assert.ok(sharedText.includes(branch.terminalIdentity!.address));
+  assert.ok(sharedText.includes(`${branch.lat.toFixed(5)}, ${branch.lng.toFixed(5)}`));
+  assert.ok(sharedText.includes("Confirm that this branch matches"));
 });
 
 for (const destination of PLANNER_DESTINATIONS) {

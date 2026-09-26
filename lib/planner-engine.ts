@@ -2526,6 +2526,7 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
   const lines = [
     "LAKBAY BAGUIO ITINERARY",
     `Starting point: ${itinerary.start.name}`,
+    ...terminalIdentityTextLines(itinerary.start, "Starting terminal"),
     `Date: ${itinerary.date ? formatTripDate(itinerary.date) : "Not specified"}`,
     `Days: ${itinerary.numberOfDays}`,
     `Pace: ${itinerary.pace === "relaxed" ? "Relaxed" : itinerary.pace === "packed" ? "Packed" : "Comfortable"} (meal, rest, queue, and commute allowances included)`,
@@ -2540,7 +2541,10 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
         ]
       : []),
     ...(itinerary.departure
-      ? [`Departure: ${itinerary.departure.location.name}${itinerary.departure.time ? ` at ${minutesToTime(parseTimeToMinutes(itinerary.departure.time) ?? 0)}` : ""}`]
+      ? [
+          `Departure: ${itinerary.departure.location.name}${itinerary.departure.time ? ` at ${minutesToTime(parseTimeToMinutes(itinerary.departure.time) ?? 0)}` : ""}`,
+          ...terminalIdentityTextLines(itinerary.departure.location, "Departure terminal"),
+        ]
       : []),
     "",
   ];
@@ -2593,6 +2597,20 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
   lines.push("");
   lines.push(PLANNING_DISCLAIMER);
   return lines.join("\n");
+}
+
+export function terminalIdentityTextLines(
+  location: PlannerStartLocation,
+  prefix = "Terminal",
+): string[] {
+  const identity = location.terminalIdentity;
+  if (!identity) return [];
+  return [
+    `${prefix} branch: ${identity.branchLabel} — ${identity.officialName}`,
+    `${prefix} address: ${identity.address}`,
+    `${prefix} coordinates: ${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`,
+    `${prefix} reminder: ${identity.warning}`,
+  ];
 }
 
 export function haversineKm(

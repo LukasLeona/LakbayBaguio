@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   BadgeCheck,
   BaggageClaim,
   BedDouble,
@@ -718,6 +719,13 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
             <label className="planner-field"><span>Time available each day</span><select value={availableHours} onChange={(event) => setAvailableHours(Number(event.target.value))}>{[4, 6, 8, 10, 12].map((hours) => <option key={hours} value={hours}>{hours === 12 ? "Full day" : `${hours} hours`}</option>)}</select></label>
             <label className="planner-field"><span>Travelers</span><input type="number" min="1" max="12" required value={travelers} onChange={(event) => setTravelers(clamp(Number(event.target.value) || 1, 1, 12))} /></label>
           </div>
+
+          {selectedStart.terminalIdentity ? <aside className="terminal-identity-card" aria-label={`${selectedStart.terminalIdentity.branchLabel} terminal details`}>
+            <div className="terminal-identity-heading"><span>{selectedStart.terminalIdentity.branchLabel}</span><div><small>{selectedStart.terminalIdentity.operator}</small><strong>{selectedStart.terminalIdentity.officialName}</strong></div></div>
+            <p><MapPin size={15} /> <span>{selectedStart.terminalIdentity.address}<small>{selectedStart.lat.toFixed(5)}, {selectedStart.lng.toFixed(5)}</small></span></p>
+            <p className="terminal-ticket-warning"><AlertTriangle size={15} /> {selectedStart.terminalIdentity.warning}</p>
+            <a href={selectedStart.terminalIdentity.sourceUrl} target="_blank" rel="noreferrer">Check Victory Liner’s terminal directory <ExternalLink size={13} /></a>
+          </aside> : null}
 
           <section className={`stay-planner-card ${includeStay ? "expanded" : ""}`} aria-labelledby="stay-planner-title">
             <header>
