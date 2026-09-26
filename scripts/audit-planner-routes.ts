@@ -1,0 +1,84 @@
+import assert from "node:assert/strict";
+import { PLANNER_DESTINATIONS, PLANNER_START_LOCATIONS } from "../lib/planner-data";
+import {
+  buildDayRouteUrls,
+  googleDirectionsUrl,
+  googleLocationUrl,
+  type PlannedDay,
+} from "../lib/planner-engine";
+
+const origin = PLANNER_START_LOCATIONS[0];
+const coordinatePattern = /^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/;
+
+for (const destination of PLANNER_DESTINATIONS) {
+  const target = destination.navigation ?? destination;
+  const expectedCoordinate = `${target.lat},${target.lng}`;
+  const directions = new URL(googleDirectionsUrl(origin, destination, "walk"));
+  const place = new URL(googleLocationUrl(destination));
+
+  assert.equal(
+    directions.searchParams.get("destination"),
+    expectedCoordinate,
+    `${destination.name} directions must target its exact coordinate`,
+  );
+  assert.equal(
+    place.searchParams.get("query"),
+    expectedCoordinate,
+    `${destination.name} place link must target its exact coordinate`,
+  );
+
+  if (destination.navigation?.googlePlaceId) {
+    assert.equal(
+      directions.searchParams.get("destination_place_id"),
+      destination.navigation.googlePlaceId,
+    );
+    assert.equal(
+      place.searchParams.get("query_place_id"),
+      destination.navigation.googlePlaceId,
+    );
+  }
+}
+
+const auditDay = {
+  items: PLANNER_DESTINATIONS.map((destination) => ({
+    destination,
+    stationary: false,
+    transport: { mode: "walk" as const },
+  })),
+} as unknown as Pick<PlannedDay, "items">;
+const routeUrls = buildDayRouteUrls(origin, auditDay);
+
+for (const routeUrl of routeUrls) {
+  const params = new URL(routeUrl).searchParams;
+  const routeCoordinates = [
+    params.get("origin"),
+    ...((params.get("waypoints") ?? "").split("|").filter(Boolean)),
+    params.get("destination"),
+  ];
+  routeCoordinates.forEach((coordinate) => {
+    assert.ok(
+      coordinate && coordinatePattern.test(coordinate),
+      `Generated route contains an ambiguous target: ${coordinate ?? "missing"}`,
+    );
+  });
+}
+
+const minesView = PLANNER_DESTINATIONS.find(({ id }) => id === "mines-view-park");
+const goodShepherd = PLANNER_DESTINATIONS.find(({ id }) => id === "good-shepherd");
+assert.ok(minesView && goodShepherd, "Mines View corridor destinations must exist");
+
+const corridorUrl = new URL(googleDirectionsUrl(minesView, goodShepherd, "walk"));
+assert.equal(corridorUrl.searchParams.get("origin"), "16.4196515,120.6269696");
+assert.equal(corridorUrl.searchParams.get("destination"), "16.4214729,120.6251922");
+assert.equal(
+  corridorUrl.searchParams.get("destination_place_id"),
+  "ChIJ-w3haAClkTMRI0xFE1PUcXI",
+);
+assert.ok(
+  !corridorUrl.toString().includes("Good+Shepherd+Convent"),
+  "Mines View corridor must not fall back to an ambiguous place name",
+);
+
+console.log(
+  `Route audit passed: ${PLANNER_DESTINATIONS.length} destinations and ${routeUrls.length} multi-stop route segments use exact coordinates.`,
+);
