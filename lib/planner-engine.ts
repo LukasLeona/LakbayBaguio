@@ -16,6 +16,7 @@ import type {
   PlannerStay,
   PlannerArea,
   PlannerDestination,
+  PlannerNavigationPoint,
   RouteGuide,
   StartLocation,
   TransportMode,
@@ -53,6 +54,7 @@ export type PlannerLocation = Coordinates & {
   name: string;
   area?: PlannerArea;
   googleQuery?: string;
+  navigation?: PlannerNavigationPoint;
 };
 
 export type PlannerStartLocation = StartLocation;
@@ -2421,11 +2423,25 @@ export function googleDirectionsUrl(
     destination: locationForDirections(to),
     travelmode: mode === "walk" ? "walking" : "driving",
   });
+  appendEndpointPlaceId(params, "origin_place_id", from);
+  appendEndpointPlaceId(params, "destination_place_id", to);
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
 export function googleSearchUrl(query: string): string {
   const params = new URLSearchParams({ api: "1", query });
+  return `https://www.google.com/maps/search/?${params.toString()}`;
+}
+
+/** Opens the exact routing coordinate, with a reviewed Place ID when available. */
+export function googleLocationUrl(location: PlannerLocation): string {
+  const params = new URLSearchParams({
+    api: "1",
+    query: locationForDirections(location),
+  });
+  if (location.navigation?.googlePlaceId) {
+    params.set("query_place_id", location.navigation.googlePlaceId);
+  }
   return `https://www.google.com/maps/search/?${params.toString()}`;
 }
 
@@ -2472,6 +2488,12 @@ export function buildDayRouteUrls(
       destination,
       travelmode: allWalking ? "walking" : "driving",
     });
+    appendEndpointPlaceId(params, "origin_place_id", segmentOrigin);
+    appendEndpointPlaceId(
+      params,
+      "destination_place_id",
+      segment[segment.length - 1].destination,
+    );
     if (waypoints.length) params.set("waypoints", waypoints.join("|"));
     routeUrls.push(`https://www.google.com/maps/dir/?${params.toString()}`);
     segmentOrigin = segment[segment.length - 1].destination;
@@ -2897,16 +2919,22 @@ function summarizeDays(days: readonly PlannedDay[]): ItineraryTotals {
   };
 }
 
-function locationForUrl(location: PlannerLocation): string {
-  if (Number.isFinite(location.lat) && Number.isFinite(location.lng)) {
-    return `${location.lat},${location.lng}`;
+function locationForDirections(location: PlannerLocation): string {
+  const target = location.navigation ?? location;
+  if (Number.isFinite(target.lat) && Number.isFinite(target.lng)) {
+    return `${target.lat},${target.lng}`;
   }
   return location.googleQuery || location.name;
 }
 
-function locationForDirections(location: PlannerLocation): string {
-  if (location.id === "current-location") return locationForUrl(location);
-  return location.googleQuery || location.name || locationForUrl(location);
+function appendEndpointPlaceId(
+  params: URLSearchParams,
+  parameter: "origin_place_id" | "destination_place_id",
+  location: PlannerLocation,
+): void {
+  if (location.navigation?.googlePlaceId) {
+    params.set(parameter, location.navigation.googlePlaceId);
+  }
 }
 
 function degreesToRadians(value: number): number {
