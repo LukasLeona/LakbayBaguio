@@ -10,6 +10,20 @@ import {
 const origin = PLANNER_START_LOCATIONS[0];
 const coordinatePattern = /^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/;
 
+const victoryBranches = PLANNER_START_LOCATIONS.filter(
+  ({ terminalIdentity }) => terminalIdentity?.operator === "Victory Liner",
+);
+assert.equal(victoryBranches.length, 2, "Both official Victory Liner Baguio branches must be selectable");
+assert.deepEqual(
+  victoryBranches.map(({ terminalIdentity }) => terminalIdentity?.branchLabel).sort(),
+  ["GOVERNOR PACK", "MARCOVILLE"],
+);
+victoryBranches.forEach((branch) => {
+  assert.ok(branch.terminalIdentity?.address, `${branch.name} needs its full official address`);
+  assert.ok(branch.terminalIdentity?.warning, `${branch.name} needs a ticket-terminal warning`);
+  assert.ok(branch.navigation, `${branch.name} needs an exact navigation target`);
+});
+
 for (const destination of PLANNER_DESTINATIONS) {
   const target = destination.navigation ?? destination;
   const expectedCoordinate = `${target.lat},${target.lng}`;

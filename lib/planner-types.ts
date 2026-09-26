@@ -77,6 +77,16 @@ export interface PlannerNavigationPoint extends Coordinates {
   readonly verifiedAt: string;
 }
 
+export interface TerminalIdentity {
+  readonly operator: string;
+  readonly branchLabel: string;
+  readonly officialName: string;
+  readonly address: string;
+  readonly warning: string;
+  readonly sourceUrl: string;
+  readonly verifiedAt: string;
+}
+
 export interface RouteGuide {
   readonly modeLabel: string;
   readonly loadingArea: string;
@@ -118,6 +128,7 @@ export interface StartLocation extends Coordinates {
   readonly customName?: boolean;
   readonly googleQuery: string;
   readonly navigation?: PlannerNavigationPoint;
+  readonly terminalIdentity?: TerminalIdentity;
 }
 
 /** A traveler-supplied accommodation used as a fixed-time itinerary stop. */

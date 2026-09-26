@@ -83,12 +83,51 @@ export const PLANNER_ROUTE_GUIDES = {
 export const PLANNER_START_LOCATIONS = [
   {
     "id": "victory-liner",
-    "name": "Victory Liner Inc. Baguio City",
+    "name": "Victory Liner — Marcoville Passenger Center",
     "lat": 16.40571,
     "lng": 120.60252,
     "area": "City Center",
     "terminal": true,
-    "googleQuery": "Victory Liner Inc. Baguio City, CJ43+72J, PNR, Utility Rd, Baguio, Benguet"
+    "googleQuery": "Victory Liner Passenger Center Upper Session Road Marcoville Baguio",
+    "navigation": {
+      "lat": 16.40571,
+      "lng": 120.60252,
+      "entranceLabel": "Victory Liner Marcoville passenger entrance",
+      "verifiedAt": "2026-09-26"
+    },
+    "terminalIdentity": {
+      "operator": "Victory Liner",
+      "branchLabel": "MARCOVILLE",
+      "officialName": "Baguio City (Passenger Center / New)",
+      "address": "Upper Session Road, Brgy. Marcoville, Baguio City, Benguet",
+      "warning": "Confirm that this branch matches the terminal printed on your ticket.",
+      "sourceUrl": "https://staging.victoryliner.com/TerminalGuide.aspx",
+      "verifiedAt": "2026-09-26"
+    }
+  },
+  {
+    "id": "victory-liner-gov-pack",
+    "name": "Victory Liner — Governor Pack Road Terminal",
+    "lat": 16.40946,
+    "lng": 120.59978,
+    "area": "City Center",
+    "terminal": true,
+    "googleQuery": "Victory Liner Governor Pack Road Baguio City Benguet",
+    "navigation": {
+      "lat": 16.40946,
+      "lng": 120.59978,
+      "entranceLabel": "Victory Liner Governor Pack Road passenger entrance",
+      "verifiedAt": "2026-09-26"
+    },
+    "terminalIdentity": {
+      "operator": "Victory Liner",
+      "branchLabel": "GOVERNOR PACK",
+      "officialName": "Baguio City (New)",
+      "address": "Governor Pack Road, Baguio City, Benguet",
+      "warning": "Confirm that this branch matches the terminal printed on your ticket.",
+      "sourceUrl": "https://staging.victoryliner.com/TerminalGuide.aspx",
+      "verifiedAt": "2026-09-26"
+    }
   },
   {
     "id": "gov-pack",
@@ -162,6 +201,18 @@ export const PLANNER_BAGGAGE_OPTIONS = {
     {
       "name": "SM City Baguio Tourist Lounge",
       "detail": "A reported alternative near the city center. Availability, level, size limits, and rates can change, so confirm with the mall concierge.",
+      "query": "SM City Baguio Tourist Lounge"
+    }
+  ],
+  "victory-liner-gov-pack": [
+    {
+      "name": "Victory Liner Governor Pack Road baggage counter",
+      "detail": "Ask the selected branch whether same-day baggage storage is currently available. Confirm eligibility, hours, and fees before leaving any bag.",
+      "query": "Victory Liner Governor Pack Road Baguio City"
+    },
+    {
+      "name": "SM City Baguio Tourist Lounge",
+      "detail": "A nearby reported alternative. Availability, level, size limits, and rates can change, so confirm with the mall concierge.",
       "query": "SM City Baguio Tourist Lounge"
     }
   ],
