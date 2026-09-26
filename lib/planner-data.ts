@@ -678,6 +678,13 @@ const RAW_DESTINATIONS = [
     "icon": "⛰️",
     "image": "assets/img/destinations/mines-view-park.jpg",
     "googleQuery": "Mines View Park, Baguio Philippines",
+    "navigation": {
+      "lat": 16.4196515,
+      "lng": 120.6269696,
+      "entranceLabel": "Mines View Park public visitor entrance",
+      "googlePlaceId": "ChIJs0hWPgKkkTMRoGuurDgtCrs",
+      "verifiedAt": "2026-09-26"
+    },
     "scope": "Baguio City",
     "alight": "Ride to the Mines View terminal and follow the pedestrian signs to the park entrance.",
     "routeGuideArea": "East Baguio"
@@ -708,6 +715,13 @@ const RAW_DESTINATIONS = [
     "icon": "🛍️",
     "image": "assets/img/destinations/good-shepherd.jpg",
     "googleQuery": "Good Shepherd Convent, Baguio Philippines",
+    "navigation": {
+      "lat": 16.4214729,
+      "lng": 120.6251922,
+      "entranceLabel": "Good Shepherd Convent main visitor entrance",
+      "googlePlaceId": "ChIJ-w3haAClkTMRI0xFE1PUcXI",
+      "verifiedAt": "2026-09-26"
+    },
     "scope": "Baguio City",
     "routeGuideArea": "East Baguio"
   },
