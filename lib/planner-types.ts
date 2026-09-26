@@ -68,6 +68,15 @@ export interface Coordinates {
   readonly lng: number;
 }
 
+/** A reviewed Google Maps routing target, normally the public visitor entrance. */
+export interface PlannerNavigationPoint extends Coordinates {
+  readonly entranceLabel: string;
+  /** Optional Google Place ID; coordinates remain the deterministic fallback. */
+  readonly googlePlaceId?: string;
+  /** ISO date when the entrance target was last reviewed. */
+  readonly verifiedAt: string;
+}
+
 export interface RouteGuide {
   readonly modeLabel: string;
   readonly loadingArea: string;
@@ -94,6 +103,7 @@ export interface PlannerDestination extends Coordinates {
   readonly icon: string;
   readonly image: string;
   readonly googleQuery: string;
+  readonly navigation?: PlannerNavigationPoint;
   readonly routeGuide: RouteGuide;
   readonly scope: DestinationScope;
   readonly alight?: string;
@@ -107,6 +117,7 @@ export interface StartLocation extends Coordinates {
   readonly terminal?: boolean;
   readonly customName?: boolean;
   readonly googleQuery: string;
+  readonly navigation?: PlannerNavigationPoint;
 }
 
 /** A traveler-supplied accommodation used as a fixed-time itinerary stop. */
