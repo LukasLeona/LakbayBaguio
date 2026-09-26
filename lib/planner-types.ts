@@ -41,6 +41,7 @@ export type AutoPickTheme =
   | "hidden";
 
 export type TravelPreference = "balanced" | "cheapest" | "fastest" | "less-walking";
+export type PacePreference = "relaxed" | "comfortable" | "packed";
 export type TransportMode = "walk" | "jeepney" | "taxi";
 export type StayKind = "hotel" | "airbnb";
 export type StayLocationPrecision = "pin" | "approximate";
@@ -165,6 +166,7 @@ export interface PlannerDefaults {
   readonly availableHoursPerDay: number;
   readonly travelers: number;
   readonly preference: TravelPreference;
+  readonly pace: PacePreference;
   readonly modes: readonly TransportMode[];
   readonly autoPickTheme: AutoPickTheme;
   readonly fares: FareSettings;

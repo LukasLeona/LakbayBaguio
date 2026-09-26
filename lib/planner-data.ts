@@ -1666,6 +1666,7 @@ export const DEFAULT_PLANNER_SETTINGS = {
   availableHoursPerDay: 8,
   travelers: 2,
   preference: "balanced",
+  pace: "comfortable",
   modes: ["walk", "jeepney", "taxi"],
   autoPickTheme: "balanced",
   fares: DEFAULT_FARE_SETTINGS,

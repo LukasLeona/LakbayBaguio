@@ -9,6 +9,7 @@ import {
   Car,
   Check,
   Clock3,
+  Coffee,
   Copy,
   ExternalLink,
   Footprints,
@@ -21,6 +22,8 @@ import {
   Route,
   Save,
   Share2,
+  ShieldCheck,
+  Utensils,
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
@@ -75,6 +78,8 @@ function fareLabel(stop: PlannedStop) {
 }
 
 function fixedStopLabel(stop: PlannedStop) {
+  if (stop.kind === "meal") return "Meal";
+  if (stop.kind === "rest") return "Rest";
   if (stop.kind === "check-in") return "Check in";
   if (stop.kind === "check-out") return "Checkout";
   if (stop.kind === "departure") return "Departure";
@@ -84,12 +89,18 @@ function fixedStopLabel(stop: PlannedStop) {
 }
 
 function fixedStopMeta(stop: PlannedStop, itinerary: PlannedItinerary) {
+  if (stop.kind === "meal") return "Protected meal time · Near the current route";
+  if (stop.kind === "rest") return "Protected recovery time · No extra travel";
   if (stop.kind === "check-in") return `${itinerary.stay?.kind === "airbnb" ? "Airbnb" : "Hotel"} · Fixed check-in`;
   if (stop.kind === "check-out") return `${itinerary.stay?.kind === "airbnb" ? "Airbnb" : "Hotel"} · Fixed checkout`;
   if (stop.kind === "departure") return "Final transfer · Departure point";
   if (stop.kind === "bag-drop") return "Confirmed luggage handoff";
   if (stop.kind === "bag-pickup") return "Return for stored luggage";
   return `${stop.destination.area} · ${stop.destination.category}`;
+}
+
+function isComfortStop(stop: PlannedStop) {
+  return stop.kind === "meal" || stop.kind === "rest";
 }
 
 function canonicalRouteLocation(location: PlannerLocation): PlannerLocation {
@@ -228,7 +239,7 @@ export function ItineraryResults({
             >
               <span>Day {item.index + 1}</span>
               <strong>{itinerary.date ? formatDayDate(itinerary.date, item.index) : `Route ${item.index + 1}`}</strong>
-              <small>{item.items.length} agenda {item.items.length === 1 ? "item" : "items"}</small>
+              <small>{item.items.filter((stop) => stop.kind === "destination").length} places · {item.items.filter(isComfortStop).length} breaks</small>
             </button>
           ))}
         </div>
@@ -250,9 +261,9 @@ export function ItineraryResults({
           {day?.items.length ? (
             <div className="route-timeline-rich">
               {day.items.map((stop) => (
-                <article className={`route-stop-rich ${stop.kind === "check-in" || stop.kind === "check-out" ? "stay-check-in-stop" : stop.kind === "bag-drop" || stop.kind === "bag-pickup" ? "luggage-route-stop" : stop.kind === "departure" ? "departure-stop" : ""}`} key={`${day.index}-${stop.destination.id}`}>
+                <article className={`route-stop-rich ${isComfortStop(stop) ? `comfort-route-stop ${stop.kind}` : stop.kind === "check-in" || stop.kind === "check-out" ? "stay-check-in-stop" : stop.kind === "bag-drop" || stop.kind === "bag-pickup" ? "luggage-route-stop" : stop.kind === "departure" ? "departure-stop" : ""}`} key={`${day.index}-${stop.destination.id}`}>
                   <div className="route-stop-time">{minutesToTime(stop.arrivalMinutes)}</div>
-                  <div className="route-stop-marker">{stop.kind !== "destination" ? (stop.kind === "departure" ? <Route size={15} aria-hidden="true" /> : stop.kind === "bag-drop" || stop.kind === "bag-pickup" ? <BaggageClaim size={15} aria-hidden="true" /> : <BedDouble size={15} aria-hidden="true" />) : stop.number}</div>
+                  <div className="route-stop-marker">{stop.kind !== "destination" ? (stop.kind === "meal" ? <Utensils size={15} aria-hidden="true" /> : stop.kind === "rest" ? <Coffee size={15} aria-hidden="true" /> : stop.kind === "departure" ? <Route size={15} aria-hidden="true" /> : stop.kind === "bag-drop" || stop.kind === "bag-pickup" ? <BaggageClaim size={15} aria-hidden="true" /> : <BedDouble size={15} aria-hidden="true" />) : stop.number}</div>
                   <div className="route-stop-content">
                     <header>
                       <div>
@@ -263,7 +274,10 @@ export function ItineraryResults({
                     </header>
                     <p className="stop-description">{stop.destination.description}</p>
 
-                    {stop.stationary && stop.kind === "check-out" ? <section className="checkout-reminder-card" aria-label={`Checkout reminder for ${stop.destination.name}`}>
+                    {isComfortStop(stop) ? <section className={`comfort-break-card ${stop.kind}`} aria-label={stop.destination.name}>
+                      <span>{stop.kind === "meal" ? <Utensils /> : <Coffee />}</span>
+                      <div><strong>{stop.kind === "meal" ? "Meal time is protected" : "Pause before the next leg"}</strong><p>{stop.destination.description}</p><small>This block already counts toward the day&apos;s schedule.</small></div>
+                    </section> : stop.stationary && stop.kind === "check-out" ? <section className="checkout-reminder-card" aria-label={`Checkout reminder for ${stop.destination.name}`}>
                       <span className="checkout-reminder-icon"><Clock3 /></span>
                       <div>
                         <strong>Checkout reminder</strong>
@@ -281,6 +295,8 @@ export function ItineraryResults({
                           <span>{fareLabel(stop)}</span>
                         </div>
                       </header>
+                      {stop.transport.bufferMinutes > 0 ? <p className="travel-buffer-note"><ShieldCheck size={14} /> {formatDuration(stop.transport.baseMinutes)} typical travel + {formatDuration(stop.transport.bufferMinutes)} traffic/loading allowance.</p> : null}
+                      {stop.queueMinutes > 0 ? <p className="queue-note"><Clock3 size={14} /> {formatDuration(stop.queueMinutes)} is reserved for entrance, ticketing, or a short queue before the visit.</p> : null}
                       {stop.waitMinutes > 0 ? <p className="wait-note"><Clock3 size={14} /> {stop.kind === "destination" ? `Includes a ${formatDuration(stop.waitMinutes)} wait for opening.` : `${formatDuration(stop.waitMinutes)} is protected before this fixed-time agenda item.`}</p> : null}
                       <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
                       <div className="route-link-row">
@@ -290,8 +306,10 @@ export function ItineraryResults({
                       </div>
                     </section>}
 
+                    {stop.gapSuggestions?.length ? <section className="gap-options-card"><strong><Coffee size={14} /> Use this protected gap gently</strong><ul>{stop.gapSuggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>)}</ul></section> : null}
+
                     <section className="stop-ideas">
-                      <strong>{stop.kind === "bag-drop" || stop.kind === "bag-pickup" ? <BaggageClaim size={15} /> : stop.kind !== "destination" ? <BedDouble size={15} /> : <Lightbulb size={15} />} {stop.kind === "check-in" ? "Check-in checklist" : stop.kind === "check-out" ? "Checkout checklist" : stop.kind === "bag-drop" ? "Safe handoff checklist" : stop.kind === "bag-pickup" ? "Before leaving storage" : stop.kind === "departure" ? "Before leaving Baguio" : "Make the most of this stop"}</strong>
+                      <strong>{stop.kind === "meal" ? <Utensils size={15} /> : stop.kind === "rest" ? <Coffee size={15} /> : stop.kind === "bag-drop" || stop.kind === "bag-pickup" ? <BaggageClaim size={15} /> : stop.kind !== "destination" ? <BedDouble size={15} /> : <Lightbulb size={15} />} {stop.kind === "meal" ? "A useful meal break" : stop.kind === "rest" ? "Reset without rushing" : stop.kind === "check-in" ? "Check-in checklist" : stop.kind === "check-out" ? "Checkout checklist" : stop.kind === "bag-drop" ? "Safe handoff checklist" : stop.kind === "bag-pickup" ? "Before leaving storage" : stop.kind === "departure" ? "Before leaving Baguio" : "Make the most of this stop"}</strong>
                       <ul>{stop.destination.activities.map((activity) => <li key={activity}>{activity}</li>)}</ul>
                     </section>
                   </div>
@@ -358,6 +376,7 @@ export function ItineraryResults({
           <h1>{itinerary.title}</h1>
           <p>Starting point: {canonicalStart.name}</p>
           {itinerary.stay ? <><p>Stay: {itinerary.stay.name} · {itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"} · Check-in Day {itinerary.stay.checkInDay + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)} · Checkout Day {(itinerary.stay.checkOutDay ?? itinerary.numberOfDays - 1) + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkOutTime || "11:00") ?? 660)}</p><p>Luggage: {arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))} · {checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}</p></> : null}
+          <p>Pace: {itinerary.pace === "relaxed" ? "Relaxed" : itinerary.pace === "packed" ? "Packed" : "Comfortable"} · meal, rest, queue, and commute allowances included</p>
           <p>{itinerary.date ? `Trip date: ${formatTripDate(itinerary.date)} · ` : ""}{itinerary.totals.scheduledStops} stops · {formatDuration(itinerary.totals.travelMinutes)} travel · {formatCurrency(itinerary.totals.fare)} transport</p>
         </header>
         {itinerary.days.map((printDay) => (
@@ -368,11 +387,14 @@ export function ItineraryResults({
               <section key={stop.destination.id}>
                 <h3>{stop.number}. {minutesToTime(stop.arrivalMinutes)} — {stop.destination.name}</h3>
                 <p className="print-place-meta">{fixedStopMeta(stop, itinerary)}{stop.destination.duration ? ` · ${formatDuration(stop.destination.duration)}` : ""}</p>
-                {stop.stationary && stop.kind === "check-out" ? <p className="print-leg"><strong>Checkout reminder:</strong> You are already at your stay. Pack up, return the key if needed, and check out without rushing. We hope you enjoyed your stay in Baguio.</p> : <>
+                {isComfortStop(stop) ? <p className="print-leg"><strong>{stop.kind === "meal" ? "Protected meal time" : "Protected recovery time"}:</strong> {stop.destination.description}</p> : stop.stationary && stop.kind === "check-out" ? <p className="print-leg"><strong>Checkout reminder:</strong> You are already at your stay. Pack up, return the key if needed, and check out without rushing. We hope you enjoyed your stay in Baguio.</p> : <>
                   <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
+                  {stop.transport.bufferMinutes > 0 ? <p className="print-leg">Travel estimate includes {formatDuration(stop.transport.bufferMinutes)} for traffic/loading uncertainty.</p> : null}
+                  {stop.queueMinutes > 0 ? <p className="print-leg">Queue allowance: {formatDuration(stop.queueMinutes)}.</p> : null}
                   <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
                   <p className="print-map-link"><a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)}>Open this leg in Google Maps</a></p>
                 </>}
+                {stop.gapSuggestions?.length ? <ul>{stop.gapSuggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>)}</ul> : null}
               </section>
             ))}
             {printDay.index === itinerary.days.length - 1 ? <p className="print-farewell"><strong>Agyaman kami iti panagbisita yo ditoy Baguio. Agsubli kayo manen!</strong><br />Thank you for visiting Baguio. We hope to welcome you back again.</p> : null}

@@ -59,6 +59,7 @@ import type {
   CheckoutLuggagePlan,
   FinalDayPreference,
   LuggagePlan,
+  PacePreference,
   PlannerCategoryFilter,
   PlannerDestination,
   StartLocation,
@@ -100,6 +101,12 @@ const MODES: { value: TransportMode; icon: string; label: string }[] = [
   { value: "taxi", icon: "🚕", label: "Taxi" },
 ];
 
+const PACE_OPTIONS: { value: PacePreference; icon: string; label: string; description: string }[] = [
+  { value: "relaxed", icon: "🌿", label: "Relaxed", description: "Longer meals, more rest, and bigger traffic buffers" },
+  { value: "comfortable", icon: "☕", label: "Comfortable", description: "Balanced sightseeing with lunch and recovery time" },
+  { value: "packed", icon: "⚡", label: "Packed", description: "More stops, while still protecting meals and short breaks" },
+];
+
 type PlannerDraft = {
   startLocation?: string;
   tripDate?: string;
@@ -109,6 +116,7 @@ type PlannerDraft = {
   travelers?: string | number;
   selected?: string[];
   preference?: TravelPreference;
+  pace?: PacePreference;
   modes?: TransportMode[];
   autoPickTheme?: AutoPickTheme;
   stay?: {
@@ -140,6 +148,10 @@ function clamp(value: number, minimum: number, maximum: number) {
 
 function isTravelPreference(value: unknown): value is TravelPreference {
   return value === "balanced" || value === "cheapest" || value === "fastest" || value === "less-walking";
+}
+
+function isPacePreference(value: unknown): value is PacePreference {
+  return value === "relaxed" || value === "comfortable" || value === "packed";
 }
 
 function isTransportMode(value: unknown): value is TransportMode {
@@ -221,6 +233,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [checkoutLuggagePlan, setCheckoutLuggagePlan] = useState<CheckoutLuggagePlan>("unresolved");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [preference, setPreference] = useState<TravelPreference>(DEFAULT_PLANNER_SETTINGS.preference);
+  const [pace, setPace] = useState<PacePreference>(DEFAULT_PLANNER_SETTINGS.pace);
   const [modes, setModes] = useState<TransportMode[]>([...DEFAULT_PLANNER_SETTINGS.modes]);
   const [autoPickTheme, setAutoPickTheme] = useState<AutoPickTheme>(DEFAULT_PLANNER_SETTINGS.autoPickTheme);
   const [filter, setFilter] = useState<PlannerCategoryFilter>("All");
@@ -287,6 +300,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
         if (draft.travelers !== undefined) setTravelers(clamp(Number(draft.travelers) || 2, 1, 12));
         if (Array.isArray(draft.selected)) setSelectedIds(draft.selected.filter((id) => Boolean(getPlannerDestinationById(id))));
         if (isTravelPreference(draft.preference)) setPreference(draft.preference);
+        if (isPacePreference(draft.pace)) setPace(draft.pace);
         if (Array.isArray(draft.modes)) setModes(draft.modes.filter(isTransportMode));
         if (isAutoPickTheme(draft.autoPickTheme)) setAutoPickTheme(draft.autoPickTheme);
         if (draft.stay) {
@@ -326,6 +340,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           setTravelers(pending.travelers);
           setSelectedIds(pending.selectedDestinationIds.filter((id) => Boolean(getPlannerDestinationById(id))));
           setPreference(pending.preference);
+          setPace(isPacePreference(pending.pace) ? pending.pace : DEFAULT_PLANNER_SETTINGS.pace);
           setModes(pending.modes);
           if (pending.stay) {
             setIncludeStay(true);
@@ -362,9 +377,9 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
   useEffect(() => {
     if (!restored) return;
-    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, checkOutTime, finalDayPreference, departureLocationId, departureTime, arrivalLuggagePlan, checkoutLuggagePlan } };
+    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, pace, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, checkOutTime, finalDayPreference, departureLocationId, departureTime, arrivalLuggagePlan, checkoutLuggagePlan } };
     try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)); } catch { /* Storage is optional. */ }
-  }, [arrivalLuggagePlan, autoPickTheme, availableHours, checkInDay, checkInTime, checkOutTime, checkoutLuggagePlan, departureLocationId, departureTime, finalDayPreference, includeStay, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
+  }, [arrivalLuggagePlan, autoPickTheme, availableHours, checkInDay, checkInTime, checkOutTime, checkoutLuggagePlan, departureLocationId, departureTime, finalDayPreference, includeStay, modes, numberOfDays, pace, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
 
   useEffect(() => {
     setCheckInDay((current) => Math.min(current, numberOfDays - 1));
@@ -557,6 +572,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       travelers,
       modes,
       preference,
+      pace,
       startTime,
       ...(stay ? { stay } : {}),
       ...(departureLocation
@@ -635,6 +651,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       travelers: reviewResult.travelers,
       modes: reviewResult.modes,
       preference: reviewResult.preference,
+      pace: reviewResult.pace,
       fareSettings: reviewResult.fareSettings,
       startMinutes: reviewResult.startMinutes,
       ...(nextStay ? { stay: nextStay } : {}),
@@ -813,6 +830,11 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           <header className="planner-step-heading"><span>03</span><div><h2>Pick your travel style</h2><p>We will balance time, cost, walking, and convenience around this preference.</p></div></header>
 
           <div className="preference-grid-rich">{PREFERENCES.map((item) => <button type="button" key={item.value} aria-pressed={preference === item.value} className={preference === item.value ? "active" : ""} onClick={() => { setPreference(item.value); setSaved(false); }}><span>{item.icon}</span><strong>{item.label}</strong><small>{item.description}</small>{preference === item.value ? <i><Check size={13} /></i> : null}</button>)}</div>
+
+          <fieldset className="itinerary-pace-picker">
+            <legend><strong>How full should each day feel?</strong><span>Every option reserves meal time, queue allowances, and commute uncertainty.</span></legend>
+            <div>{PACE_OPTIONS.map((option) => <button type="button" key={option.value} aria-pressed={pace === option.value} className={pace === option.value ? "active" : ""} onClick={() => { setPace(option.value); setSaved(false); }}><span>{option.icon}</span><strong>{option.label}</strong><small>{option.description}</small>{pace === option.value ? <i><Check size={13} /></i> : null}</button>)}</div>
+          </fieldset>
 
           <fieldset className="transport-modes"><legend>Allowed transportation</legend><div>{MODES.map((mode) => <button type="button" key={mode.value} aria-pressed={modes.includes(mode.value)} className={modes.includes(mode.value) ? "active" : ""} onClick={() => toggleMode(mode.value)}><span>{mode.icon}</span>{mode.label}{modes.includes(mode.value) ? <Check size={13} /> : null}</button>)}</div></fieldset>
 

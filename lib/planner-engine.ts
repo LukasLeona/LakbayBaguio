@@ -12,6 +12,7 @@ import type {
   Coordinates,
   FareSettings,
   FinalDayPreference,
+  PacePreference,
   PlannerStay,
   PlannerArea,
   PlannerDestination,
@@ -66,6 +67,7 @@ export type PlannerRequest = {
   travelers: number;
   modes: readonly TransportMode[];
   preference: TravelPreference;
+  pace?: PacePreference;
   fareSettings?: Partial<FareSettings>;
   /** A 24-hour HH:mm value. Defaults to 08:00 when omitted. */
   startTime?: string;
@@ -105,6 +107,10 @@ export type PlannerValidationIssue = {
 
 export type PlannedTransport = {
   mode: TransportMode;
+  /** Travel estimate before the comfort/traffic allowance. */
+  baseMinutes: number;
+  /** Extra time reserved for traffic, loading, and minor route uncertainty. */
+  bufferMinutes: number;
   minutes: number;
   farePerPerson: number;
   vehicleFare: number;
@@ -115,18 +121,21 @@ export type PlannedTransport = {
 };
 
 export type PlannedStop = {
-  kind: "destination" | "check-in" | "check-out" | "bag-drop" | "bag-pickup" | "departure";
+  kind: "destination" | "meal" | "rest" | "check-in" | "check-out" | "bag-drop" | "bag-pickup" | "departure";
   number: number;
   destination: PlannerDestination;
   arrivalMinutes: number;
   departureMinutes: number;
   waitMinutes: number;
+  /** Time reserved before the visit for entrance lines or ticketing. */
+  queueMinutes: number;
   distance: number;
   transport: PlannedTransport;
   from: PlannerLocation;
   /** True when a fixed stop happens at the traveler's current property. */
   stationary?: true;
   eveningAddOn?: true;
+  gapSuggestions?: string[];
   placeMapUrl: string;
   mapPreviewUrl: string;
 };
@@ -161,6 +170,7 @@ export type PlannedItinerary = {
   start: PlannerStartLocation;
   days: PlannedDay[];
   preference: TravelPreference;
+  pace: PacePreference;
   travelers: number;
   modes: TransportMode[];
   fareSettings: FareSettings;
@@ -186,6 +196,7 @@ export type ItineraryMoveEvaluation = {
 type DayBuildOptions = {
   dayIndex: number;
   preference: TravelPreference;
+  pace: PacePreference;
   availableMinutes: number;
   travelers: number;
   modes: readonly TransportMode[];
@@ -198,7 +209,7 @@ type DayBuildOptions = {
 
 type TransportOptions = Pick<
   DayBuildOptions,
-  "preference" | "travelers" | "modes" | "fareSettings"
+  "preference" | "pace" | "travelers" | "modes" | "fareSettings"
 >;
 
 const VALID_PREFERENCES = new Set<TravelPreference>([
@@ -207,6 +218,63 @@ const VALID_PREFERENCES = new Set<TravelPreference>([
   "fastest",
   "less-walking",
 ]);
+const VALID_PACE_PREFERENCES = new Set<PacePreference>([
+  "relaxed",
+  "comfortable",
+  "packed",
+]);
+
+type PacePolicy = {
+  lunchMinutes: number;
+  restMinutes: number;
+  maxActiveMinutes: number;
+  queuePopularMinutes: number;
+  queueStandardMinutes: number;
+  travelBufferRatio: number;
+  travelBufferMinimum: number;
+  travelBufferMaximum: number;
+  dayCapacityReserve: number;
+};
+
+const PACE_POLICIES: Record<PacePreference, PacePolicy> = {
+  relaxed: {
+    lunchMinutes: 60,
+    restMinutes: 20,
+    maxActiveMinutes: 150,
+    queuePopularMinutes: 20,
+    queueStandardMinutes: 8,
+    travelBufferRatio: 0.25,
+    travelBufferMinimum: 7,
+    travelBufferMaximum: 20,
+    dayCapacityReserve: 105,
+  },
+  comfortable: {
+    lunchMinutes: 50,
+    restMinutes: 15,
+    maxActiveMinutes: 180,
+    queuePopularMinutes: 15,
+    queueStandardMinutes: 5,
+    travelBufferRatio: 0.18,
+    travelBufferMinimum: 5,
+    travelBufferMaximum: 15,
+    dayCapacityReserve: 80,
+  },
+  packed: {
+    lunchMinutes: 40,
+    restMinutes: 10,
+    maxActiveMinutes: 210,
+    queuePopularMinutes: 10,
+    queueStandardMinutes: 0,
+    travelBufferRatio: 0.12,
+    travelBufferMinimum: 3,
+    travelBufferMaximum: 10,
+    dayCapacityReserve: 55,
+  },
+};
+
+function resolvePacePreference(pace: PacePreference | undefined): PacePreference {
+  return pace && VALID_PACE_PREFERENCES.has(pace) ? pace : "comfortable";
+}
 
 const VALID_MODES = new Set<TransportMode>(["walk", "jeepney", "taxi"]);
 const VALID_FINAL_DAY_PREFERENCES = new Set<FinalDayPreference>([
@@ -374,6 +442,14 @@ export function validatePlannerRequest(
       field: "preference",
       code: "invalid",
       message: "Choose a valid travel preference.",
+    });
+  }
+
+  if (request?.pace !== undefined && !VALID_PACE_PREFERENCES.has(request.pace)) {
+    issues.push({
+      field: "pace",
+      code: "invalid",
+      message: "Choose a valid itinerary pace.",
     });
   }
 
@@ -595,6 +671,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
   const startMinutes = resolveStartMinutes(request);
   const fareSettings = mergeFareSettings(request.fareSettings);
   const modes = uniqueModes(request.modes);
+  const pace = resolvePacePreference(request.pace);
   const destinations = [...request.destinations];
   const deferredDestinationIds = [...new Set(request.deferredDestinationIds ?? [])]
     .filter((id) => destinations.some((destination) => destination.id === id));
@@ -608,6 +685,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     request.preference,
     startMinutes,
     request.stay,
+    pace,
   );
   const buckets = applyDayAssignments(
     automaticBuckets,
@@ -618,6 +696,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
 
   const dayOptions = {
     preference: request.preference,
+    pace,
     availableMinutes: request.availableMinutes,
     travelers: request.travelers,
     modes,
@@ -667,6 +746,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
       travelers: request.travelers,
       modes,
       preference: request.preference,
+      pace,
       fareSettings,
       startMinutes,
       stay: request.stay,
@@ -685,6 +765,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     start: request.start,
     days,
     preference: request.preference,
+    pace,
     travelers: request.travelers,
     modes,
     fareSettings,
@@ -770,7 +851,7 @@ function scheduledDestinationIds(itinerary: PlannedItinerary): Set<string> {
 
 function activeDayMinutes(day: PlannedDay): number {
   return day.items.reduce(
-    (total, item) => total + item.transport.minutes + item.destination.duration,
+    (total, item) => total + item.transport.minutes + item.queueMinutes + item.destination.duration,
     0,
   );
 }
@@ -836,6 +917,7 @@ export function evaluateItineraryMove(
     travelers: itinerary.travelers,
     modes: itinerary.modes,
     preference: itinerary.preference,
+    pace: itinerary.pace,
     fareSettings: itinerary.fareSettings,
     startMinutes: itinerary.startMinutes,
     ...(itinerary.stay ? { stay: itinerary.stay } : {}),
@@ -900,6 +982,7 @@ export function deferItineraryDestination(
     travelers: itinerary.travelers,
     modes: itinerary.modes,
     preference: itinerary.preference,
+    pace: itinerary.pace,
     fareSettings: itinerary.fareSettings,
     startMinutes: itinerary.startMinutes,
     ...(itinerary.stay ? { stay: itinerary.stay } : {}),
@@ -1106,6 +1189,7 @@ export function buildDayBuckets(
   preference: TravelPreference,
   startMinutes: number,
   stay?: PlannerStay,
+  pace: PacePreference = "comfortable",
 ): PlannerDestination[][] {
   const buckets = Array.from(
     { length: numberOfDays },
@@ -1137,7 +1221,10 @@ export function buildDayBuckets(
     regularStops.push(...atokStops);
   }
 
-  const targetPerDay = Math.max(180, availableMinutes - 45);
+  const targetPerDay = Math.max(
+    180,
+    availableMinutes - PACE_POLICIES[pace].dayCapacityReserve,
+  );
   const finalRegularDay =
     atokStops.length && numberOfDays > 1 && !protectedFinalDay
       ? numberOfDays - 2
@@ -1527,6 +1614,83 @@ function luggageStopDestination({
   };
 }
 
+function queueMinutesFor(
+  destination: PlannerDestination,
+  pace: PacePreference,
+): number {
+  if (destination.timeSlot === "night") {
+    return destination.popular ? PACE_POLICIES[pace].queuePopularMinutes : 0;
+  }
+  if (destination.category === "Stay") return 0;
+  return destination.popular
+    ? PACE_POLICIES[pace].queuePopularMinutes
+    : PACE_POLICIES[pace].queueStandardMinutes;
+}
+
+function comfortStopDestination({
+  kind,
+  location,
+  dayIndex,
+  sequence,
+  duration,
+  mealName = "Lunch and recharge",
+}: {
+  kind: "meal" | "rest";
+  location: PlannerLocation;
+  dayIndex: number;
+  sequence: number;
+  duration: number;
+  mealName?: string;
+}): PlannerDestination {
+  const meal = kind === "meal";
+  return {
+    id: `comfort-${dayIndex}-${kind}-${sequence}`,
+    name: meal ? mealName : "Short rest and reset",
+    area: location.area ?? "City Center",
+    duration,
+    open: "00:00",
+    close: "23:59",
+    category: meal ? "Food & shopping" : "Stay",
+    popular: false,
+    description: meal
+      ? "A protected meal window near the current route, with enough time to order, eat, and use the restroom without rushing."
+      : "A short recovery window for water, a restroom stop, and a seated breather before continuing.",
+    activities: meal
+      ? ["Choose a nearby place that matches your budget", "Eat without rushing", "Refill water and use the restroom"]
+      : ["Sit down for a few minutes", "Drink water", "Check the next route before leaving"],
+    tags: ["comfort", kind],
+    icon: meal ? "🍽️" : "☕",
+    image: "/assets/img/favicon.svg",
+    googleQuery: meal ? `restaurants near ${location.name}, Baguio` : location.googleQuery || location.name,
+    routeGuide: {
+      ...GENERIC_ROUTE_GUIDE,
+      modeLabel: meal ? "Meal break" : "Rest break",
+      loadingQuery: location.googleQuery || location.name,
+      signboard: `a safe public spot near ${location.name}`,
+      returnHint: "Keep the next saved route ready before continuing.",
+    },
+    scope: "Baguio City",
+    lat: location.lat,
+    lng: location.lng,
+  };
+}
+
+function suggestionsForProtectedGap(
+  location: PlannerLocation,
+  waitMinutes: number,
+): string[] {
+  const suggestions = [
+    `Have a slow meal or coffee near ${location.name}; stay close to the next fixed stop.`,
+    "Use the restroom, refill water, and recharge your phone or power bank.",
+  ];
+  if (waitMinutes >= 90) {
+    suggestions.push("Browse a nearby shop or souvenir stall, but leave a 15-minute return allowance.");
+  } else {
+    suggestions.push("Keep the remaining time open as a traffic and queue cushion.");
+  }
+  return suggestions;
+}
+
 export function buildDayItinerary(
   start: PlannerLocation,
   bucket: readonly PlannerDestination[],
@@ -1543,6 +1707,12 @@ export function buildDayItinerary(
   const notices: string[] = [];
   let current: PlannerLocation = start;
   let cursor = options.startMinutes;
+  const pacePolicy = PACE_POLICIES[options.pace];
+  const lunchWindowStart = 11 * 60 + 30;
+  const lunchWindowEnd = 13 * 60 + 30;
+  let lunchTaken = false;
+  let lastRecoveryAt = cursor;
+  let comfortSequence = 0;
   const dayEnd = options.startMinutes + options.availableMinutes;
   const stayDestination = options.checkInStay
     ? stayToDestination(options.checkInStay)
@@ -1572,6 +1742,53 @@ export function buildDayItinerary(
   let checkoutBagPickupTarget: number | null = null;
   let protectFinalDayFromSightseeing = false;
 
+  const appendComfortStop = (
+    kind: "meal" | "rest",
+    arrivalMinutes: number,
+    mealName?: string,
+  ) => {
+    const protectedWait = Math.max(0, arrivalMinutes - cursor);
+    const duration = kind === "meal" ? pacePolicy.lunchMinutes : pacePolicy.restMinutes;
+    const destination = comfortStopDestination({
+      kind,
+      location: current,
+      dayIndex: options.dayIndex,
+      sequence: comfortSequence,
+      duration,
+      mealName,
+    });
+    comfortSequence += 1;
+    const transport: PlannedTransport = {
+      mode: "walk",
+      baseMinutes: 0,
+      bufferMinutes: 0,
+      minutes: 0,
+      farePerPerson: 0,
+      vehicleFare: 0,
+      totalFare: 0,
+      instructions: [],
+      loadingMapUrl: null,
+      legMapUrl: googleSearchUrl(destination.googleQuery),
+    };
+    items.push(createPlannedStop({
+      kind,
+      destination,
+      from: current,
+      arrivalMinutes,
+      waitMinutes: protectedWait,
+      distance: 0,
+      transport,
+      number: items.length + 1,
+      stationary: true,
+      gapSuggestions: protectedWait >= 45
+        ? suggestionsForProtectedGap(current, protectedWait)
+        : undefined,
+    }));
+    cursor = arrivalMinutes + duration;
+    lastRecoveryAt = cursor;
+    if (kind === "meal" && mealName !== "Dinner and recharge") lunchTaken = true;
+  };
+
   const appendFixedStop = (
     kind: "check-in" | "check-out" | "bag-drop" | "bag-pickup" | "departure",
     destination: PlannerDestination,
@@ -1583,6 +1800,8 @@ export function buildDayItinerary(
     const transport = stationary
       ? {
           mode: "walk" as const,
+          baseMinutes: 0,
+          bufferMinutes: 0,
           minutes: 0,
           farePerPerson: 0,
           vehicleFare: 0,
@@ -1608,6 +1827,7 @@ export function buildDayItinerary(
       number: items.length + 1,
       placeMapUrl,
       stationary,
+      gapSuggestions: wait >= 45 ? suggestionsForProtectedGap(current, wait) : undefined,
     }));
     cursor = scheduledArrival + destination.duration;
     current = destination;
@@ -1702,34 +1922,74 @@ export function buildDayItinerary(
     deadline: number | null,
     deadlineAnchor: PlannerLocation | null = stayDestination,
   ) => {
-    const distance = haversineKm(current, destination);
-    const transport = chooseTransport(current, destination, distance, options);
-    const arrival = cursor + transport.minutes;
     const { open, close } = openingWindow(destination);
-    const scheduledArrival = Math.max(arrival, open);
-    const wait = Math.max(0, open - arrival);
-    const onwardMinutes = deadline !== null && deadlineAnchor
-      ? chooseTransport(
-          destination,
-          deadlineAnchor as PlannerDestination,
-          haversineKm(destination, deadlineAnchor),
-          options,
-        ).minutes
-      : 0;
-    const travelToDeparture = departureDestination
-      ? chooseTransport(
-          destination,
-          departureDestination,
-          haversineKm(destination, departureDestination),
-          options,
-        ).minutes
-      : 0;
+    const queueMinutes = queueMinutesFor(destination, options.pace);
+
+    const projectVisit = () => {
+      const distance = haversineKm(current, destination);
+      const transport = chooseTransport(current, destination, distance, options);
+      const arrival = cursor + transport.minutes;
+      const scheduledArrival = Math.max(arrival, open);
+      const onwardMinutes = deadline !== null && deadlineAnchor
+        ? chooseTransport(
+            destination,
+            deadlineAnchor as PlannerDestination,
+            haversineKm(destination, deadlineAnchor),
+            options,
+          ).minutes
+        : 0;
+      const travelToDeparture = departureDestination
+        ? chooseTransport(
+            destination,
+            departureDestination,
+            haversineKm(destination, departureDestination),
+            options,
+          ).minutes
+        : 0;
+      return {
+        distance,
+        transport,
+        arrival,
+        scheduledArrival,
+        onwardMinutes,
+        travelToDeparture,
+        finish: scheduledArrival + queueMinutes + destination.duration,
+      };
+    };
+
+    let projected = projectVisit();
+    const breakFits = (start: number, duration: number) => {
+      const shiftedArrival = Math.max(start + duration + projected.transport.minutes, open);
+      const shiftedFinish = shiftedArrival + queueMinutes + destination.duration;
+      return (
+        shiftedFinish <= close
+        && shiftedArrival <= dayEnd + 90
+        && (deadline === null || shiftedFinish + projected.onwardMinutes <= deadline + 15)
+        && (departureMinutes === null || shiftedFinish + projected.travelToDeparture <= departureMinutes - 30)
+      );
+    };
+
+    const shouldProtectLunch = !lunchTaken
+      && cursor >= lunchWindowStart
+      && cursor <= lunchWindowEnd + 30;
+    if (shouldProtectLunch && breakFits(cursor, pacePolicy.lunchMinutes)) {
+      appendComfortStop("meal", cursor);
+      projected = projectVisit();
+    } else if (
+      cursor - lastRecoveryAt >= pacePolicy.maxActiveMinutes
+      && breakFits(cursor, pacePolicy.restMinutes)
+    ) {
+      appendComfortStop("rest", cursor);
+      projected = projectVisit();
+    }
+
+    const wait = Math.max(0, open - projected.arrival);
 
     if (
-      scheduledArrival + destination.duration > close ||
-      scheduledArrival > dayEnd + 90 ||
-      (deadline !== null && scheduledArrival + destination.duration + onwardMinutes > deadline + 15) ||
-      (departureMinutes !== null && scheduledArrival + destination.duration + travelToDeparture > departureMinutes - 30)
+      projected.finish > close ||
+      projected.scheduledArrival > dayEnd + 90 ||
+      (deadline !== null && projected.finish + projected.onwardMinutes > deadline + 15) ||
+      (departureMinutes !== null && projected.finish + projected.travelToDeparture > departureMinutes - 30)
     ) {
       unscheduled.push(destination);
       return false;
@@ -1738,13 +1998,15 @@ export function buildDayItinerary(
     items.push(createPlannedStop({
       destination,
       from: current,
-      arrivalMinutes: scheduledArrival,
+      arrivalMinutes: projected.scheduledArrival,
       waitMinutes: wait,
-      distance,
-      transport,
+      queueMinutes,
+      distance: projected.distance,
+      transport: projected.transport,
       number: items.length + 1,
+      gapSuggestions: wait >= 45 ? suggestionsForProtectedGap(current, wait) : undefined,
     }));
-    cursor = scheduledArrival + destination.duration;
+    cursor = projected.finish;
     current = destination;
     return true;
   };
@@ -1825,6 +2087,39 @@ export function buildDayItinerary(
     ));
   }
 
+  const scheduledAttractions = items.filter((item) => item.kind === "destination").length;
+  const nextFixedLimit = Math.min(
+    dayEnd + 90,
+    checkoutBagPickupTarget ?? Number.POSITIVE_INFINITY,
+    departureMinutes === null ? Number.POSITIVE_INFINITY : departureMinutes - 30,
+  );
+  if (
+    scheduledAttractions > 0
+    && !lunchTaken
+    && options.startMinutes <= lunchWindowEnd
+    && cursor <= 15 * 60
+    && Math.max(cursor, lunchWindowStart) + pacePolicy.lunchMinutes <= nextFixedLimit
+  ) {
+    appendComfortStop(
+      "meal",
+      Math.max(cursor, lunchWindowStart),
+      cursor > lunchWindowEnd ? "Late lunch and recharge" : undefined,
+    );
+  }
+
+  const eveningFixedLimit = Math.min(
+    checkoutBagPickupTarget ?? Number.POSITIVE_INFINITY,
+    departureMinutes === null ? Number.POSITIVE_INFINITY : departureMinutes - 30,
+  );
+  if (
+    nightStops.length > 0
+    && scheduledAttractions > 0
+    && cursor <= 19 * 60
+    && Math.max(cursor, 18 * 60) + pacePolicy.lunchMinutes <= eveningFixedLimit
+  ) {
+    appendComfortStop("meal", Math.max(cursor, 18 * 60), "Dinner and recharge");
+  }
+
   nightStops.forEach((destination) => {
     if (protectFinalDayFromSightseeing) {
       unscheduled.push(destination);
@@ -1841,6 +2136,8 @@ export function buildDayItinerary(
     const { open, close } = openingWindow(destination);
     const scheduledArrival = Math.max(afterTravel, open);
     const wait = Math.max(0, scheduledArrival - afterTravel);
+    const queueMinutes = queueMinutesFor(destination, options.pace);
+    const finish = scheduledArrival + queueMinutes + destination.duration;
     const travelToDeparture = departureDestination
       ? chooseTransport(
           destination,
@@ -1859,9 +2156,9 @@ export function buildDayItinerary(
       : 0;
 
     if (
-      scheduledArrival + destination.duration > close ||
-      (checkoutBagPickupTarget !== null && scheduledArrival + destination.duration + travelToBagPickup > checkoutBagPickupTarget + 15) ||
-      (departureMinutes !== null && scheduledArrival + destination.duration + travelToDeparture > departureMinutes - 30)
+      finish > close ||
+      (checkoutBagPickupTarget !== null && finish + travelToBagPickup > checkoutBagPickupTarget + 15) ||
+      (departureMinutes !== null && finish + travelToDeparture > departureMinutes - 30)
     ) {
       unscheduled.push(destination);
       notices.push(
@@ -1884,13 +2181,15 @@ export function buildDayItinerary(
         from: current,
         arrivalMinutes: scheduledArrival,
         waitMinutes: wait,
+        queueMinutes,
         distance,
         transport,
         number: items.length + 1,
         eveningAddOn: true,
+        gapSuggestions: wait >= 45 ? suggestionsForProtectedGap(current, wait) : undefined,
       }),
     );
-    cursor = scheduledArrival + destination.duration;
+    cursor = finish;
     current = destination;
   });
 
@@ -2003,7 +2302,18 @@ export function chooseTransport(
     mode = "jeepney";
   }
 
-  const minutes = estimateTravelMinutes(distance, mode);
+  const baseMinutes = estimateTravelMinutes(distance, mode);
+  const pacePolicy = PACE_POLICIES[options.pace];
+  const bufferMinutes = distance < 0.05
+    ? 0
+    : Math.min(
+        pacePolicy.travelBufferMaximum,
+        Math.max(
+          mode === "walk" ? Math.min(2, pacePolicy.travelBufferMinimum) : pacePolicy.travelBufferMinimum,
+          Math.round(baseMinutes * pacePolicy.travelBufferRatio * (mode === "walk" ? 0.5 : 1)),
+        ),
+      );
+  const minutes = baseMinutes + bufferMinutes;
   const farePerPerson =
     mode === "jeepney"
       ? calculateJeepneyFare(distance, options.fareSettings)
@@ -2020,6 +2330,8 @@ export function chooseTransport(
 
   return {
     mode,
+    baseMinutes,
+    bufferMinutes,
     minutes,
     farePerPerson: roundMoney(farePerPerson),
     vehicleFare: roundMoney(vehicleFare),
@@ -2174,6 +2486,7 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     `Starting point: ${itinerary.start.name}`,
     `Date: ${itinerary.date ? formatTripDate(itinerary.date) : "Not specified"}`,
     `Days: ${itinerary.numberOfDays}`,
+    `Pace: ${itinerary.pace === "relaxed" ? "Relaxed" : itinerary.pace === "packed" ? "Packed" : "Comfortable"} (meal, rest, queue, and commute allowances included)`,
     `Scheduled stops: ${itinerary.totals.scheduledStops}`,
     `Estimated travel: ${formatDuration(itinerary.totals.travelMinutes)}`,
     `Estimated transport: ${formatCurrency(itinerary.totals.fare)}`,
@@ -2198,12 +2511,20 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     day.notices.forEach((notice) => lines.push(`Note: ${notice}`));
     day.items.forEach((item, index) => {
       lines.push(
-        `${index + 1}. ${minutesToTime(item.arrivalMinutes)} - ${item.destination.name}${item.kind === "check-in" ? " (fixed check-in)" : item.kind === "check-out" ? " (fixed checkout)" : item.kind === "bag-drop" ? " (luggage handoff)" : item.kind === "bag-pickup" ? " (luggage pickup)" : item.kind === "departure" ? " (departure)" : ""}`,
+        `${index + 1}. ${minutesToTime(item.arrivalMinutes)} - ${item.destination.name}${item.kind === "meal" ? " (protected meal break)" : item.kind === "rest" ? " (protected recovery break)" : item.kind === "check-in" ? " (fixed check-in)" : item.kind === "check-out" ? " (fixed checkout)" : item.kind === "bag-drop" ? " (luggage handoff)" : item.kind === "bag-pickup" ? " (luggage pickup)" : item.kind === "departure" ? " (departure)" : ""}`,
       );
-      lines.push(item.stationary && item.kind === "check-out"
+      lines.push(item.kind === "meal" || item.kind === "rest"
+        ? `   ${item.destination.description}`
+        : item.stationary && item.kind === "check-out"
         ? "   Checkout reminder: You are already at your stay. Pack up, return the key if needed, and check out without rushing."
         : `   ${transportLabel(item.transport.mode)} from ${item.from.name}, about ${formatDuration(item.transport.minutes)} (${item.distance.toFixed(1)} km est.).`,
       );
+      if (item.transport.bufferMinutes > 0) {
+        lines.push(`   Travel allowance: ${formatDuration(item.transport.baseMinutes)} typical + ${formatDuration(item.transport.bufferMinutes)} for traffic/loading.`);
+      }
+      if (item.queueMinutes > 0) {
+        lines.push(`   Queue allowance: ${formatDuration(item.queueMinutes)}.`);
+      }
       if (item.transport.mode !== "walk") {
         const fare =
           item.transport.mode === "jeepney"
@@ -2217,6 +2538,7 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
       if (item.destination.activities?.length) {
         lines.push(`   Try: ${item.destination.activities.join("; ")}`);
       }
+      item.gapSuggestions?.forEach((suggestion) => lines.push(`   Gap option: ${suggestion}`));
     });
     if (!day.items.length) {
       lines.push("No selected stops fit this day's schedule.");
@@ -2337,8 +2659,10 @@ function createPlannedStop({
   eveningAddOn,
   placeMapUrl,
   stationary,
+  queueMinutes = 0,
+  gapSuggestions,
 }: {
-  kind?: "destination" | "check-in" | "check-out" | "bag-drop" | "bag-pickup" | "departure";
+  kind?: PlannedStop["kind"];
   destination: PlannerDestination;
   from: PlannerLocation;
   arrivalMinutes: number;
@@ -2349,19 +2673,23 @@ function createPlannedStop({
   eveningAddOn?: true;
   placeMapUrl?: string;
   stationary?: boolean;
+  queueMinutes?: number;
+  gapSuggestions?: string[];
 }): PlannedStop {
   return {
     kind,
     number,
     destination,
     arrivalMinutes,
-    departureMinutes: arrivalMinutes + destination.duration,
+    departureMinutes: arrivalMinutes + queueMinutes + destination.duration,
     waitMinutes,
+    queueMinutes,
     distance,
     transport,
     from,
     ...(stationary ? { stationary: true as const } : {}),
     ...(eveningAddOn ? { eveningAddOn } : {}),
+    ...(gapSuggestions?.length ? { gapSuggestions } : {}),
     placeMapUrl: placeMapUrl ?? googleSearchUrl(destination.googleQuery || destination.name),
     mapPreviewUrl: googleMapEmbedUrl(
       destination.googleQuery || destination.name,

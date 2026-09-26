@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   Check,
   Clock3,
+  Coffee,
   GripVertical,
   LoaderCircle,
   MapPin,
@@ -14,6 +15,7 @@ import {
   Pencil,
   Route,
   Trash2,
+  Utensils,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -53,6 +55,8 @@ type MoveFeedback = {
 };
 
 function stopLabel(stop: PlannedStop) {
+  if (stop.kind === "meal") return "Protected meal break";
+  if (stop.kind === "rest") return "Recovery break";
   if (stop.kind === "check-in") return "Check-in";
   if (stop.kind === "check-out") return "Checkout";
   if (stop.kind === "departure") return "Departure";
@@ -62,6 +66,8 @@ function stopLabel(stop: PlannedStop) {
 }
 
 function stopIcon(stop: PlannedStop) {
+  if (stop.kind === "meal") return <Utensils size={14} />;
+  if (stop.kind === "rest") return <Coffee size={14} />;
   if (stop.kind === "check-in" || stop.kind === "check-out") return <BedDouble size={14} />;
   if (stop.kind === "departure") return <Route size={14} />;
   if (stop.kind === "bag-drop" || stop.kind === "bag-pickup") return <BaggageClaim size={14} />;
@@ -207,6 +213,11 @@ export function ItineraryReviewDialog({
           <div><strong>Your luggage route is accounted for</strong><span><b>Before check-in:</b> {arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))}</span><span><b>After checkout:</b> {checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}</span></div>
         </section> : null}
 
+        <section className="review-pace-plan" aria-label="Itinerary pacing safeguards">
+          <Clock3 />
+          <div><strong>{itinerary.pace === "relaxed" ? "Relaxed" : itinerary.pace === "packed" ? "Packed" : "Comfortable"} pace is built into the schedule</strong><span>Meal and recovery blocks are real agenda time. Attraction queues and traffic/loading allowances are included before deciding what fits.</span></div>
+        </section>
+
         <div className={`review-move-guide ${moving ? "active" : ""}`}>
           <GripVertical />
           <div>
@@ -223,6 +234,8 @@ export function ItineraryReviewDialog({
         <div className="review-day-grid">
           {itinerary.days.map((day) => {
             const areas = [...new Set(day.items.filter((item) => item.kind === "destination").map((item) => item.destination.area))];
+            const placeCount = day.items.filter((item) => item.kind === "destination").length;
+            const comfortCount = day.items.filter((item) => item.kind === "meal" || item.kind === "rest").length;
             const moveOption = moveOptions[day.index];
             return (
               <article
@@ -232,7 +245,7 @@ export function ItineraryReviewDialog({
                 onDrop={(event) => { event.preventDefault(); finishMove(day.index); }}
               >
                 <header>
-                  <div><small>DAY {day.index + 1}</small><strong>{day.items.length} agenda {day.items.length === 1 ? "item" : "items"}</strong></div>
+                  <div><small>DAY {day.index + 1}</small><strong>{placeCount} {placeCount === 1 ? "place" : "places"}{comfortCount ? ` · ${comfortCount} comfort ${comfortCount === 1 ? "break" : "breaks"}` : ""}</strong></div>
                   <div className="review-day-meta">
                     <span><Clock3 size={13} /> {minutesToTime(day.startMinutes)}–{minutesToTime(day.endMinutes)}</span>
                     {moving ? (
