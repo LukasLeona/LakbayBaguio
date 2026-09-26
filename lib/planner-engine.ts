@@ -7,6 +7,8 @@
  */
 
 import type {
+  ArrivalLuggagePlan,
+  CheckoutLuggagePlan,
   Coordinates,
   FareSettings,
   FinalDayPreference,
@@ -113,7 +115,7 @@ export type PlannedTransport = {
 };
 
 export type PlannedStop = {
-  kind: "destination" | "check-in" | "check-out" | "departure";
+  kind: "destination" | "check-in" | "check-out" | "bag-drop" | "bag-pickup" | "departure";
   number: number;
   destination: PlannerDestination;
   arrivalMinutes: number;
@@ -213,6 +215,27 @@ const VALID_FINAL_DAY_PREFERENCES = new Set<FinalDayPreference>([
   "easy-stop",
   "sightseeing",
 ]);
+const VALID_ARRIVAL_LUGGAGE_PLANS = new Set<ArrivalLuggagePlan>([
+  "unresolved",
+  "property-drop",
+  "terminal-storage",
+  "carry",
+]);
+const VALID_CHECKOUT_LUGGAGE_PLANS = new Set<CheckoutLuggagePlan>([
+  "unresolved",
+  "property-storage",
+  "departure-storage",
+  "carry",
+]);
+
+export function getArrivalLuggagePlan(stay: PlannerStay): ArrivalLuggagePlan {
+  return stay.arrivalLuggagePlan
+    ?? (stay.luggagePlan === "property-drop" ? "property-drop" : "carry");
+}
+
+export function getCheckoutLuggagePlan(stay: PlannerStay): CheckoutLuggagePlan {
+  return stay.checkoutLuggagePlan ?? "carry";
+}
 
 const GENERIC_ROUTE_GUIDE: PlannerRouteGuide = {
   modeLabel: "Local jeepney",
@@ -405,6 +428,8 @@ export function validatePlannerRequest(
 
   if (request?.stay) {
     const stay = request.stay;
+    const arrivalLuggagePlan = getArrivalLuggagePlan(stay);
+    const checkoutLuggagePlan = getCheckoutLuggagePlan(stay);
     validateLocation(stay, "stay", issues);
 
     if (stay.kind !== "hotel" && stay.kind !== "airbnb") {
@@ -478,11 +503,30 @@ export function validatePlannerRequest(
         message: "Choose how you want to spend your final day.",
       });
     }
-    if (stay.luggagePlan !== "carry" && stay.luggagePlan !== "property-drop") {
+    if (!VALID_ARRIVAL_LUGGAGE_PLANS.has(arrivalLuggagePlan)) {
       issues.push({
-        field: "stay.luggagePlan",
+        field: "stay.arrivalLuggagePlan",
         code: "invalid",
-        message: "Choose how you plan to handle luggage before check-in.",
+        message: "Choose a confirmed luggage plan for the hours before check-in.",
+      });
+    } else if (arrivalLuggagePlan === "unresolved") {
+      issues.push({
+        field: "stay.arrivalLuggagePlan",
+        code: "required",
+        message: "Confirm where your bags will be before check-in. We will not route you through attractions with an unresolved luggage plan.",
+      });
+    }
+    if (!VALID_CHECKOUT_LUGGAGE_PLANS.has(checkoutLuggagePlan)) {
+      issues.push({
+        field: "stay.checkoutLuggagePlan",
+        code: "invalid",
+        message: "Choose a confirmed luggage plan for the hours after checkout.",
+      });
+    } else if (checkoutLuggagePlan === "unresolved") {
+      issues.push({
+        field: "stay.checkoutLuggagePlan",
+        code: "required",
+        message: "Confirm where your bags will be after checkout before generating the route.",
       });
     }
   }
@@ -510,6 +554,21 @@ export function validatePlannerRequest(
         message: "Departure time must use HH:mm format.",
       });
     }
+  }
+
+  if (request?.stay && getArrivalLuggagePlan(request.stay) === "terminal-storage" && !request.start.terminal) {
+    issues.push({
+      field: "stay.arrivalLuggagePlan",
+      code: "invalid",
+      message: "Arrival-terminal storage is only available when your selected starting point is a terminal.",
+    });
+  }
+  if (request?.stay && getCheckoutLuggagePlan(request.stay) === "departure-storage" && !request.departure) {
+    issues.push({
+      field: "stay.checkoutLuggagePlan",
+      code: "invalid",
+      message: "Choose a final departure point before using departure-terminal luggage storage.",
+    });
   }
 
   const fares = mergeFareSettings(request?.fareSettings);
@@ -1374,12 +1433,12 @@ function estimateAnchoredRouteMinutes(
 function partitionAroundCheckIn(
   start: PlannerLocation,
   destinations: readonly PlannerDestination[],
-  stay: PlannerStay,
+  anchor: PlannerLocation,
   startMinutes: number,
-  checkInMinutes: number,
+  deadlineMinutes: number,
 ): { before: PlannerDestination[]; after: PlannerDestination[] } {
   if (!destinations.length) return { before: [], after: [] };
-  const budget = Math.max(0, checkInMinutes - startMinutes - 15);
+  const budget = Math.max(0, deadlineMinutes - startMinutes - 15);
   const groups = new Map<PlannerArea, PlannerDestination[]>();
   destinations.forEach((destination) => {
     const group = groups.get(destination.area) ?? [];
@@ -1388,26 +1447,26 @@ function partitionAroundCheckIn(
   });
 
   const candidates = [...groups.values()].map((group) => {
-    const route = optimizeRouteToAnchor(start, group, stay);
-    const minutes = estimateAnchoredRouteMinutes(start, route, stay);
+    const route = optimizeRouteToAnchor(start, group, anchor);
+    const minutes = estimateAnchoredRouteMinutes(start, route, anchor);
     const centroid = destinationCentroid(group, group[0].area);
     return {
       route,
       minutes,
-      score: minutes + haversineKm(centroid, stay) * 10,
+      score: minutes + haversineKm(centroid, anchor) * 10,
     };
   }).filter((candidate) => candidate.minutes <= budget);
 
   let before = candidates.sort((first, second) => second.score - first.score)[0]?.route ?? [];
   if (!before.length) {
-    const fallback = optimizeRouteToAnchor(start, destinations, stay);
+    const fallback = optimizeRouteToAnchor(start, destinations, anchor);
     let used = 0;
     let current = start;
     before = fallback.filter((destination) => {
       const next = used
         + estimateTravelMinutes(haversineKm(current, destination), "taxi")
         + destination.duration
-        + estimateTravelMinutes(haversineKm(destination, stay), "taxi");
+        + estimateTravelMinutes(haversineKm(destination, anchor), "taxi");
       if (next > budget) return false;
       used += estimateTravelMinutes(haversineKm(current, destination), "taxi")
         + destination.duration;
@@ -1420,6 +1479,51 @@ function partitionAroundCheckIn(
   return {
     before,
     after: destinations.filter((destination) => !beforeIds.has(destination.id)),
+  };
+}
+
+function luggageStopDestination({
+  id,
+  name,
+  location,
+  action,
+}: {
+  id: string;
+  name: string;
+  location: PlannerLocation;
+  action: "drop" | "pickup";
+}): PlannerDestination {
+  const dropping = action === "drop";
+  return {
+    id,
+    name,
+    area: location.area ?? "City Center",
+    duration: dropping ? 15 : 10,
+    open: "00:00",
+    close: "23:59",
+    category: "Stay",
+    popular: false,
+    description: dropping
+      ? "Hand over your luggage only after the storage arrangement is confirmed, keep the claim stub, and carry valuables with you."
+      : "Return for your stored luggage, check every bag, and allow time for the next transfer.",
+    activities: dropping
+      ? ["Confirm the storage counter or front desk accepts the bags", "Keep valuables and travel documents with you", "Save the claim stub or contact number"]
+      : ["Present the claim stub", "Count and inspect every bag", "Keep the next ticket and route ready"],
+    tags: ["luggage", action],
+    icon: dropping ? "🧳" : "🎒",
+    image: "/assets/img/favicon.svg",
+    googleQuery: location.googleQuery || location.name,
+    routeGuide: {
+      ...GENERIC_ROUTE_GUIDE,
+      modeLabel: dropping ? "Luggage drop-off" : "Luggage pickup",
+      loadingQuery: location.googleQuery || location.name,
+      signboard: `the route closest to ${location.name}`,
+      returnHint: "Keep the saved pin and storage claim details available.",
+    },
+    scope: "Baguio City",
+    alight: `Show the driver the saved pin for ${location.name}.`,
+    lat: location.lat,
+    lng: location.lng,
   };
 }
 
@@ -1458,15 +1562,24 @@ export function buildDayItinerary(
   const departureMinutes = options.departure?.time
     ? (parseTimeToMinutes(options.departure.time) ?? null)
     : null;
+  const arrivalLuggagePlan = options.checkInStay
+    ? getArrivalLuggagePlan(options.checkInStay)
+    : null;
+  const checkoutLuggagePlan = options.checkOutStay
+    ? getCheckoutLuggagePlan(options.checkOutStay)
+    : null;
+  let checkoutBagAnchor: PlannerDestination | null = null;
+  let checkoutBagPickupTarget: number | null = null;
+  let protectFinalDayFromSightseeing = false;
 
   const appendFixedStop = (
-    kind: "check-in" | "check-out" | "departure",
+    kind: "check-in" | "check-out" | "bag-drop" | "bag-pickup" | "departure",
     destination: PlannerDestination,
     fixedMinutes: number | null,
     placeMapUrl?: string,
   ) => {
     const distance = haversineKm(current, destination);
-    const stationary = kind === "check-out" && distance < 0.05;
+    const stationary = kind !== "departure" && distance < 0.05;
     const transport = stationary
       ? {
           mode: "walk" as const,
@@ -1516,6 +1629,47 @@ export function buildDayItinerary(
     if (arrival > checkoutMinutes + 10) {
       notices.push("Checkout may run late; shorten the morning before leaving the property.");
     }
+
+    if (checkoutLuggagePlan === "carry") {
+      protectFinalDayFromSightseeing = true;
+      notices.push("You chose to keep your luggage after checkout, so sightseeing is held out of the route. Continue to your departure point or choose verified storage to add stops safely.");
+    } else if (checkoutLuggagePlan === "property-storage") {
+      checkoutBagAnchor = luggageStopDestination({
+        id: `${options.checkOutStay.id}-bags-after-checkout`,
+        name: `Leave bags at ${options.checkOutStay.name}`,
+        location: options.checkOutStay,
+        action: "drop",
+      });
+      appendFixedStop("bag-drop", checkoutBagAnchor, null, options.checkOutStay.googleMapsUrl);
+      notices.push(`The route records a confirmed luggage handoff at ${options.checkOutStay.name} and returns there before the final transfer.`);
+    } else if (checkoutLuggagePlan === "departure-storage" && departureDestination && options.departure) {
+      checkoutBagAnchor = luggageStopDestination({
+        id: `${options.departure.location.id}-bags-after-checkout`,
+        name: `Store bags at ${options.departure.location.name}`,
+        location: options.departure.location,
+        action: "drop",
+      });
+      appendFixedStop(
+        "bag-drop",
+        checkoutBagAnchor,
+        null,
+        googleSearchUrl(options.departure.location.googleQuery || options.departure.location.name),
+      );
+      notices.push(`The final-day route goes to ${options.departure.location.name} first for the luggage handoff, then returns before departure.`);
+    }
+
+    if (checkoutBagAnchor && departureDestination && departureMinutes !== null) {
+      const anchorToDeparture = chooseTransport(
+        checkoutBagAnchor,
+        departureDestination,
+        haversineKm(checkoutBagAnchor, departureDestination),
+        options,
+      ).minutes;
+      checkoutBagPickupTarget = Math.max(
+        cursor,
+        departureMinutes - 30 - anchorToDeparture - 10,
+      );
+    }
   }
 
   const appendStayCheckIn = () => {
@@ -1546,6 +1700,7 @@ export function buildDayItinerary(
   const scheduleDestination = (
     destination: PlannerDestination,
     deadline: number | null,
+    deadlineAnchor: PlannerLocation | null = stayDestination,
   ) => {
     const distance = haversineKm(current, destination);
     const transport = chooseTransport(current, destination, distance, options);
@@ -1553,11 +1708,11 @@ export function buildDayItinerary(
     const { open, close } = openingWindow(destination);
     const scheduledArrival = Math.max(arrival, open);
     const wait = Math.max(0, open - arrival);
-    const onwardMinutes = deadline !== null && stayDestination
+    const onwardMinutes = deadline !== null && deadlineAnchor
       ? chooseTransport(
           destination,
-          stayDestination,
-          haversineKm(destination, stayDestination),
+          deadlineAnchor as PlannerDestination,
+          haversineKm(destination, deadlineAnchor),
           options,
         ).minutes
       : 0;
@@ -1595,35 +1750,86 @@ export function buildDayItinerary(
   };
 
   if (stayDestination && options.checkInStay && checkInMinutes !== null) {
-    const partition = partitionAroundCheckIn(
-      start,
-      daytime,
-      options.checkInStay,
-      options.startMinutes,
-      checkInMinutes,
-    );
-    partition.before.forEach((destination) => {
-      scheduleDestination(destination, checkInMinutes);
-    });
-    appendStayCheckIn();
-    const postCheckIn = optimizeRoute(
-      current,
-      partition.after,
-      options.preference,
-      cursor,
-    );
-    postCheckIn.forEach((destination) => scheduleDestination(destination, null));
+    if (arrivalLuggagePlan === "property-drop") {
+      const propertyDrop = luggageStopDestination({
+        id: `${options.checkInStay.id}-early-bag-drop`,
+        name: `Leave bags at ${options.checkInStay.name}`,
+        location: options.checkInStay,
+        action: "drop",
+      });
+      appendFixedStop("bag-drop", propertyDrop, null, options.checkInStay.googleMapsUrl);
+      const partition = partitionAroundCheckIn(
+        current,
+        daytime,
+        options.checkInStay,
+        cursor,
+        checkInMinutes,
+      );
+      partition.before.forEach((destination) => {
+        scheduleDestination(destination, checkInMinutes, options.checkInStay ?? null);
+      });
+      appendStayCheckIn();
+      const postCheckIn = optimizeRoute(current, partition.after, options.preference, cursor);
+      postCheckIn.forEach((destination) => scheduleDestination(destination, null));
+      notices.push(`The day starts with the confirmed early luggage handoff at ${options.checkInStay.name}; valuables should stay with you.`);
+    } else if (arrivalLuggagePlan === "terminal-storage") {
+      const terminalDrop = luggageStopDestination({
+        id: `${options.dayIndex}-arrival-terminal-bag-drop`,
+        name: `Store bags at ${start.name}`,
+        location: start,
+        action: "drop",
+      });
+      appendFixedStop("bag-drop", terminalDrop, null, googleSearchUrl(start.googleQuery || start.name));
+      const terminalPickup = luggageStopDestination({
+        id: `${options.dayIndex}-arrival-terminal-bag-pickup`,
+        name: `Collect bags at ${start.name}`,
+        location: start,
+        action: "pickup",
+      });
+      const terminalToStay = chooseTransport(
+        terminalPickup,
+        stayDestination,
+        haversineKm(terminalPickup, stayDestination),
+        options,
+      ).minutes;
+      const pickupTarget = Math.max(cursor, checkInMinutes - terminalToStay - terminalPickup.duration);
+      const partition = partitionAroundCheckIn(
+        current,
+        daytime,
+        terminalPickup,
+        cursor,
+        pickupTarget,
+      );
+      partition.before.forEach((destination) => {
+        scheduleDestination(destination, pickupTarget, terminalPickup);
+      });
+      appendFixedStop("bag-pickup", terminalPickup, pickupTarget, googleSearchUrl(start.googleQuery || start.name));
+      appendStayCheckIn();
+      const postCheckIn = optimizeRoute(current, partition.after, options.preference, cursor);
+      postCheckIn.forEach((destination) => scheduleDestination(destination, null));
+      notices.push(`The route returns to ${start.name} for the bags before check-in. Use this only after the terminal confirms storage.`);
+    } else {
+      appendStayCheckIn();
+      const postCheckIn = optimizeRoute(current, daytime, options.preference, cursor);
+      postCheckIn.forEach((destination) => scheduleDestination(destination, null));
+      notices.push("You chose to keep your luggage, so sightseeing starts only after check-in.");
+    }
+  } else if (protectFinalDayFromSightseeing) {
+    unscheduled.push(...daytime);
   } else {
-    const ordered = optimizeRoute(
-      current,
-      daytime,
-      options.preference,
-      cursor,
-    );
-    ordered.forEach((destination) => scheduleDestination(destination, null));
+    const ordered = optimizeRoute(current, daytime, options.preference, cursor);
+    ordered.forEach((destination) => scheduleDestination(
+      destination,
+      checkoutBagPickupTarget,
+      checkoutBagAnchor,
+    ));
   }
 
   nightStops.forEach((destination) => {
+    if (protectFinalDayFromSightseeing) {
+      unscheduled.push(destination);
+      return;
+    }
     const distance = haversineKm(current, destination);
     const transport = chooseTransport(
       current,
@@ -1643,9 +1849,18 @@ export function buildDayItinerary(
           options,
         ).minutes
       : 0;
+    const travelToBagPickup = checkoutBagAnchor
+      ? chooseTransport(
+          destination,
+          checkoutBagAnchor,
+          haversineKm(destination, checkoutBagAnchor),
+          options,
+        ).minutes
+      : 0;
 
     if (
       scheduledArrival + destination.duration > close ||
+      (checkoutBagPickupTarget !== null && scheduledArrival + destination.duration + travelToBagPickup > checkoutBagPickupTarget + 15) ||
       (departureMinutes !== null && scheduledArrival + destination.duration + travelToDeparture > departureMinutes - 30)
     ) {
       unscheduled.push(destination);
@@ -1678,6 +1893,23 @@ export function buildDayItinerary(
     cursor = scheduledArrival + destination.duration;
     current = destination;
   });
+
+  if (checkoutBagAnchor) {
+    const pickup = luggageStopDestination({
+      id: `${checkoutBagAnchor.id}-pickup`,
+      name: checkoutBagAnchor.name
+        .replace(/^Leave bags at /, "Collect bags at ")
+        .replace(/^Store bags at /, "Collect bags at "),
+      location: checkoutBagAnchor,
+      action: "pickup",
+    });
+    appendFixedStop(
+      "bag-pickup",
+      pickup,
+      checkoutBagPickupTarget,
+      googleSearchUrl(checkoutBagAnchor.googleQuery || checkoutBagAnchor.name),
+    );
+  }
 
   if (departureDestination && options.departure) {
     const arrivalTarget = departureMinutes === null
@@ -1905,7 +2137,7 @@ export function buildDayRouteUrls(
   day: Pick<PlannedDay, "items">,
 ): string[] {
   const routeItems = day.items.filter(
-    (item) => !(item.kind === "check-out" && item.distance < 0.05),
+    (item) => !item.stationary,
   );
   if (!routeItems.length) {
     return [googleSearchUrl(start.googleQuery || start.name)];
@@ -1946,7 +2178,11 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     `Estimated travel: ${formatDuration(itinerary.totals.travelMinutes)}`,
     `Estimated transport: ${formatCurrency(itinerary.totals.fare)}`,
     ...(itinerary.stay
-      ? [`Stay: ${itinerary.stay.name} (${itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"}), check-in Day ${itinerary.stay.checkInDay + 1} at ${minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)}, checkout Day ${(itinerary.stay.checkOutDay ?? itinerary.numberOfDays - 1) + 1} at ${minutesToTime(parseTimeToMinutes(itinerary.stay.checkOutTime || "11:00") ?? 660)}`]
+      ? [
+          `Stay: ${itinerary.stay.name} (${itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"}), check-in Day ${itinerary.stay.checkInDay + 1} at ${minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)}, checkout Day ${(itinerary.stay.checkOutDay ?? itinerary.numberOfDays - 1) + 1} at ${minutesToTime(parseTimeToMinutes(itinerary.stay.checkOutTime || "11:00") ?? 660)}`,
+          `Luggage before check-in: ${arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))}`,
+          `Luggage after checkout: ${checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}`,
+        ]
       : []),
     ...(itinerary.departure
       ? [`Departure: ${itinerary.departure.location.name}${itinerary.departure.time ? ` at ${minutesToTime(parseTimeToMinutes(itinerary.departure.time) ?? 0)}` : ""}`]
@@ -1962,9 +2198,9 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     day.notices.forEach((notice) => lines.push(`Note: ${notice}`));
     day.items.forEach((item, index) => {
       lines.push(
-        `${index + 1}. ${minutesToTime(item.arrivalMinutes)} - ${item.destination.name}${item.kind === "check-in" ? " (fixed check-in)" : item.kind === "check-out" ? " (fixed checkout)" : item.kind === "departure" ? " (departure)" : ""}`,
+        `${index + 1}. ${minutesToTime(item.arrivalMinutes)} - ${item.destination.name}${item.kind === "check-in" ? " (fixed check-in)" : item.kind === "check-out" ? " (fixed checkout)" : item.kind === "bag-drop" ? " (luggage handoff)" : item.kind === "bag-pickup" ? " (luggage pickup)" : item.kind === "departure" ? " (departure)" : ""}`,
       );
-      lines.push(item.stationary
+      lines.push(item.stationary && item.kind === "check-out"
         ? "   Checkout reminder: You are already at your stay. Pack up, return the key if needed, and check out without rushing."
         : `   ${transportLabel(item.transport.mode)} from ${item.from.name}, about ${formatDuration(item.transport.minutes)} (${item.distance.toFixed(1)} km est.).`,
       );
@@ -2075,6 +2311,20 @@ export function transportLabel(mode: TransportMode): string {
   return "Taxi";
 }
 
+export function arrivalLuggagePlanLabel(plan: ArrivalLuggagePlan): string {
+  if (plan === "property-drop") return "Confirmed early drop at the accommodation";
+  if (plan === "terminal-storage") return "Confirmed storage at the arrival terminal";
+  if (plan === "carry") return "Keep bags; sightseeing starts after check-in";
+  return "Not confirmed";
+}
+
+export function checkoutLuggagePlanLabel(plan: CheckoutLuggagePlan): string {
+  if (plan === "property-storage") return "Store at the accommodation and return for pickup";
+  if (plan === "departure-storage") return "Store at the departure terminal and return for pickup";
+  if (plan === "carry") return "Keep bags; no sightseeing after checkout";
+  return "Not confirmed";
+}
+
 function createPlannedStop({
   kind = "destination",
   destination,
@@ -2088,7 +2338,7 @@ function createPlannedStop({
   placeMapUrl,
   stationary,
 }: {
-  kind?: "destination" | "check-in" | "check-out" | "departure";
+  kind?: "destination" | "check-in" | "check-out" | "bag-drop" | "bag-pickup" | "departure";
   destination: PlannerDestination;
   from: PlannerLocation;
   arrivalMinutes: number;
@@ -2168,7 +2418,7 @@ function stayToDestination(stay: PlannerStay): PlannerDestination {
     popular: false,
     description: `Check in at your ${isHotel ? "hotel" : "Airbnb"}, settle your luggage, and take a short breather before the next stop.`,
     activities:
-      stay.luggagePlan === "property-drop"
+      getArrivalLuggagePlan(stay) === "property-drop"
         ? ["Confirm the early luggage arrangement", "Keep valuables with you", "Save the host or front-desk contact"]
         : ["Complete check-in", "Leave luggage securely", "Save the host or front-desk contact"],
     tags: ["stay", "check-in", stay.kind],

@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  BaggageClaim,
   BedDouble,
   BusFront,
   CalendarDays,
@@ -27,12 +28,16 @@ import { useState } from "react";
 import { ItineraryShareDialog } from "@/components/itinerary-share-dialog";
 import { getPlannerStartLocationById } from "@/lib/planner-data";
 import {
+  arrivalLuggagePlanLabel,
   buildDayRouteUrls,
+  checkoutLuggagePlanLabel,
   formatCurrency,
   formatDayDate,
   formatDuration,
   formatTripDate,
   googleDirectionsUrl,
+  getArrivalLuggagePlan,
+  getCheckoutLuggagePlan,
   itineraryToText,
   minutesToTime,
   parseTimeToMinutes,
@@ -73,6 +78,8 @@ function fixedStopLabel(stop: PlannedStop) {
   if (stop.kind === "check-in") return "Check in";
   if (stop.kind === "check-out") return "Checkout";
   if (stop.kind === "departure") return "Departure";
+  if (stop.kind === "bag-drop") return "Bag drop";
+  if (stop.kind === "bag-pickup") return "Bag pickup";
   return "Visit";
 }
 
@@ -80,6 +87,8 @@ function fixedStopMeta(stop: PlannedStop, itinerary: PlannedItinerary) {
   if (stop.kind === "check-in") return `${itinerary.stay?.kind === "airbnb" ? "Airbnb" : "Hotel"} · Fixed check-in`;
   if (stop.kind === "check-out") return `${itinerary.stay?.kind === "airbnb" ? "Airbnb" : "Hotel"} · Fixed checkout`;
   if (stop.kind === "departure") return "Final transfer · Departure point";
+  if (stop.kind === "bag-drop") return "Confirmed luggage handoff";
+  if (stop.kind === "bag-pickup") return "Return for stored luggage";
   return `${stop.destination.area} · ${stop.destination.category}`;
 }
 
@@ -241,9 +250,9 @@ export function ItineraryResults({
           {day?.items.length ? (
             <div className="route-timeline-rich">
               {day.items.map((stop) => (
-                <article className={`route-stop-rich ${stop.kind === "check-in" || stop.kind === "check-out" ? "stay-check-in-stop" : stop.kind === "departure" ? "departure-stop" : ""}`} key={`${day.index}-${stop.destination.id}`}>
+                <article className={`route-stop-rich ${stop.kind === "check-in" || stop.kind === "check-out" ? "stay-check-in-stop" : stop.kind === "bag-drop" || stop.kind === "bag-pickup" ? "luggage-route-stop" : stop.kind === "departure" ? "departure-stop" : ""}`} key={`${day.index}-${stop.destination.id}`}>
                   <div className="route-stop-time">{minutesToTime(stop.arrivalMinutes)}</div>
-                  <div className="route-stop-marker">{stop.kind !== "destination" ? (stop.kind === "departure" ? <Route size={15} aria-hidden="true" /> : <BedDouble size={15} aria-hidden="true" />) : stop.number}</div>
+                  <div className="route-stop-marker">{stop.kind !== "destination" ? (stop.kind === "departure" ? <Route size={15} aria-hidden="true" /> : stop.kind === "bag-drop" || stop.kind === "bag-pickup" ? <BaggageClaim size={15} aria-hidden="true" /> : <BedDouble size={15} aria-hidden="true" />) : stop.number}</div>
                   <div className="route-stop-content">
                     <header>
                       <div>
@@ -254,7 +263,7 @@ export function ItineraryResults({
                     </header>
                     <p className="stop-description">{stop.destination.description}</p>
 
-                    {stop.stationary ? <section className="checkout-reminder-card" aria-label={`Checkout reminder for ${stop.destination.name}`}>
+                    {stop.stationary && stop.kind === "check-out" ? <section className="checkout-reminder-card" aria-label={`Checkout reminder for ${stop.destination.name}`}>
                       <span className="checkout-reminder-icon"><Clock3 /></span>
                       <div>
                         <strong>Checkout reminder</strong>
@@ -282,7 +291,7 @@ export function ItineraryResults({
                     </section>}
 
                     <section className="stop-ideas">
-                      <strong>{stop.kind !== "destination" ? <BedDouble size={15} /> : <Lightbulb size={15} />} {stop.kind === "check-in" ? "Check-in checklist" : stop.kind === "check-out" ? "Checkout checklist" : stop.kind === "departure" ? "Before leaving Baguio" : "Make the most of this stop"}</strong>
+                      <strong>{stop.kind === "bag-drop" || stop.kind === "bag-pickup" ? <BaggageClaim size={15} /> : stop.kind !== "destination" ? <BedDouble size={15} /> : <Lightbulb size={15} />} {stop.kind === "check-in" ? "Check-in checklist" : stop.kind === "check-out" ? "Checkout checklist" : stop.kind === "bag-drop" ? "Safe handoff checklist" : stop.kind === "bag-pickup" ? "Before leaving storage" : stop.kind === "departure" ? "Before leaving Baguio" : "Make the most of this stop"}</strong>
                       <ul>{stop.destination.activities.map((activity) => <li key={activity}>{activity}</li>)}</ul>
                     </section>
                   </div>
@@ -348,7 +357,7 @@ export function ItineraryResults({
           <div className="print-brand"><img src="/assets/img/favicon.svg" alt="" /><strong>Baguio Buddy</strong><span>{variant === "shared" ? "Shared route" : "Personal itinerary"}</span></div>
           <h1>{itinerary.title}</h1>
           <p>Starting point: {canonicalStart.name}</p>
-          {itinerary.stay ? <p>Stay: {itinerary.stay.name} · {itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"} · Check-in Day {itinerary.stay.checkInDay + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)} · Checkout Day {(itinerary.stay.checkOutDay ?? itinerary.numberOfDays - 1) + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkOutTime || "11:00") ?? 660)}</p> : null}
+          {itinerary.stay ? <><p>Stay: {itinerary.stay.name} · {itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"} · Check-in Day {itinerary.stay.checkInDay + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)} · Checkout Day {(itinerary.stay.checkOutDay ?? itinerary.numberOfDays - 1) + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkOutTime || "11:00") ?? 660)}</p><p>Luggage: {arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))} · {checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}</p></> : null}
           <p>{itinerary.date ? `Trip date: ${formatTripDate(itinerary.date)} · ` : ""}{itinerary.totals.scheduledStops} stops · {formatDuration(itinerary.totals.travelMinutes)} travel · {formatCurrency(itinerary.totals.fare)} transport</p>
         </header>
         {itinerary.days.map((printDay) => (
@@ -359,7 +368,7 @@ export function ItineraryResults({
               <section key={stop.destination.id}>
                 <h3>{stop.number}. {minutesToTime(stop.arrivalMinutes)} — {stop.destination.name}</h3>
                 <p className="print-place-meta">{fixedStopMeta(stop, itinerary)}{stop.destination.duration ? ` · ${formatDuration(stop.destination.duration)}` : ""}</p>
-                {stop.stationary ? <p className="print-leg"><strong>Checkout reminder:</strong> You are already at your stay. Pack up, return the key if needed, and check out without rushing. We hope you enjoyed your stay in Baguio.</p> : <>
+                {stop.stationary && stop.kind === "check-out" ? <p className="print-leg"><strong>Checkout reminder:</strong> You are already at your stay. Pack up, return the key if needed, and check out without rushing. We hope you enjoyed your stay in Baguio.</p> : <>
                   <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
                   <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
                   <p className="print-map-link"><a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)}>Open this leg in Google Maps</a></p>

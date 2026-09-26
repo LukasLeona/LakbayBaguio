@@ -54,7 +54,9 @@ import {
   type PlannerRequest,
 } from "@/lib/planner-engine";
 import type {
+  ArrivalLuggagePlan,
   AutoPickTheme,
+  CheckoutLuggagePlan,
   FinalDayPreference,
   LuggagePlan,
   PlannerCategoryFilter,
@@ -120,7 +122,9 @@ type PlannerDraft = {
     finalDayPreference: FinalDayPreference;
     departureLocationId: string;
     departureTime: string;
-    luggagePlan: LuggagePlan;
+    arrivalLuggagePlan?: ArrivalLuggagePlan;
+    checkoutLuggagePlan?: CheckoutLuggagePlan;
+    luggagePlan?: LuggagePlan;
   };
 };
 
@@ -213,7 +217,8 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [finalDayPreference, setFinalDayPreference] = useState<FinalDayPreference>("relax");
   const [departureLocationId, setDepartureLocationId] = useState("");
   const [departureTime, setDepartureTime] = useState("");
-  const [luggagePlan, setLuggagePlan] = useState<LuggagePlan>("carry");
+  const [arrivalLuggagePlan, setArrivalLuggagePlan] = useState<ArrivalLuggagePlan>("unresolved");
+  const [checkoutLuggagePlan, setCheckoutLuggagePlan] = useState<CheckoutLuggagePlan>("unresolved");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [preference, setPreference] = useState<TravelPreference>(DEFAULT_PLANNER_SETTINGS.preference);
   const [modes, setModes] = useState<TransportMode[]>([...DEFAULT_PLANNER_SETTINGS.modes]);
@@ -295,7 +300,14 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           if (isFinalDayPreference(draft.stay.finalDayPreference)) setFinalDayPreference(draft.stay.finalDayPreference);
           if (typeof draft.stay.departureLocationId === "string") setDepartureLocationId(draft.stay.departureLocationId);
           if (typeof draft.stay.departureTime === "string") setDepartureTime(draft.stay.departureTime);
-          if (draft.stay.luggagePlan === "carry" || draft.stay.luggagePlan === "property-drop") setLuggagePlan(draft.stay.luggagePlan);
+          if (["unresolved", "property-drop", "terminal-storage", "carry"].includes(draft.stay.arrivalLuggagePlan ?? "")) {
+            setArrivalLuggagePlan(draft.stay.arrivalLuggagePlan as ArrivalLuggagePlan);
+          } else if (draft.stay.luggagePlan === "carry" || draft.stay.luggagePlan === "property-drop") {
+            setArrivalLuggagePlan(draft.stay.luggagePlan);
+          }
+          if (["unresolved", "property-storage", "departure-storage", "carry"].includes(draft.stay.checkoutLuggagePlan ?? "")) {
+            setCheckoutLuggagePlan(draft.stay.checkoutLuggagePlan as CheckoutLuggagePlan);
+          }
         }
       }
 
@@ -324,7 +336,8 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
             setCheckInTime(pending.stay.checkInTime);
             setCheckOutTime(pending.stay.checkOutTime || "");
             setFinalDayPreference(pending.stay.finalDayPreference || "relax");
-            setLuggagePlan(pending.stay.luggagePlan);
+            setArrivalLuggagePlan(pending.stay.arrivalLuggagePlan ?? (pending.stay.luggagePlan === "property-drop" ? "property-drop" : "carry"));
+            setCheckoutLuggagePlan(pending.stay.checkoutLuggagePlan ?? "carry");
           }
           if (pending.departure) {
             setDepartureLocationId(pending.departure.location.id);
@@ -349,9 +362,9 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
   useEffect(() => {
     if (!restored) return;
-    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, checkOutTime, finalDayPreference, departureLocationId, departureTime, luggagePlan } };
+    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, checkOutTime, finalDayPreference, departureLocationId, departureTime, arrivalLuggagePlan, checkoutLuggagePlan } };
     try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)); } catch { /* Storage is optional. */ }
-  }, [autoPickTheme, availableHours, checkInDay, checkInTime, checkOutTime, departureLocationId, departureTime, finalDayPreference, includeStay, luggagePlan, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
+  }, [arrivalLuggagePlan, autoPickTheme, availableHours, checkInDay, checkInTime, checkOutTime, checkoutLuggagePlan, departureLocationId, departureTime, finalDayPreference, includeStay, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
 
   useEffect(() => {
     setCheckInDay((current) => Math.min(current, numberOfDays - 1));
@@ -514,7 +527,8 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           checkOutDay: numberOfDays - 1,
           checkOutTime,
           finalDayPreference,
-          luggagePlan,
+          arrivalLuggagePlan,
+          checkoutLuggagePlan,
         });
       } catch (stayError) {
         setGenerating(false);
@@ -747,7 +761,34 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                 <label className="planner-field"><span>Final departure point <small>optional</small></span><select value={departureLocationId} onChange={(event) => setDepartureLocationId(event.target.value)}><option value="">Not decided yet</option>{PLANNER_START_LOCATIONS.map((location) => <option value={location.id} key={location.id}>{location.name}</option>)}</select></label>
                 <label className="planner-field"><span>Bus / departure time <small>optional</small></span><input type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} disabled={!departureLocationId} /></label>
               </div>
-              <label className="stay-luggage-choice"><input type="checkbox" checked={luggagePlan === "property-drop"} onChange={(event) => setLuggagePlan(event.target.checked ? "property-drop" : "carry")} /><span><strong>I can leave my bags at the property before check-in</strong><small>We will still remind you to confirm this arrangement.</small></span></label>
+              <section className="luggage-plan-section" aria-labelledby="arrival-luggage-title">
+                <header><span><BaggageClaim size={18} /></span><div><strong id="arrival-luggage-title">Where will your bags be before check-in?</strong><small>This changes the route. Only choose storage you have confirmed.</small></div></header>
+                <div className="luggage-plan-grid">
+                  {([
+                    ["property-drop", "Accommodation", "Early bag drop is confirmed. We will go there first."],
+                    ["terminal-storage", "Arrival terminal", selectedStart.terminal ? `Storage at ${selectedStart.name} is confirmed.` : "Choose a terminal starting point to use this."],
+                    ["carry", "Keep my bags", "Sightseeing will start only after check-in."],
+                    ["unresolved", "Not sure yet", "The itinerary stays blocked until this is resolved."],
+                  ] as const).map(([value, label, description]) => {
+                    const disabled = value === "terminal-storage" && !selectedStart.terminal;
+                    return <button type="button" key={value} disabled={disabled} aria-pressed={arrivalLuggagePlan === value} className={arrivalLuggagePlan === value ? "active" : ""} onClick={() => setArrivalLuggagePlan(value)}><strong>{label}</strong><small>{description}</small>{arrivalLuggagePlan === value ? <Check size={14} /> : null}</button>;
+                  })}
+                </div>
+              </section>
+              <section className="luggage-plan-section" aria-labelledby="checkout-luggage-title">
+                <header><span><BaggageClaim size={18} /></span><div><strong id="checkout-luggage-title">Where will your bags be after checkout?</strong><small>Storage plans include the return trip to collect every bag.</small></div></header>
+                <div className="luggage-plan-grid">
+                  {([
+                    ["property-storage", "Accommodation", "Storage is confirmed; return here before leaving Baguio."],
+                    ["departure-storage", "Departure terminal", departureLocationId ? "Terminal storage is confirmed; go there first and return before boarding." : "Choose a departure point to use this."],
+                    ["carry", "Keep my bags", "No sightseeing will be scheduled after checkout."],
+                    ["unresolved", "Not sure yet", "The itinerary stays blocked until this is resolved."],
+                  ] as const).map(([value, label, description]) => {
+                    const disabled = value === "departure-storage" && !departureLocationId;
+                    return <button type="button" key={value} disabled={disabled} aria-pressed={checkoutLuggagePlan === value} className={checkoutLuggagePlan === value ? "active" : ""} onClick={() => setCheckoutLuggagePlan(value)}><strong>{label}</strong><small>{description}</small>{checkoutLuggagePlan === value ? <Check size={14} /> : null}</button>;
+                  })}
+                </div>
+              </section>
               {stayMapsUrl ? <p className={`stay-map-status ${stayMapState === "verified" ? "valid" : stayMapState === "checking" ? "checking" : "invalid"}`} aria-live="polite">{stayMapState === "checking" ? <><LoaderCircle className="spin" size={14} /> Checking the exact Google Maps place…</> : stayMapState === "verified" && currentVerifiedStay ? <><Check size={14} /> {currentVerifiedStay.name} — exact pin confirmed.</> : <>{stayMapError || "Paste the exact place or Share link from Google Maps."}</>}</p> : <p className="stay-map-help"><MapPin size={14} /> Find the property in Google Maps, tap Share, then paste its link here.</p>}
             </div> : null}
           </section>

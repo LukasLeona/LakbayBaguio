@@ -1,6 +1,7 @@
 import type {
+  ArrivalLuggagePlan,
+  CheckoutLuggagePlan,
   FinalDayPreference,
-  LuggagePlan,
   PlannerStay,
   StayKind,
   StayLocationPrecision,
@@ -139,7 +140,8 @@ export function createPlannerStay(input: {
   checkOutDay: number;
   checkOutTime: string;
   finalDayPreference: FinalDayPreference;
-  luggagePlan: LuggagePlan;
+  arrivalLuggagePlan: ArrivalLuggagePlan;
+  checkoutLuggagePlan: CheckoutLuggagePlan;
 }): PlannerStay {
   const parsed = parseGoogleMapsPlaceUrl(input.googleMapsUrl);
   if (!parsed) throw new Error("Paste a valid Google Maps place or share link for your stay.");
@@ -160,7 +162,8 @@ export function createPlannerStay(input: {
     checkOutDay: input.checkOutDay,
     checkOutTime: input.checkOutTime,
     finalDayPreference: input.finalDayPreference,
-    luggagePlan: input.luggagePlan,
+    arrivalLuggagePlan: input.arrivalLuggagePlan,
+    checkoutLuggagePlan: input.checkoutLuggagePlan,
     lat: parsed.lat as number,
     lng: parsed.lng as number,
     locationPrecision: parsed.locationPrecision,

@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  BaggageClaim,
   BedDouble,
   CalendarCheck,
   Check,
@@ -18,7 +19,11 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, PointerEvent as ReactPointerEvent } from "react";
 import {
+  arrivalLuggagePlanLabel,
+  checkoutLuggagePlanLabel,
   formatDuration,
+  getArrivalLuggagePlan,
+  getCheckoutLuggagePlan,
   minutesToTime,
   type ItineraryMoveEvaluation,
   type PlannedItinerary,
@@ -51,12 +56,15 @@ function stopLabel(stop: PlannedStop) {
   if (stop.kind === "check-in") return "Check-in";
   if (stop.kind === "check-out") return "Checkout";
   if (stop.kind === "departure") return "Departure";
+  if (stop.kind === "bag-drop") return "Luggage drop-off";
+  if (stop.kind === "bag-pickup") return "Luggage pickup";
   return stop.destination.area;
 }
 
 function stopIcon(stop: PlannedStop) {
   if (stop.kind === "check-in" || stop.kind === "check-out") return <BedDouble size={14} />;
   if (stop.kind === "departure") return <Route size={14} />;
+  if (stop.kind === "bag-drop" || stop.kind === "bag-pickup") return <BaggageClaim size={14} />;
   return <MapPin size={14} />;
 }
 
@@ -193,6 +201,11 @@ export function ItineraryReviewDialog({
                 : "Nearby places stay together, and fixed hotel times divide the route into practical segments."}</p>
           </div>
         </div>
+
+        {itinerary.stay ? <section className="review-luggage-plan" aria-label="Confirmed luggage plan">
+          <BaggageClaim />
+          <div><strong>Your luggage route is accounted for</strong><span><b>Before check-in:</b> {arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))}</span><span><b>After checkout:</b> {checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}</span></div>
+        </section> : null}
 
         <div className={`review-move-guide ${moving ? "active" : ""}`}>
           <GripVertical />

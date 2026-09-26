@@ -44,7 +44,18 @@ export type TravelPreference = "balanced" | "cheapest" | "fastest" | "less-walki
 export type TransportMode = "walk" | "jeepney" | "taxi";
 export type StayKind = "hotel" | "airbnb";
 export type StayLocationPrecision = "pin" | "approximate";
+/** Kept for reading planner drafts created before the luggage-safety update. */
 export type LuggagePlan = "carry" | "property-drop";
+export type ArrivalLuggagePlan =
+  | "unresolved"
+  | "property-drop"
+  | "terminal-storage"
+  | "carry";
+export type CheckoutLuggagePlan =
+  | "unresolved"
+  | "property-storage"
+  | "departure-storage"
+  | "carry";
 export type FinalDayPreference =
   | "relax"
   | "pasalubong"
@@ -113,7 +124,12 @@ export interface PlannerStay extends Coordinates {
   /** Local 24-hour time in HH:mm format. */
   readonly checkOutTime: string;
   readonly finalDayPreference: FinalDayPreference;
-  readonly luggagePlan: LuggagePlan;
+  /** How bags are handled before the fixed check-in time. */
+  readonly arrivalLuggagePlan: ArrivalLuggagePlan;
+  /** How bags are handled after the fixed checkout time. */
+  readonly checkoutLuggagePlan: CheckoutLuggagePlan;
+  /** Legacy value retained so previously saved itineraries still render. */
+  readonly luggagePlan?: LuggagePlan;
   readonly locationPrecision: StayLocationPrecision;
 }
 
