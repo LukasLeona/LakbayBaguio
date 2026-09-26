@@ -2385,6 +2385,22 @@ export function buildDirections(
   to: PlannerDestination,
   mode: TransportMode,
 ): string[] {
+  if (mode === "walk" && from.id === "mines-view-park" && to.id === "good-shepherd") {
+    return [
+      "Leave Mines View Park through its public visitor entrance on Outlook Drive South.",
+      "Open the exact walking leg and follow the public route toward Gibraltar Road; avoid vendor or property shortcuts.",
+      "Enter through the pinned Good Shepherd main visitor entrance—the general convent listing is not the navigation target.",
+    ];
+  }
+
+  if (mode === "walk" && from.id === "good-shepherd" && to.id === "mines-view-park") {
+    return [
+      "Leave through the pinned Good Shepherd main visitor entrance on Gibraltar Road.",
+      "Open the exact walking leg and stay on the public route toward Outlook Drive South.",
+      "Continue to the pinned Mines View Park public visitor entrance.",
+    ];
+  }
+
   if (mode === "walk") {
     return [
       `Start from ${from.name} and open the walking route in Google Maps.`,
