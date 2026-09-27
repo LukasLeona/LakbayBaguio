@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { PLANNER_DESTINATIONS, PLANNER_START_LOCATIONS } from "../lib/planner-data";
 import { getVerifiedWalkingCorridor, summarizeRouteTerrain } from "../lib/geoapify-routing";
 import { resolveFarePolicy, resolveFareProfile } from "../lib/fare-policy";
+import { completeEastBaguioCoreLoop, EAST_BAGUIO_CORE_LOOP_IDS } from "../lib/planner-recommendations";
 import { routeEstimateKey } from "../lib/route-estimates";
 import {
   buildDayRouteUrls,
@@ -51,6 +52,16 @@ assert.ok(octoberItinerary.totals.fareMinimum < octoberItinerary.totals.fareMaxi
 assert.match(itineraryToText(octoberItinerary), /safe budget uses the modern-jeepney ceiling/);
 assert.match(itineraryToText(octoberItinerary), /Up to/);
 assert.match(itineraryToText(octoberItinerary), /Effective September 28, 2026/);
+
+const botanicalGarden = PLANNER_DESTINATIONS.find(({ id }) => id === "botanical-garden");
+assert.ok(botanicalGarden);
+const eastBaguioLoop = completeEastBaguioCoreLoop([botanicalGarden], PLANNER_DESTINATIONS);
+assert.deepEqual(
+  eastBaguioLoop.destinations.map(({ id }) => id).sort(),
+  [...EAST_BAGUIO_CORE_LOOP_IDS].sort(),
+  "Selecting one East Baguio anchor should propose the complete core loop",
+);
+assert.equal(eastBaguioLoop.suggestedIds.length, 3);
 
 assert.notEqual(
   routeEstimateKey({ lat: 16.411, lng: 120.591 }, { lat: 16.421, lng: 120.625 }, "walk"),

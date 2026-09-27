@@ -24,7 +24,7 @@ type ContactState = "idle" | "sending" | "success" | "error";
 const faqs = [
   {
     question: "How does the itinerary generator work?",
-    answer: "Choose your starting point, dates, pace, destinations, and transport preferences. Baguio Buddy arranges them into a practical route with estimated travel time, fares, directions, and suggested activities.",
+    answer: "Choose your starting point, dates, destinations, travel style, and transport options. Baguio Buddy arranges them into a practical route with estimated travel time, fares, directions, automatic pacing safeguards, and suggested activities.",
   },
   {
     question: "Are fares and travel times guaranteed?",

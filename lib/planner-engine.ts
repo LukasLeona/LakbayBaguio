@@ -30,6 +30,7 @@ import {
   type FarePolicyVersion,
 } from "@/lib/fare-policy";
 import { isSupportedGoogleMapsUrl } from "@/lib/google-maps-place";
+import { isEastBaguioCoreLoopDestination } from "@/lib/planner-recommendations";
 import {
   findRouteEstimate,
   routeCoordinates,
@@ -104,6 +105,8 @@ export type PlannerRequest = {
   dayAssignments?: PlannerDayAssignments;
   /** Places intentionally held outside the route while the user reviews it. */
   deferredDestinationIds?: readonly string[];
+  /** Nearby places proposed by Buddy rather than explicitly selected. */
+  suggestedDestinationIds?: readonly string[];
   /** Server-resolved road and walking measurements keyed by directional coordinates. */
   routeEstimates?: PlannerRouteEstimates;
 };
@@ -245,6 +248,7 @@ export type PlannedItinerary = {
   startMinutes: number;
   selectedCount: number;
   selectedDestinationIds: string[];
+  suggestedDestinationIds?: string[];
   deferredDestinationIds?: string[];
   stay?: PlannerStay;
   departure?: PlannerDeparture;
@@ -849,6 +853,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
       departure: request.departure,
       dayAssignments: request.dayAssignments,
       deferredDestinationIds,
+      suggestedDestinationIds: request.suggestedDestinationIds,
       routeEstimateKeys: Object.keys(request.routeEstimates ?? {}).sort(),
     }),
   );
@@ -874,6 +879,9 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     startMinutes,
     selectedCount: destinations.length,
     selectedDestinationIds: destinations.map((destination) => destination.id),
+    ...(request.suggestedDestinationIds?.length
+      ? { suggestedDestinationIds: request.suggestedDestinationIds.filter((id) => destinations.some((destination) => destination.id === id)) }
+      : {}),
     ...(deferredDestinationIds.length ? { deferredDestinationIds } : {}),
     ...(request.stay ? { stay: request.stay } : {}),
     ...(request.departure ? { departure: request.departure } : {}),
@@ -1040,6 +1048,7 @@ export function evaluateItineraryMove(
     ...(itinerary.departure ? { departure: itinerary.departure } : {}),
     dayAssignments: assignments,
     deferredDestinationIds: itinerary.deferredDestinationIds?.filter((id) => id !== destinationId),
+    suggestedDestinationIds: itinerary.suggestedDestinationIds,
     routeEstimates: itinerary.routeEstimates,
   });
   const nextTargetDay = next.days[targetDayIndex];
@@ -1110,6 +1119,7 @@ export function deferItineraryDestination(
       ...(itinerary.deferredDestinationIds ?? []),
       destinationId,
     ])],
+    suggestedDestinationIds: itinerary.suggestedDestinationIds,
     routeEstimates: itinerary.routeEstimates,
   });
 }
@@ -1296,7 +1306,9 @@ function rebalanceBucketCounts(
     const candidates = buckets[fullest].filter(
       (destination) =>
         destination.timeSlot !== "night" &&
-        destination.area !== "Atok Side Trip",
+        destination.area !== "Atok Side Trip" &&
+        (!isEastBaguioCoreLoopDestination(destination)
+          || buckets[fullest].filter(isEastBaguioCoreLoopDestination).length < 2),
     );
     if (!candidates.length) return;
 
@@ -2934,7 +2946,7 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     ...terminalIdentityTextLines(itinerary.start, "Starting terminal"),
     `Date: ${itinerary.date ? formatTripDate(itinerary.date) : "Not specified"}`,
     `Days: ${itinerary.numberOfDays}`,
-    `Pace: ${itinerary.pace === "relaxed" ? "Relaxed" : itinerary.pace === "packed" ? "Packed" : "Comfortable"} (meal, rest, queue, and commute allowances included)`,
+    "Pacing safeguards: automatic (meal, rest, queue, and commute allowances included)",
     `Scheduled stops: ${itinerary.totals.scheduledStops}`,
     `Estimated travel: ${formatDuration(itinerary.totals.travelMinutes)}`,
     `Estimated transport: ${totalFareText}`,
