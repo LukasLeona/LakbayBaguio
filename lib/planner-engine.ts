@@ -267,6 +267,8 @@ export type ItineraryMoveEvaluation = {
 
 type DayBuildOptions = {
   dayIndex: number;
+  /** Auto-packed sightseeing target used for the middle day of a three-day trip. */
+  minimumDestinationTarget?: number;
   preference: TravelPreference;
   pace: PacePreference;
   availableMinutes: number;
@@ -810,9 +812,14 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
 
   const buildDaysWithoutRoutes = (dayBuckets: readonly PlannerDestination[][]) =>
     dayBuckets.map((bucket, dayIndex) => {
+      const daytimeCount = bucket.filter((destination) => destination.timeSlot !== "night").length;
+      const middleDayTarget = request.numberOfDays === 3 && dayIndex === 1 && daytimeCount >= 4
+        ? Math.min(5, daytimeCount)
+        : 0;
       const day = buildDayItinerary(dayStarts[dayIndex], bucket, {
         ...dayOptions,
         dayIndex,
+        ...(middleDayTarget ? { minimumDestinationTarget: middleDayTarget } : {}),
         ...(request.stay?.checkInDay === dayIndex ? { checkInStay: request.stay } : {}),
         ...(request.stay?.checkOutDay === dayIndex ? { checkOutStay: request.stay } : {}),
         ...(request.departure?.dayIndex === dayIndex ? { departure: request.departure } : {}),
@@ -1139,7 +1146,9 @@ export function evaluateItineraryMove(
   const assignments = getItineraryDayAssignments(itinerary);
   const sourceDayIndex = assignments[destinationId];
   const isDeferred = itinerary.deferredDestinationIds?.includes(destinationId) ?? false;
-  if (sourceDayIndex === targetDayIndex && !isDeferred) {
+  const isUnscheduled = sourceDayIndex !== undefined
+    && itinerary.days[sourceDayIndex]?.unscheduled.some((place) => place.id === destinationId);
+  if (sourceDayIndex === targetDayIndex && !isDeferred && !isUnscheduled) {
     return { allowed: false, reason: `${destination.name} is already assigned to Day ${targetDayIndex + 1}.` };
   }
 
@@ -1155,15 +1164,23 @@ export function evaluateItineraryMove(
       reason: `${destination.name} cannot be mixed with Day ${targetDayIndex + 1}'s ${targetHasSideTrip ? "Atok side trip" : "Baguio city route"}.`,
     };
   }
+  if (targetPlaces.length >= 7) {
+    return {
+      allowed: false,
+      reason: `Day ${targetDayIndex + 1} already has seven attractions. Remove or move one before adding ${destination.name}.`,
+    };
+  }
 
   const sharesArea = targetPlaces.some((place) => place.area === destination.area);
   const nearestTargetKm = targetPlaces.length
     ? Math.min(...targetPlaces.map((place) => planningRouteMetric(place, destination, itinerary.routeEstimates).distanceKm))
     : planningRouteMetric(startLocationForDay(itinerary.start, itinerary.stay, targetDayIndex), destination, itinerary.routeEstimates).distanceKm;
-  if (targetPlaces.length && !sharesArea && nearestTargetKm > 2.5) {
+  const fillingMiddleDay = itinerary.numberOfDays === 3 && targetDayIndex === 1 && targetPlaces.length < 5;
+  const corridorLimitKm = fillingMiddleDay ? 4.5 : 2.5;
+  if (targetPlaces.length && !sharesArea && nearestTargetKm > corridorLimitKm) {
     return {
       allowed: false,
-      reason: `${destination.name} is too far from Day ${targetDayIndex + 1}'s route (${nearestTargetKm.toFixed(1)} km from its nearest stop).`,
+      reason: `${destination.name} is ${nearestTargetKm.toFixed(1)} km from Day ${targetDayIndex + 1}'s nearest stop. Adding it would create a separate corridor and too much backtracking.`,
     };
   }
 
@@ -1193,9 +1210,28 @@ export function evaluateItineraryMove(
     (item) => item.kind === "destination" && item.destination.id === destinationId,
   );
   if (!movedStop) {
+    const checkoutStop = targetDay.items.find((item) => item.kind === "check-out");
+    if (checkoutStop && targetDayIndex === itinerary.numberOfDays - 1 && !itinerary.departure?.time) {
+      return {
+        allowed: false,
+        reason: `Day ${targetDayIndex + 1} starts with ${checkoutStop.destination.name} at ${minutesToTime(checkoutStop.arrivalMinutes)}, and no departure time was entered. Use Edit choices to add your departure point and time so we can safely use the remaining hours.`,
+      };
+    }
+    const destinationClose = parseTimeToMinutes(destination.close);
+    if (destinationClose !== null && destinationClose <= targetDay.endMinutes + 30) {
+      return {
+        allowed: false,
+        reason: `${destination.name} closes at ${minutesToTime(destinationClose)}. Day ${targetDayIndex + 1}'s existing route, travel, and breaks reach too close to that closing time.`,
+      };
+    }
+    const fixedCommitments = targetDay.items
+      .filter((item) => ["check-in", "check-out", "bag-pickup", "departure"].includes(item.kind))
+      .map((item) => item.destination.name);
     return {
       allowed: false,
-      reason: `${destination.name} cannot fit Day ${targetDayIndex + 1}'s opening hours, travel time, and fixed commitments.`,
+      reason: fixedCommitments.length
+        ? `${destination.name} cannot fit before Day ${targetDayIndex + 1}'s fixed ${fixedCommitments.join(" and ")}. Travel, the visit, and a safe buffer would run past it.`
+        : `${destination.name} cannot fit before Day ${targetDayIndex + 1}'s current ${minutesToTime(targetDay.endMinutes)} finish after travel time, the visit, and protected breaks are included.`,
     };
   }
 
@@ -1214,7 +1250,11 @@ export function evaluateItineraryMove(
   const nextActiveMinutes = activeDayMinutes(nextTargetDay);
   const currentActiveMinutes = activeDayMinutes(targetDay);
   const scheduleReserve = sharesArea ? 5 : 30;
-  const safeLimit = Math.max(180, itinerary.availableMinutes - scheduleReserve);
+  const nextPlaceCount = nextTargetDay.items.filter((item) => item.kind === "destination").length;
+  const packedMiddleDay = itinerary.numberOfDays === 3 && targetDayIndex === 1 && nextPlaceCount <= 7;
+  const safeLimit = packedMiddleDay
+    ? Math.max(itinerary.availableMinutes, 11 * 60 - scheduleReserve)
+    : Math.max(180, itinerary.availableMinutes - scheduleReserve);
   if (nextActiveMinutes > safeLimit && nextActiveMinutes > currentActiveMinutes + 15) {
     return {
       allowed: false,
@@ -1699,6 +1739,7 @@ export function optimizeRoute(
   preference: TravelPreference,
   startMinutes: number,
   routeEstimates?: PlannerRouteEstimates,
+  corridorFirst = false,
 ): PlannerDestination[] {
   const remaining = destinations.map((destination, originalIndex) => ({
     destination,
@@ -1720,21 +1761,28 @@ export function optimizeRoute(
       const { open, close } = openingWindow(destination);
       const effectiveClose =
         destination.timeSlot === "night" ? 26 * 60 : close;
-      const waitPenalty = Math.max(0, open - estimatedArrival) * 0.012;
+      const waitPenalty = Math.max(0, open - estimatedArrival) * (corridorFirst ? 0.04 : 0.012);
       const closurePenalty =
         estimatedArrival + destination.duration > effectiveClose ? 100 : 0;
-      const sameAreaBonus =
-        current.area && current.area === destination.area ? -0.45 : 0;
+      const sameAreaBonus = current.area && current.area === destination.area
+        ? corridorFirst ? -2.5 : -0.45
+        : 0;
+      const closingUrgency = corridorFirst && destination.timeSlot !== "night"
+        ? Math.max(0, effectiveClose - estimatedArrival) * 0.004
+        : 0;
       const sideTripPenalty =
         destination.scope && destination.scope !== "Baguio City" ? 0.8 : 0;
       const preferencePenalty =
         preference === "fastest" ? destination.duration / 600 : 0;
+      const popularBonus = corridorFirst && destination.popular ? -0.35 : 0;
       const score =
         distance +
         waitPenalty +
         closurePenalty +
         sameAreaBonus +
+        closingUrgency +
         sideTripPenalty +
+        popularBonus +
         preferencePenalty;
 
       if (
@@ -2060,9 +2108,12 @@ export function buildDayItinerary(
   const packedArrivalRoute = daytime.some((destination) =>
     destination.tags.includes("classic-east-loop") || destination.tags.includes("arrival-city-loop"),
   );
+  const packedMiddleDay = (options.minimumDestinationTarget ?? 0) >= 4;
   const sightseeingEnd = options.checkInStay && nightStops.length && packedArrivalRoute
     ? Math.max(dayEnd + 90, 20 * 60 + 30)
-    : dayEnd;
+    : packedMiddleDay
+      ? Math.max(dayEnd, Math.min(20 * 60, options.startMinutes + 11 * 60))
+      : dayEnd;
   const stayDestination = options.checkInStay
     ? stayToDestination(options.checkInStay)
     : null;
@@ -2273,6 +2324,10 @@ export function buildDayItinerary(
     deadline: number | null,
     deadlineAnchor: PlannerLocation | null = stayDestination,
   ) => {
+    if (packedMiddleDay && items.filter((item) => item.kind === "destination").length >= 7) {
+      unscheduled.push(destination);
+      return false;
+    }
     const { open, close } = openingWindow(destination);
     const queueMinutes = queueMinutesFor(destination, options.pace);
     const deadlineGrace = destination.tags.includes("classic-east-loop") ? 60 : 15;
@@ -2453,7 +2508,14 @@ export function buildDayItinerary(
   } else if (protectFinalDayFromSightseeing) {
     unscheduled.push(...daytime);
   } else {
-    const ordered = optimizeRoute(current, daytime, options.preference, cursor, options.routeEstimates);
+    const ordered = optimizeRoute(
+      current,
+      daytime,
+      options.preference,
+      cursor,
+      options.routeEstimates,
+      packedMiddleDay,
+    );
     ordered.forEach((destination) => scheduleDestination(
       destination,
       checkoutBagPickupTarget,
@@ -2598,6 +2660,13 @@ export function buildDayItinerary(
       departureMinutes === null
         ? `The route finishes at ${options.departure.location.name}. Confirm your departure schedule before travelling.`
         : `The route aims to reach ${options.departure.location.name} by ${minutesToTime(arrivalTarget ?? arrival)}, 30 minutes before the ${minutesToTime(departureMinutes)} departure.`,
+    );
+  }
+
+  const finalAttractionCount = items.filter((item) => item.kind === "destination").length;
+  if (packedMiddleDay && finalAttractionCount >= 4 && cursor > dayEnd) {
+    notices.push(
+      `Day ${options.dayIndex + 1} uses an extended sightseeing window to keep ${finalAttractionCount} selected attractions, with protected meal and recovery time. Review and accept the packed-day warning before using it.`,
     );
   }
 

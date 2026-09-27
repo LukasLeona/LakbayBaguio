@@ -14,6 +14,7 @@ import {
   calculateJeepneyFare,
   chooseTransport,
   DEFAULT_FARE_SETTINGS,
+  evaluateItineraryMove,
   generateItinerary,
   googleDirectionsUrl,
   googleLocationUrl,
@@ -261,6 +262,53 @@ assert.ok(
   threeDayBalanced.days[1].items.filter(({ kind }) => kind === "destination").length >= 5,
   `A partially filled Day 2 should absorb compatible overflow and reach five places when time permits: ${JSON.stringify(threeDayBalanced.days.map((day) => ({ scheduled: day.items.filter(({ kind }) => kind === "destination").map(({ destination }) => destination.id), unscheduled: day.unscheduled.map(({ id }) => id) })))}`,
 );
+
+const packedMiddleIds = [
+  "ili-likha",
+  "camp-john-hay",
+  "lions-head",
+  "diplomat-hotel",
+  "igorot-stone-kingdom",
+  "valley-of-colors",
+];
+const packedMiddleChoices = PLANNER_DESTINATIONS.filter(({ id }) => packedMiddleIds.includes(id));
+const packedMiddleDay = generateItinerary({
+  start: origin,
+  destinations: packedMiddleChoices,
+  date: "2026-10-16",
+  numberOfDays: 3,
+  availableMinutes: 6 * 60,
+  travelers: 1,
+  modes: ["jeepney", "walk"],
+  preference: "balanced",
+  pace: "comfortable",
+  startTime: "08:00",
+  dayAssignments: Object.fromEntries(packedMiddleChoices.map(({ id }) => [id, 1])),
+  balanceOpenDays: false,
+});
+const packedMiddleStops = packedMiddleDay.days[1].items.filter(({ kind }) => kind === "destination");
+assert.ok(
+  packedMiddleStops.length >= 4 && packedMiddleStops.length <= 7,
+  `A three-day trip should keep four to seven selected attractions on its packed middle day: ${JSON.stringify({ scheduled: packedMiddleStops.map(({ destination }) => destination.id), unscheduled: packedMiddleDay.days[1].unscheduled.map(({ id }) => id), notices: packedMiddleDay.days[1].notices })}`,
+);
+assert.ok(
+  packedMiddleDay.days[1].items.some(({ kind }) => kind === "meal"),
+  "A packed middle day must retain a protected meal break",
+);
+assert.match(
+  packedMiddleDay.days[1].notices.join(" "),
+  /extended sightseeing window/,
+  "An automatically extended middle day should explain why it runs longer",
+);
+const packedMiddleOverflow = packedMiddleDay.days[1].unscheduled[0];
+if (packedMiddleOverflow) {
+  const sameDayRetry = evaluateItineraryMove(packedMiddleDay, packedMiddleOverflow.id, 1);
+  assert.doesNotMatch(
+    sameDayRetry.reason,
+    /already assigned/,
+    "An unscheduled place must be allowed to retry its original day and receive the real fit reason",
+  );
+}
 
 assert.notEqual(
   routeEstimateKey({ lat: 16.411, lng: 120.591 }, { lat: 16.421, lng: 120.625 }, "walk"),

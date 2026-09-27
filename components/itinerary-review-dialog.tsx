@@ -78,7 +78,7 @@ function reviewDayIntensity(
       ? { level: "easy", label: "Logistics day" }
       : { level: "easy", label: "Open day" };
   }
-  if (placeCount >= 5 || (placeCount >= 4 && utilization >= 0.72)) return { level: "full", label: "Full day" };
+  if (placeCount >= 4) return { level: "full", label: "Full day" };
   if (placeCount >= 3 || (placeCount >= 2 && utilization >= 0.5)) return { level: "balanced", label: "Balanced day" };
   return { level: "easy", label: "Easygoing day" };
 }
@@ -118,6 +118,9 @@ export function ItineraryReviewDialog({
   const [acknowledgedFullDays, setAcknowledgedFullDays] = useState<Set<number>>(() => new Set());
   const holdTimer = useRef<number | null>(null);
   const holdOrigin = useRef<{ x: number; y: number } | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const edgeScrollFrame = useRef<number | null>(null);
+  const edgePointerY = useRef<number | null>(null);
   const excluded = itinerary.days.flatMap((day) => day.unscheduled);
   const uniqueExcluded = [...new Map(excluded.map((place) => [place.id, place])).values()];
   const dayEffort = itinerary.days.map((day) => Math.max(0, day.endMinutes - day.startMinutes));
@@ -153,6 +156,41 @@ export function ItineraryReviewDialog({
     holdOrigin.current = null;
   }
 
+  function stopEdgeAutoScroll() {
+    if (edgeScrollFrame.current !== null) window.cancelAnimationFrame(edgeScrollFrame.current);
+    edgeScrollFrame.current = null;
+    edgePointerY.current = null;
+  }
+
+  function updateEdgeAutoScroll(clientY: number) {
+    edgePointerY.current = clientY;
+    if (edgeScrollFrame.current !== null) return;
+    const tick = () => {
+      const dialog = dialogRef.current;
+      const pointerY = edgePointerY.current;
+      if (!dialog || pointerY === null) {
+        edgeScrollFrame.current = null;
+        return;
+      }
+      const bounds = dialog.getBoundingClientRect();
+      const edgeSize = Math.min(110, bounds.height * 0.22);
+      const topDistance = pointerY - bounds.top;
+      const bottomDistance = bounds.bottom - pointerY;
+      const speed = topDistance < edgeSize
+        ? -Math.ceil((edgeSize - topDistance) / 7)
+        : bottomDistance < edgeSize
+          ? Math.ceil((edgeSize - bottomDistance) / 7)
+          : 0;
+      if (!speed) {
+        edgeScrollFrame.current = null;
+        return;
+      }
+      dialog.scrollTop += Math.max(-18, Math.min(18, speed));
+      edgeScrollFrame.current = window.requestAnimationFrame(tick);
+    };
+    edgeScrollFrame.current = window.requestAnimationFrame(tick);
+  }
+
   function beginMove(id: string, name: string, sourceDay: number | null) {
     clearHoldTimer();
     setMoving({ id, name, sourceDay });
@@ -174,6 +212,10 @@ export function ItineraryReviewDialog({
   }
 
   function cancelLongPressOnMove(event: ReactPointerEvent<HTMLElement>) {
+    if (moving) {
+      updateEdgeAutoScroll(event.clientY);
+      return;
+    }
     if (!holdOrigin.current) return;
     if (
       Math.abs(event.clientX - holdOrigin.current.x) > 10 ||
@@ -192,6 +234,7 @@ export function ItineraryReviewDialog({
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", id);
     beginMove(id, name, sourceDay);
+    updateEdgeAutoScroll(event.clientY);
   }
 
   function finishMove(targetDayIndex: number) {
@@ -207,12 +250,14 @@ export function ItineraryReviewDialog({
   function dayMoveState(dayIndex: number) {
     if (!moving) return "";
     if (moveOptions[dayIndex]?.allowed) return "move-allowed";
-    if (moving.sourceDay === dayIndex) return "move-current";
+    const movingIsUnscheduled = uniqueExcluded.some((place) => place.id === moving.id);
+    if (moving.sourceDay === dayIndex && !movingIsUnscheduled) return "move-current";
     return "move-blocked";
   }
 
   function cancelMove() {
     clearHoldTimer();
+    stopEdgeAutoScroll();
     setMoving(null);
     setMoveFeedback(null);
   }
@@ -245,6 +290,7 @@ export function ItineraryReviewDialog({
     window.addEventListener("keydown", closeOnEscape);
     return () => {
       clearHoldTimer();
+      stopEdgeAutoScroll();
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
@@ -254,7 +300,7 @@ export function ItineraryReviewDialog({
     <div
       className="itinerary-review-backdrop"
       role="presentation"
-      onPointerDown={(event) => {
+      onClick={(event) => {
         if (confirming) return;
         const target = event.target as HTMLElement;
         if (moving) {
@@ -265,7 +311,7 @@ export function ItineraryReviewDialog({
         if (event.target === event.currentTarget) onEdit();
       }}
     >
-      <section className={`itinerary-review-dialog ${confirming ? "is-confirming" : ""} ${moving ? "is-moving-place" : ""}`} role="dialog" aria-modal="true" aria-labelledby="itinerary-review-title" aria-busy={confirming}>
+      <section ref={dialogRef} className={`itinerary-review-dialog ${confirming ? "is-confirming" : ""} ${moving ? "is-moving-place" : ""}`} role="dialog" aria-modal="true" aria-labelledby="itinerary-review-title" aria-busy={confirming}>
         <header className="itinerary-review-header">
           <div>
             <span><CalendarCheck size={15} /> BEFORE WE LOCK IT IN</span>
@@ -280,7 +326,7 @@ export function ItineraryReviewDialog({
           <div>
             <strong>{overloaded ? "A few choices need your attention" : "This route has a comfortable shape"}</strong>
             <p>{uniqueExcluded.length
-              ? `${uniqueExcluded.length} selected ${uniqueExcluded.length === 1 ? "place does" : "places do"} not fit safely. You can accept the plan without them or edit your choices.`
+              ? `${uniqueExcluded.length} selected ${uniqueExcluded.length === 1 ? "place is" : "places are"} still waiting for a day. Move one below to see the exact distance, timing, or fixed-schedule reason.`
               : spread > 150
                 ? "One day is noticeably fuller than another because of opening hours or longer visits. Review the day cards below."
                 : "Nearby places stay together, and fixed hotel times divide the route into practical segments."}</p>
@@ -297,13 +343,33 @@ export function ItineraryReviewDialog({
           <div>
             <strong>{moving ? `Moving ${moving.name}` : "Fine-tune this route"}</strong>
             <p>{moving
-              ? "Green days can take this stop. Tap Move here, or drop it on a green card."
+              ? "Choose a day below—there is no need to keep holding. Green days can take this stop."
               : "Drag a place on desktop, or press and hold on mobile. Fixed hotel and departure times stay locked."}</p>
           </div>
           {moving ? <button type="button" onClick={cancelMove}>Cancel</button> : null}
         </div>
 
-        {moveFeedback ? <div className={`review-move-feedback ${moveFeedback.tone}`} role="status">{moveFeedback.text}</div> : null}
+        {moving ? <aside className="review-move-tray" data-move-control="true" aria-label={`Move ${moving.name} to another day`}>
+          <div><strong>Move {moving.name}</strong><span>Choose a day</span></div>
+          <div className="review-move-tray-days">{itinerary.days.map((day) => {
+            const option = moveOptions[day.index];
+            const movingIsUnscheduled = uniqueExcluded.some((place) => place.id === moving.id);
+            const current = moving.sourceDay === day.index
+              && !movingIsUnscheduled
+              && !itinerary.deferredDestinationIds?.includes(moving.id);
+            return <button
+              type="button"
+              key={day.index}
+              className={current ? "current" : option?.allowed ? "allowed" : "blocked"}
+              onClick={() => finishMove(day.index)}
+              title={option?.reason}
+            ><b>Day {day.index + 1}</b><small>{current ? "Current" : option?.allowed ? "Fits here" : "Why not?"}</small></button>;
+          })}</div>
+          {moveFeedback ? <p className={moveFeedback.tone} role="status">{moveFeedback.text}</p> : null}
+          <button type="button" className="review-move-tray-cancel" onClick={cancelMove}><X /> Cancel</button>
+        </aside> : null}
+
+        {moveFeedback && !moving ? <div className={`review-move-feedback ${moveFeedback.tone}`} role="status">{moveFeedback.text}</div> : null}
 
         <div className="review-day-grid">
           {itinerary.days.map((day) => {
@@ -328,8 +394,8 @@ export function ItineraryReviewDialog({
                 className={`review-day-card ${dayMoveState(day.index)}`}
                 key={day.index}
                 id={`review-day-${day.index + 1}`}
-                onDragOver={(event) => { if (moving) { event.preventDefault(); event.dataTransfer.dropEffect = moveOption?.allowed ? "move" : "none"; } }}
-                onDrop={(event) => { event.preventDefault(); finishMove(day.index); }}
+                onDragOver={(event) => { if (moving) { event.preventDefault(); updateEdgeAutoScroll(event.clientY); event.dataTransfer.dropEffect = moveOption?.allowed ? "move" : "none"; } }}
+                onDrop={(event) => { event.preventDefault(); stopEdgeAutoScroll(); finishMove(day.index); }}
               >
                 <header>
                   <div><small>DAY {day.index + 1}</small><strong>{placeCount} {placeCount === 1 ? "place" : "places"}{comfortCount ? ` · ${comfortCount} comfort ${comfortCount === 1 ? "break" : "breaks"}` : ""}</strong></div>
@@ -344,7 +410,7 @@ export function ItineraryReviewDialog({
                         title={moveOption?.reason}
                         data-move-control="true"
                         onClick={() => finishMove(day.index)}
-                      ><MoveRight /> {moveOption?.allowed ? "Move here" : moving.sourceDay === day.index ? "Current day" : "Doesn't fit"}</button>
+                      ><MoveRight /> {moveOption?.allowed ? "Move here" : dayMoveState(day.index) === "move-current" ? "Current day" : "See reason"}</button>
                     ) : null}
                   </div>
                 </header>
@@ -363,10 +429,6 @@ export function ItineraryReviewDialog({
                     <button type="button" onClick={() => focusDayAdjustments(day.index)}>Adjust places</button>
                   </div>
                 </aside> : null}
-                {itinerary.numberOfDays === 3 && day.index === 1 && placeCount < 5 && uniqueExcluded.length ? <aside className="review-day-constraint" role="alert">
-                  <AlertTriangle />
-                  <div><strong>Day 2 could not safely reach five places</strong><p>The remaining choices conflict with travel time, opening hours, or fixed plans. You can move a compatible place here, but the planner will not force an unsafe route.</p></div>
-                </aside> : null}
                 {!day.items.length ? <div className="review-open-day">
                   <Coffee />
                   <div><strong>Keep this day open—or add another place</strong><p>Your selected stops already fit elsewhere. Use this as a recovery day, or choose Edit choices to add more of Baguio.</p></div>
@@ -379,15 +441,15 @@ export function ItineraryReviewDialog({
                       data-move-control={moving?.id === stop.destination.id ? "true" : undefined}
                       aria-grabbed={stop.kind === "destination" ? moving?.id === stop.destination.id : undefined}
                       onDragStart={stop.kind === "destination" ? (event) => startDrag(event, stop.destination.id, stop.destination.name, day.index) : undefined}
-                      onDragEnd={stop.kind === "destination" ? () => setMoving(null) : undefined}
+                      onDragEnd={stop.kind === "destination" ? () => { stopEdgeAutoScroll(); setMoving(null); } : undefined}
                       onPointerDown={stop.kind === "destination" ? (event) => scheduleLongPress(event, stop.destination.id, stop.destination.name, day.index) : undefined}
                       onPointerMove={stop.kind === "destination" ? cancelLongPressOnMove : undefined}
-                      onPointerUp={stop.kind === "destination" ? clearHoldTimer : undefined}
-                      onPointerCancel={stop.kind === "destination" ? clearHoldTimer : undefined}
+                      onPointerUp={stop.kind === "destination" ? () => { clearHoldTimer(); stopEdgeAutoScroll(); } : undefined}
+                      onPointerCancel={stop.kind === "destination" ? () => { clearHoldTimer(); stopEdgeAutoScroll(); } : undefined}
                     >
                       <span>{stopIcon(stop)}</span>
                       <div className="review-stop-copy"><strong>{stop.destination.name}</strong><small>{minutesToTime(stop.arrivalMinutes)} · {stopLabel(stop)}</small>{suggestedIds.has(stop.destination.id) ? <em>Buddy suggested</em> : null}</div>
-                      {stop.kind === "destination" ? <div className="review-stop-actions">
+                      {stop.kind === "destination" ? <div className="review-stop-actions" data-move-control="true">
                         <button type="button" className="review-grab-button" onClick={() => beginMove(stop.destination.id, stop.destination.name, day.index)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Move ${stop.destination.name}`} title="Move to another day"><GripVertical /></button>
                         <button type="button" className="review-remove-button" onClick={() => onDefer(stop.destination.id)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Move ${stop.destination.name} out of Day ${day.index + 1}`} title="Move out of this day"><Trash2 /></button>
                       </div> : null}
@@ -402,7 +464,7 @@ export function ItineraryReviewDialog({
 
         {uniqueExcluded.length ? (
           <section className="review-excluded">
-            <header><AlertTriangle size={17} /><div><strong>These places need another time</strong><p>Add one back to its previous day, or test another day that can safely take it.</p></div></header>
+            <header><AlertTriangle size={17} /><div><strong>Your remaining selected places</strong><p>They are still selected. Move one to a day to test the exact route, time, and opening-hour fit.</p></div></header>
             <div>{uniqueExcluded.map((place) => {
               const sourceDay = itinerary.days.find((day) => day.unscheduled.some((item) => item.id === place.id))?.index ?? null;
               return <article
@@ -412,14 +474,14 @@ export function ItineraryReviewDialog({
                 data-move-control={moving?.id === place.id ? "true" : undefined}
                 aria-grabbed={moving?.id === place.id}
                 onDragStart={(event) => startDrag(event, place.id, place.name, sourceDay)}
-                onDragEnd={() => setMoving(null)}
+                onDragEnd={() => { stopEdgeAutoScroll(); setMoving(null); }}
                 onPointerDown={(event) => scheduleLongPress(event, place.id, place.name, sourceDay)}
                 onPointerMove={cancelLongPressOnMove}
-                onPointerUp={clearHoldTimer}
-                onPointerCancel={clearHoldTimer}
+                onPointerUp={() => { clearHoldTimer(); stopEdgeAutoScroll(); }}
+                onPointerCancel={() => { clearHoldTimer(); stopEdgeAutoScroll(); }}
               >
                 <span><strong>{place.name}</strong><small>{place.area} · {place.open}–{place.close}</small>{suggestedIds.has(place.id) ? <em className="review-suggested-label">Buddy suggested</em> : null}</span>
-                <div className="review-excluded-actions">
+                <div className="review-excluded-actions" data-move-control="true">
                   <button type="button" className="review-grab-button" onClick={() => beginMove(place.id, place.name, sourceDay)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Add ${place.name} to a day`} title="Add back to a day"><GripVertical /></button>
                   <button type="button" className="review-remove-button" onClick={() => onDelete(place.id)} onPointerDown={(event) => event.stopPropagation()}><Trash2 size={14} /> Delete choice</button>
                 </div>
