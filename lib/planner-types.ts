@@ -43,6 +43,7 @@ export type AutoPickTheme =
 export type TravelPreference = "balanced" | "cheapest" | "fastest" | "less-walking";
 export type PacePreference = "relaxed" | "comfortable" | "packed";
 export type TransportMode = "walk" | "jeepney" | "taxi";
+export type JeepneyVehicleClass = "traditional" | "modern" | "unsure";
 export type StayKind = "hotel" | "airbnb";
 export type StayLocationPrecision = "pin" | "approximate";
 /** Kept for reading planner drafts created before the luggage-safety update. */

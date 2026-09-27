@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { PLANNER_DESTINATIONS, PLANNER_START_LOCATIONS } from "../lib/planner-data";
 import { getVerifiedWalkingCorridor, summarizeRouteTerrain } from "../lib/geoapify-routing";
+import { resolveFarePolicy, resolveFareProfile } from "../lib/fare-policy";
 import { routeEstimateKey } from "../lib/route-estimates";
 import {
   buildDayRouteUrls,
+  calculateJeepneyFare,
   chooseTransport,
   DEFAULT_FARE_SETTINGS,
   googleDirectionsUrl,
@@ -18,6 +20,18 @@ import type { StartLocation } from "../lib/planner-types";
 const startLocations = PLANNER_START_LOCATIONS as readonly StartLocation[];
 const origin = startLocations[0];
 const coordinatePattern = /^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/;
+
+const previousFarePolicy = resolveFarePolicy("2026-09-27");
+const adjustedFarePolicy = resolveFarePolicy("2026-09-28");
+const octoberFareProfile = resolveFareProfile("2026-10-16", "unsure");
+assert.equal(previousFarePolicy.id, "puj-2023-10-08");
+assert.equal(adjustedFarePolicy.id, "puj-2026-09-28");
+assert.equal(adjustedFarePolicy.jeepney.traditional.minimum, 14);
+assert.equal(adjustedFarePolicy.jeepney.traditional.perKilometer, 2);
+assert.equal(adjustedFarePolicy.jeepney.modern.minimum, 17);
+assert.equal(adjustedFarePolicy.jeepney.modern.perKilometer, 2.4);
+assert.equal(calculateJeepneyFare(4, octoberFareProfile.minimumSettings), 14);
+assert.equal(calculateJeepneyFare(4, octoberFareProfile.maximumSettings), 17);
 
 assert.notEqual(
   routeEstimateKey({ lat: 16.411, lng: 120.591 }, { lat: 16.421, lng: 120.625 }, "walk"),
@@ -170,10 +184,16 @@ const directJeepney = chooseTransport(
     pace: "comfortable",
     travelers: 2,
     modes: ["jeepney"],
-    fareSettings: DEFAULT_FARE_SETTINGS,
+    fareSettings: octoberFareProfile.planningSettings,
+    minimumFareSettings: octoberFareProfile.minimumSettings,
+    maximumFareSettings: octoberFareProfile.maximumSettings,
+    jeepneyClass: "unsure",
+    farePolicy: octoberFareProfile.policy,
   },
 );
 assert.equal(directJeepney.mode, "jeepney");
+assert.ok((directJeepney.totalFareMinimum ?? 0) < (directJeepney.totalFareMaximum ?? 0));
+assert.equal(directJeepney.farePolicyId, "puj-2026-09-28");
 assert.equal(directJeepney.boardings, 1);
 assert.deepEqual(
   directJeepney.stages?.map(({ kind }) => kind),
@@ -213,7 +233,11 @@ const transferJeepney = chooseTransport(
     pace: "comfortable",
     travelers: 2,
     modes: ["jeepney"],
-    fareSettings: DEFAULT_FARE_SETTINGS,
+    fareSettings: octoberFareProfile.planningSettings,
+    minimumFareSettings: octoberFareProfile.minimumSettings,
+    maximumFareSettings: octoberFareProfile.maximumSettings,
+    jeepneyClass: "unsure",
+    farePolicy: octoberFareProfile.policy,
   },
 );
 assert.equal(transferJeepney.boardings, 2);

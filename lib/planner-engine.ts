@@ -12,6 +12,7 @@ import type {
   Coordinates,
   FareSettings,
   FinalDayPreference,
+  JeepneyVehicleClass,
   PacePreference,
   PlannerStay,
   PlannerArea,
@@ -22,7 +23,12 @@ import type {
   TransportMode,
   TravelPreference,
 } from "@/lib/planner-types";
-import { LTFRB_FARE_POLICY, OFFICIAL_FARE_SETTINGS } from "@/lib/fare-policy";
+import {
+  LTFRB_FARE_POLICY,
+  OFFICIAL_FARE_SETTINGS,
+  resolveFareProfile,
+  type FarePolicyVersion,
+} from "@/lib/fare-policy";
 import { isSupportedGoogleMapsUrl } from "@/lib/google-maps-place";
 import {
   findRouteEstimate,
@@ -36,6 +42,7 @@ import {
 
 export type {
   FareSettings,
+  JeepneyVehicleClass,
   PlannerDestination,
   PlannerStay,
   StartLocation,
@@ -83,6 +90,8 @@ export type PlannerRequest = {
   preference: TravelPreference;
   pace?: PacePreference;
   fareSettings?: Partial<FareSettings>;
+  /** Jeepney type used for budgeting; unsure produces a traditional-to-modern range. */
+  jeepneyClass?: JeepneyVehicleClass;
   /** A 24-hour HH:mm value. Defaults to 08:00 when omitted. */
   startTime?: string;
   /** Alternative to startTime, primarily useful for tests and restored state. */
@@ -138,6 +147,13 @@ export type PlannedTransport = {
   stages?: PlannedCommuteStage[];
   boardings?: number;
   routeReference?: PlannedRouteReference;
+  farePerPersonMinimum?: number;
+  farePerPersonMaximum?: number;
+  totalFareMinimum?: number;
+  totalFareMaximum?: number;
+  jeepneyClass?: JeepneyVehicleClass;
+  farePolicyId?: string;
+  fareEffectiveFrom?: string;
   /** Routed distance used by the schedule; omitted only on restored legacy plans. */
   distanceKm?: number;
   durationRange?: { minimum: number; maximum: number };
@@ -190,6 +206,8 @@ export type PlannedDay = {
   notices: string[];
   totalDistance: number;
   totalFare: number;
+  totalFareMinimum: number;
+  totalFareMaximum: number;
   totalTravelMinutes: number;
   startMinutes: number;
   endMinutes: number;
@@ -203,6 +221,8 @@ export type ItineraryTotals = {
   unscheduledStops: number;
   distance: number;
   fare: number;
+  fareMinimum: number;
+  fareMaximum: number;
   travelMinutes: number;
 };
 
@@ -217,6 +237,8 @@ export type PlannedItinerary = {
   travelers: number;
   modes: TransportMode[];
   fareSettings: FareSettings;
+  jeepneyClass: JeepneyVehicleClass;
+  farePolicy: FarePolicyVersion;
   date: string;
   numberOfDays: number;
   availableMinutes: number;
@@ -245,6 +267,10 @@ type DayBuildOptions = {
   travelers: number;
   modes: readonly TransportMode[];
   fareSettings: FareSettings;
+  minimumFareSettings: FareSettings;
+  maximumFareSettings: FareSettings;
+  jeepneyClass: JeepneyVehicleClass;
+  farePolicy: FarePolicyVersion;
   startMinutes: number;
   checkInStay?: PlannerStay;
   checkOutStay?: PlannerStay;
@@ -255,7 +281,10 @@ type DayBuildOptions = {
 type TransportOptions = Pick<
   DayBuildOptions,
   "preference" | "pace" | "travelers" | "modes" | "fareSettings" | "routeEstimates"
->;
+> & Partial<Pick<
+  DayBuildOptions,
+  "minimumFareSettings" | "maximumFareSettings" | "jeepneyClass" | "farePolicy"
+>>;
 
 const VALID_PREFERENCES = new Set<TravelPreference>([
   "balanced",
@@ -714,7 +743,21 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
   if (issues.length) throw new PlannerValidationError(issues);
 
   const startMinutes = resolveStartMinutes(request);
-  const fareSettings = mergeFareSettings(request.fareSettings);
+  const jeepneyClass = request.jeepneyClass ?? "unsure";
+  const fareProfile = resolveFareProfile(request.date, jeepneyClass);
+  const fareSettings = mergeFareSettings(request.fareSettings, fareProfile.planningSettings);
+  const minimumFareSettings = {
+    ...fareSettings,
+    jeepMinimum: fareProfile.minimumSettings.jeepMinimum,
+    jeepBaseKm: fareProfile.minimumSettings.jeepBaseKm,
+    jeepPerKm: fareProfile.minimumSettings.jeepPerKm,
+  };
+  const maximumFareSettings = {
+    ...fareSettings,
+    jeepMinimum: fareProfile.maximumSettings.jeepMinimum,
+    jeepBaseKm: fareProfile.maximumSettings.jeepBaseKm,
+    jeepPerKm: fareProfile.maximumSettings.jeepPerKm,
+  };
   const modes = uniqueModes(request.modes);
   const pace = resolvePacePreference(request.pace);
   const destinations = [...request.destinations];
@@ -747,6 +790,10 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     travelers: request.travelers,
     modes,
     fareSettings,
+    minimumFareSettings,
+    maximumFareSettings,
+    jeepneyClass,
+    farePolicy: fareProfile.policy,
     startMinutes,
     routeEstimates: request.routeEstimates,
   };
@@ -795,6 +842,8 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
       preference: request.preference,
       pace,
       fareSettings,
+      jeepneyClass,
+      farePolicyId: fareProfile.policy.id,
       startMinutes,
       stay: request.stay,
       departure: request.departure,
@@ -817,6 +866,8 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     travelers: request.travelers,
     modes,
     fareSettings,
+    jeepneyClass,
+    farePolicy: fareProfile.policy,
     date,
     numberOfDays: request.numberOfDays,
     availableMinutes: request.availableMinutes,
@@ -983,6 +1034,7 @@ export function evaluateItineraryMove(
     preference: itinerary.preference,
     pace: itinerary.pace,
     fareSettings: itinerary.fareSettings,
+    jeepneyClass: itinerary.jeepneyClass,
     startMinutes: itinerary.startMinutes,
     ...(itinerary.stay ? { stay: itinerary.stay } : {}),
     ...(itinerary.departure ? { departure: itinerary.departure } : {}),
@@ -1049,6 +1101,7 @@ export function deferItineraryDestination(
     preference: itinerary.preference,
     pace: itinerary.pace,
     fareSettings: itinerary.fareSettings,
+    jeepneyClass: itinerary.jeepneyClass,
     startMinutes: itinerary.startMinutes,
     ...(itinerary.stay ? { stay: itinerary.stay } : {}),
     ...(itinerary.departure ? { departure: itinerary.departure } : {}),
@@ -2357,6 +2410,12 @@ export function buildDayItinerary(
     totalFare: roundMoney(
       items.reduce((sum, item) => sum + item.transport.totalFare, 0),
     ),
+    totalFareMinimum: roundMoney(
+      items.reduce((sum, item) => sum + (item.transport.totalFareMinimum ?? item.transport.totalFare), 0),
+    ),
+    totalFareMaximum: roundMoney(
+      items.reduce((sum, item) => sum + (item.transport.totalFareMaximum ?? item.transport.totalFare), 0),
+    ),
     totalTravelMinutes: items.reduce(
       (sum, item) => sum + item.transport.minutes,
       0,
@@ -2442,6 +2501,18 @@ export function chooseTransport(
       : 0;
   const boardings = jeepneyCommute?.boardings ?? (mode === "jeepney" ? 1 : 0);
   const farePerPerson = singleBoardingFare * Math.max(1, boardings);
+  const minimumFarePerPerson = mode === "jeepney"
+    ? calculateJeepneyFare(
+        effectiveDistance,
+        options.minimumFareSettings ?? options.fareSettings,
+      ) * Math.max(1, boardings)
+    : 0;
+  const maximumFarePerPerson = mode === "jeepney"
+    ? calculateJeepneyFare(
+        effectiveDistance,
+        options.maximumFareSettings ?? options.fareSettings,
+      ) * Math.max(1, boardings)
+    : 0;
   const vehicleFare =
     mode === "taxi"
       ? calculateTaxiFare(effectiveDistance, options.fareSettings, minutes)
@@ -2450,6 +2521,12 @@ export function chooseTransport(
     mode === "jeepney"
       ? farePerPerson * options.travelers
       : vehicleFare;
+  const totalFareMinimum = mode === "jeepney"
+    ? minimumFarePerPerson * options.travelers
+    : vehicleFare;
+  const totalFareMaximum = mode === "jeepney"
+    ? maximumFarePerPerson * options.travelers
+    : vehicleFare;
   const durationRange = jeepneyCommute
     ? {
         minimum: Math.max(1, minutes - Math.ceil(bufferMinutes / 2)),
@@ -2473,6 +2550,17 @@ export function chooseTransport(
     farePerPerson: roundMoney(farePerPerson),
     vehicleFare: roundMoney(vehicleFare),
     totalFare: roundMoney(totalFare),
+    farePerPersonMinimum: roundMoney(minimumFarePerPerson),
+    farePerPersonMaximum: roundMoney(maximumFarePerPerson),
+    totalFareMinimum: roundMoney(totalFareMinimum),
+    totalFareMaximum: roundMoney(totalFareMaximum),
+    ...(mode === "jeepney"
+      ? {
+          jeepneyClass: options.jeepneyClass ?? "unsure",
+          farePolicyId: options.farePolicy?.id,
+          fareEffectiveFrom: options.farePolicy?.effectiveFrom,
+        }
+      : {}),
     distanceKm: roundDistance(effectiveDistance),
     durationRange,
     confidence: mode === "jeepney"
@@ -3244,15 +3332,18 @@ function resolveStartMinutes(request: PlannerRequest): number {
   return parseTimeToMinutes(request.startTime || "08:00") ?? 8 * 60;
 }
 
-function mergeFareSettings(settings?: Partial<FareSettings>): FareSettings {
+function mergeFareSettings(
+  settings?: Partial<FareSettings>,
+  defaults: FareSettings = DEFAULT_FARE_SETTINGS,
+): FareSettings {
   return {
-    jeepMinimum: settings?.jeepMinimum ?? DEFAULT_FARE_SETTINGS.jeepMinimum,
-    jeepBaseKm: settings?.jeepBaseKm ?? DEFAULT_FARE_SETTINGS.jeepBaseKm,
-    jeepPerKm: settings?.jeepPerKm ?? DEFAULT_FARE_SETTINGS.jeepPerKm,
-    taxiFlag: settings?.taxiFlag ?? DEFAULT_FARE_SETTINGS.taxiFlag,
-    taxiPerKm: settings?.taxiPerKm ?? DEFAULT_FARE_SETTINGS.taxiPerKm,
+    jeepMinimum: settings?.jeepMinimum ?? defaults.jeepMinimum,
+    jeepBaseKm: settings?.jeepBaseKm ?? defaults.jeepBaseKm,
+    jeepPerKm: settings?.jeepPerKm ?? defaults.jeepPerKm,
+    taxiFlag: settings?.taxiFlag ?? defaults.taxiFlag,
+    taxiPerKm: settings?.taxiPerKm ?? defaults.taxiPerKm,
     taxiPerMinute:
-      settings?.taxiPerMinute ?? DEFAULT_FARE_SETTINGS.taxiPerMinute,
+      settings?.taxiPerMinute ?? defaults.taxiPerMinute,
   };
 }
 
@@ -3284,6 +3375,12 @@ function summarizeDays(days: readonly PlannedDay[]): ItineraryTotals {
       days.reduce((sum, day) => sum + day.totalDistance, 0),
     ),
     fare: roundMoney(days.reduce((sum, day) => sum + day.totalFare, 0)),
+    fareMinimum: roundMoney(
+      days.reduce((sum, day) => sum + (day.totalFareMinimum ?? day.totalFare), 0),
+    ),
+    fareMaximum: roundMoney(
+      days.reduce((sum, day) => sum + (day.totalFareMaximum ?? day.totalFare), 0),
+    ),
     travelMinutes: days.reduce(
       (sum, day) => sum + day.totalTravelMinutes,
       0,
