@@ -93,6 +93,14 @@ export interface RouteGuide {
   readonly loadingQuery: string;
   readonly signboard: string;
   readonly returnHint: string;
+  readonly routeName?: string;
+  readonly routeReferenceUrl?: string;
+  readonly routeVerification?: "official-directory" | "confirm-on-site";
+  readonly serviceHours?: string;
+  readonly loadingPoint?: Coordinates & {
+    readonly label: string;
+    readonly googleQuery: string;
+  };
 }
 
 export interface PlannerDestination extends Coordinates {

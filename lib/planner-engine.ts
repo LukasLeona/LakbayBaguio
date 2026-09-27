@@ -37,6 +37,9 @@ export type {
 export const PLANNING_DISCLAIMER =
   `Travel time and routes are estimates. Fare calculations use LTFRB-published rates reviewed ${LTFRB_FARE_POLICY.reviewedLabel}; confirm the taxi meter, jeepney fare matrix, attraction hours, and loading areas locally.`;
 
+export const JEEPNEY_ROAD_PATH_DISCLAIMER =
+  "Road-path reference only—not live jeepney navigation. Confirm the signboard, loading point, transfer, and drop-off with a dispatcher or driver.";
+
 export const DEFAULT_FARE_SETTINGS = OFFICIAL_FARE_SETTINGS;
 
 export const PLANNER_LIMITS = Object.freeze({
@@ -120,6 +123,27 @@ export type PlannedTransport = {
   instructions: string[];
   loadingMapUrl: string | null;
   legMapUrl: string;
+  /** Detailed commute stages are present for newly generated jeepney legs. */
+  stages?: PlannedCommuteStage[];
+  boardings?: number;
+  routeReference?: PlannedRouteReference;
+};
+
+export type PlannedCommuteStage = {
+  kind: "access-walk" | "wait" | "ride" | "transfer-walk" | "transfer-wait" | "final-walk";
+  label: string;
+  minutes: number;
+  detail: string;
+  mapUrl?: string;
+  mapLabel?: string;
+};
+
+export type PlannedRouteReference = {
+  name: string;
+  sourceUrl: string;
+  verification: "official-directory" | "confirm-on-site";
+  serviceHours?: string;
+  disclaimer: string;
 };
 
 export type PlannedStop = {
@@ -2304,22 +2328,29 @@ export function chooseTransport(
     mode = "jeepney";
   }
 
-  const baseMinutes = estimateTravelMinutes(distance, mode);
+  const vehicleMinutes = estimateTravelMinutes(distance, mode);
   const pacePolicy = PACE_POLICIES[options.pace];
+  const guide = to.routeGuide || GENERIC_ROUTE_GUIDE;
+  const jeepneyCommute = mode === "jeepney"
+    ? buildJeepneyCommute(from, to, distance, vehicleMinutes, options.pace, guide)
+    : null;
+  const baseMinutes = jeepneyCommute?.baseMinutes ?? vehicleMinutes;
   const bufferMinutes = distance < 0.05
     ? 0
     : Math.min(
         pacePolicy.travelBufferMaximum,
         Math.max(
           mode === "walk" ? Math.min(2, pacePolicy.travelBufferMinimum) : pacePolicy.travelBufferMinimum,
-          Math.round(baseMinutes * pacePolicy.travelBufferRatio * (mode === "walk" ? 0.5 : 1)),
+          Math.round(vehicleMinutes * pacePolicy.travelBufferRatio * (mode === "walk" ? 0.5 : 1)),
         ),
       );
   const minutes = baseMinutes + bufferMinutes;
-  const farePerPerson =
+  const singleBoardingFare =
     mode === "jeepney"
       ? calculateJeepneyFare(distance, options.fareSettings)
       : 0;
+  const boardings = jeepneyCommute?.boardings ?? (mode === "jeepney" ? 1 : 0);
+  const farePerPerson = singleBoardingFare * Math.max(1, boardings);
   const vehicleFare =
     mode === "taxi"
       ? calculateTaxiFare(distance, options.fareSettings, minutes)
@@ -2328,7 +2359,6 @@ export function chooseTransport(
     mode === "jeepney"
       ? farePerPerson * options.travelers
       : vehicleFare;
-  const guide = to.routeGuide || GENERIC_ROUTE_GUIDE;
 
   return {
     mode,
@@ -2338,10 +2368,158 @@ export function chooseTransport(
     farePerPerson: roundMoney(farePerPerson),
     vehicleFare: roundMoney(vehicleFare),
     totalFare: roundMoney(totalFare),
-    instructions: buildDirections(from, to, mode),
+    instructions: buildDirections(from, to, mode, boardings),
     loadingMapUrl:
-      mode === "jeepney" ? googleSearchUrl(guide.loadingQuery) : null,
-    legMapUrl: googleDirectionsUrl(from, to, mode),
+      mode === "jeepney"
+        ? jeepneyCommute?.stages.find((stage) => stage.kind === "access-walk")?.mapUrl
+          ?? googleSearchUrl(guide.loadingQuery)
+        : null,
+    legMapUrl: jeepneyCommute?.roadPathUrl ?? googleDirectionsUrl(from, to, mode),
+    ...(jeepneyCommute
+      ? {
+          stages: jeepneyCommute.stages,
+          boardings: jeepneyCommute.boardings,
+          routeReference: jeepneyCommute.routeReference,
+        }
+      : {}),
+  };
+}
+
+function buildJeepneyCommute(
+  from: PlannerLocation,
+  to: PlannerDestination,
+  distance: number,
+  rideMinutes: number,
+  pace: PacePreference,
+  guide: PlannerRouteGuide,
+): {
+  stages: PlannedCommuteStage[];
+  baseMinutes: number;
+  boardings: number;
+  roadPathUrl: string;
+  routeReference: PlannedRouteReference;
+} {
+  const needsTransfer = Boolean(
+    from.area
+      && from.area !== "City Center"
+      && to.area !== "City Center"
+      && from.area !== to.area,
+  );
+  const sameCorridor = Boolean(from.area && from.area === to.area);
+  const boardings = needsTransfer ? 2 : 1;
+  const loadingPoint: PlannerLocation | null = guide.loadingPoint
+    ? {
+        id: `jeepney-loading-${to.area.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+        name: guide.loadingPoint.label,
+        lat: guide.loadingPoint.lat,
+        lng: guide.loadingPoint.lng,
+        area: "City Center",
+        googleQuery: guide.loadingPoint.googleQuery,
+      }
+    : null;
+  const canWalkDirectlyToTerminal = from.area === "City Center" && loadingPoint;
+  const accessMinutes = canWalkDirectlyToTerminal
+    ? Math.min(20, Math.max(4, estimateTravelMinutes(haversineKm(from, loadingPoint), "walk")))
+    : pace === "relaxed" ? 7 : pace === "packed" ? 4 : 6;
+  const waitMinutes = sameCorridor
+    ? pace === "relaxed" ? 10 : 8
+    : pace === "relaxed" ? 15 : pace === "packed" ? 10 : 12;
+  const finalWalkMinutes = pace === "relaxed" ? 7 : pace === "packed" ? 4 : 6;
+  const accessMapUrl = canWalkDirectlyToTerminal && loadingPoint
+    ? googleDirectionsUrl(from, loadingPoint, "walk")
+    : googleSearchUrl(`${from.googleQuery || from.name} jeepney loading area`);
+  const stages: PlannedCommuteStage[] = [
+    {
+      kind: "access-walk",
+      label: needsTransfer ? "Reach a city-bound loading point" : "Walk to the loading point",
+      minutes: accessMinutes,
+      detail: canWalkDirectlyToTerminal && loadingPoint
+        ? `Walk to ${loadingPoint.name}.`
+        : `Ask for the nearest official loading point serving ${guide.routeName || to.area}; do not assume any roadside stop is permitted.`,
+      mapUrl: accessMapUrl,
+      mapLabel: canWalkDirectlyToTerminal ? "Walking directions" : "Find a loading point",
+    },
+    {
+      kind: "wait",
+      label: "Queue and confirm the signboard",
+      minutes: waitMinutes,
+      detail: `Look for ${guide.signboard}. Ask the dispatcher whether the jeep reaches ${to.name} or the safest drop-off.`,
+    },
+  ];
+
+  if (needsTransfer) {
+    const firstRideMinutes = Math.ceil(rideMinutes / 2);
+    const secondRideMinutes = Math.max(1, rideMinutes - firstRideMinutes);
+    const transferWalkMinutes = pace === "relaxed" ? 6 : 5;
+    const transferWaitMinutes = pace === "relaxed" ? 12 : pace === "packed" ? 7 : 9;
+    stages.push(
+      {
+        kind: "ride",
+        label: "Ride toward the city-center transfer",
+        minutes: firstRideMinutes,
+        detail: "Tell the driver you need the city-center transfer for the next route and confirm where to alight.",
+        mapUrl: guide.routeReferenceUrl,
+        mapLabel: "Official route directory",
+      },
+      {
+        kind: "transfer-walk",
+        label: "Walk to the connecting terminal",
+        minutes: transferWalkMinutes,
+        detail: loadingPoint
+          ? `Continue to ${loadingPoint.name}; ask a dispatcher before crossing between terminal areas.`
+          : `Ask a dispatcher for the terminal serving ${guide.routeName || to.area}.`,
+        mapUrl: loadingPoint ? googleDestinationDirectionsUrl(loadingPoint, "walk") : googleSearchUrl(guide.loadingQuery),
+        mapLabel: loadingPoint ? "Walking directions" : "Find connecting terminal",
+      },
+      {
+        kind: "transfer-wait",
+        label: "Wait for the connecting jeepney",
+        minutes: transferWaitMinutes,
+        detail: `Confirm the ${guide.signboard} signboard before paying a second fare.`,
+      },
+      {
+        kind: "ride",
+        label: `Ride the ${guide.routeName || to.area} route`,
+        minutes: secondRideMinutes,
+        detail: to.alight || `Ask the driver to announce the safest public drop-off for ${to.name}.`,
+        mapUrl: guide.routeReferenceUrl,
+        mapLabel: "Official route directory",
+      },
+    );
+  } else {
+    stages.push({
+      kind: "ride",
+      label: `Ride the ${guide.routeName || to.area} route`,
+      minutes: rideMinutes,
+      detail: to.alight || `Ask the driver to announce the safest public drop-off for ${to.name}.`,
+      mapUrl: guide.routeReferenceUrl,
+      mapLabel: "Official route directory",
+    });
+  }
+
+  stages.push({
+    kind: "final-walk",
+    label: "Walk from the drop-off to the entrance",
+    minutes: finalWalkMinutes,
+    detail: `After alighting, open walking directions to the verified or safest public entrance of ${to.name}.`,
+    mapUrl: googleDestinationDirectionsUrl(to, "walk"),
+    mapLabel: "Walk to entrance",
+  });
+
+  const routeReference: PlannedRouteReference = {
+    name: guide.routeName || guide.modeLabel,
+    sourceUrl: guide.routeReferenceUrl || "https://alternateroutes.baguio.gov.ph/jeepneyroutes/",
+    verification: guide.routeVerification || "confirm-on-site",
+    ...(guide.serviceHours ? { serviceHours: guide.serviceHours } : {}),
+    disclaimer: JEEPNEY_ROAD_PATH_DISCLAIMER,
+  };
+  const roadOrigin = canWalkDirectlyToTerminal && loadingPoint ? loadingPoint : from;
+  return {
+    stages,
+    baseMinutes: stages.reduce((total, stage) => total + stage.minutes, 0),
+    boardings,
+    roadPathUrl: googleDirectionsUrl(roadOrigin, to, "jeepney"),
+    routeReference,
   };
 }
 
@@ -2384,6 +2562,7 @@ export function buildDirections(
   from: PlannerLocation,
   to: PlannerDestination,
   mode: TransportMode,
+  boardings = 1,
 ): string[] {
   if (mode === "walk" && from.id === "mines-view-park" && to.id === "good-shepherd") {
     return [
@@ -2419,11 +2598,16 @@ export function buildDirections(
 
   const guide = to.routeGuide || GENERIC_ROUTE_GUIDE;
   return [
-    `Go to: ${guide.loadingArea}.`,
-    `Look for a signboard marked ${guide.signboard}.`,
+    `Walk to a confirmed loading point: ${guide.loadingArea}.`,
+    `Allow time to queue, then look for a signboard marked ${guide.signboard}.`,
+    ...(boardings > 1
+      ? ["This leg needs a city-center transfer. Confirm the connecting terminal before leaving the first jeepney and expect a second fare."]
+      : []),
     `Tell the dispatcher or driver that you are going to ${to.name}.`,
     to.alight ||
       `Ask the driver to announce the nearest safe drop-off for ${to.name}.`,
+    `After alighting, use walking directions to the public entrance of ${to.name}.`,
+    JEEPNEY_ROAD_PATH_DISCLAIMER,
     guide.returnHint,
   ];
 }
@@ -2440,6 +2624,19 @@ export function googleDirectionsUrl(
     travelmode: mode === "walk" ? "walking" : "driving",
   });
   appendEndpointPlaceId(params, "origin_place_id", from);
+  appendEndpointPlaceId(params, "destination_place_id", to);
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+export function googleDestinationDirectionsUrl(
+  to: PlannerLocation,
+  mode: TransportMode,
+): string {
+  const params = new URLSearchParams({
+    api: "1",
+    destination: locationForDirections(to),
+    travelmode: mode === "walk" ? "walking" : "driving",
+  });
   appendEndpointPlaceId(params, "destination_place_id", to);
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }

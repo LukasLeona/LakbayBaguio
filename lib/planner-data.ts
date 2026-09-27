@@ -25,56 +25,112 @@ export const PLANNER_ROUTE_GUIDES = {
     "loadingArea": "Lower Session Road, Harrison Road, or the public-market transport area",
     "loadingQuery": "Lower Session Road jeepney terminal Baguio",
     "signboard": "Ask for the CBD route closest to your destination",
-    "returnHint": "Most city-center stops are walkable; otherwise ask for a jeepney returning to Plaza, Burnham, or the public market."
+    "returnHint": "Most city-center stops are walkable; otherwise ask for a jeepney returning to Plaza, Burnham, or the public market.",
+    "routeName": "City-center / CBD jeepney",
+    "routeReferenceUrl": "https://alternateroutes.baguio.gov.ph/jeepneyroutes/",
+    "routeVerification": "confirm-on-site"
   },
   "East Baguio": {
     "modeLabel": "Mines View / Pacdal jeepney",
     "loadingArea": "City-center Mines View or Pacdal loading area; ask a dispatcher near the Plaza or lower Mabini area",
     "loadingQuery": "Mines View jeepney terminal Baguio city center",
     "signboard": "Mines View, Pacdal, or a route serving Leonard Wood Road",
-    "returnHint": "Use the designated city-bound loading area and confirm that the jeepney returns to Plaza or Burnham."
+    "returnHint": "Use the designated city-bound loading area and confirm that the jeepney returns to Plaza or Burnham.",
+    "routeName": "Pacdal Road – Claudio Street corridor",
+    "routeReferenceUrl": "https://alternateroutes.baguio.gov.ph/jeepneyroutes/1/",
+    "routeVerification": "official-directory",
+    "serviceHours": "6:00 AM–9:00 PM",
+    "loadingPoint": {
+      "label": "Claudio Street Pacdal loading area",
+      "googleQuery": "Claudio Street Pacdal jeepney terminal Baguio",
+      "lat": 16.4118478,
+      "lng": 120.596563
+    }
   },
   "South Baguio": {
     "modeLabel": "Scout Barrio / Loakan / Kias jeepney",
     "loadingArea": "A city-center terminal serving Scout Barrio, Loakan, Kias, or PMA",
     "loadingQuery": "Scout Barrio jeepney terminal Baguio",
     "signboard": "Scout Barrio, Loakan, Kias, Camp John Hay, or PMA as appropriate",
-    "returnHint": "Ask staff where the city-bound jeepney waits; Camp John Hay entrances can require additional walking."
+    "returnHint": "Ask staff where the city-bound jeepney waits; Camp John Hay entrances can require additional walking.",
+    "routeName": "Perfecto Street (Loakan Terminal) – Loakan Road",
+    "routeReferenceUrl": "https://alternateroutes.baguio.gov.ph/jeepneyroutes/7/",
+    "routeVerification": "official-directory",
+    "serviceHours": "6:00 AM–9:00 PM",
+    "loadingPoint": {
+      "label": "Perfecto Street Loakan loading area",
+      "googleQuery": "Perfecto Street Loakan jeepney terminal Baguio",
+      "lat": 16.4140113,
+      "lng": 120.5958893
+    }
   },
   "West Baguio": {
     "modeLabel": "Quezon Hill / Tam-awan / Lourdes jeepney",
     "loadingArea": "City-center or market-side terminal serving Quezon Hill, Tam-awan, Lourdes, or Dominican Hill",
     "loadingQuery": "Quezon Hill jeepney terminal Baguio",
     "signboard": "Confirm Tam-awan, Lourdes, Dominican Hill, or Quezon Hill before boarding",
-    "returnHint": "Return from the marked roadside loading point and ask for Plaza, Burnham, or the public market."
+    "returnHint": "Return from the marked roadside loading point and ask for Plaza, Burnham, or the public market.",
+    "routeName": "West Baguio / Upper Kayang corridor",
+    "routeReferenceUrl": "https://alternateroutes.baguio.gov.ph/jeepneyroutes/",
+    "routeVerification": "confirm-on-site",
+    "loadingPoint": {
+      "label": "Upper Kayang Street loading area",
+      "googleQuery": "Upper Kayang Street jeepney terminal Baguio",
+      "lat": 16.4145823,
+      "lng": 120.5931482
+    }
   },
   "North Baguio": {
     "modeLabel": "La Trinidad / Bokawkan jeepney",
     "loadingArea": "Magsaysay Avenue or the Baguio Center Mall transport area",
     "loadingQuery": "La Trinidad jeepney terminal Baguio Center Mall",
     "signboard": "La Trinidad, Bokawkan, or Bell Church",
-    "returnHint": "Use a Baguio-bound jeepney and confirm the Plaza or city-center drop-off."
+    "returnHint": "Use a Baguio-bound jeepney and confirm the Plaza or city-center drop-off.",
+    "routeName": "Magsaysay Avenue / La Trinidad corridor",
+    "routeReferenceUrl": "https://alternateroutes.baguio.gov.ph/jeepneyroutes/",
+    "routeVerification": "confirm-on-site",
+    "loadingPoint": {
+      "label": "Baguio Center Mall / Magsaysay Avenue loading area",
+      "googleQuery": "Baguio Center Mall La Trinidad jeepney terminal",
+      "lat": 16.4163079,
+      "lng": 120.5963353
+    }
   },
   "La Trinidad": {
     "modeLabel": "La Trinidad jeepney",
     "loadingArea": "Magsaysay Avenue or Baguio Center Mall area",
     "loadingQuery": "La Trinidad jeepney terminal Baguio Center Mall",
     "signboard": "La Trinidad; tell the dispatcher the exact attraction",
-    "returnHint": "Board a Baguio-bound jeepney from an official loading area and confirm the city-center stop."
+    "returnHint": "Board a Baguio-bound jeepney from an official loading area and confirm the city-center stop.",
+    "routeName": "Magsaysay Avenue / La Trinidad corridor",
+    "routeReferenceUrl": "https://alternateroutes.baguio.gov.ph/jeepneyroutes/",
+    "routeVerification": "confirm-on-site",
+    "loadingPoint": {
+      "label": "Baguio Center Mall / Magsaysay Avenue loading area",
+      "googleQuery": "Baguio Center Mall La Trinidad jeepney terminal",
+      "lat": 16.4163079,
+      "lng": 120.5963353
+    }
   },
   "Tuba / Asin": {
     "modeLabel": "Asin / Tuba jeepney or hired vehicle",
     "loadingArea": "Confirm the current Asin or Tuba loading area with the Baguio public-market dispatcher",
     "loadingQuery": "Asin Road jeepney terminal Baguio",
     "signboard": "Asin, Nangalisan, or the exact barangay of the attraction",
-    "returnHint": "Return trips can be less frequent. Ask the driver about the final city-bound trip before alighting."
+    "returnHint": "Return trips can be less frequent. Ask the driver about the final city-bound trip before alighting.",
+    "routeName": "Asin Road – Upper Kayang Street corridor",
+    "routeReferenceUrl": "https://alternateroutes.baguio.gov.ph/jeepneyroutes/34/",
+    "routeVerification": "official-directory"
   },
   "Atok Side Trip": {
     "modeLabel": "Atok-bound bus or hired vehicle",
     "loadingArea": "Dangwa or Slaughterhouse-area terminals serving northern Benguet; verify the current operator",
     "loadingQuery": "Atok bus terminal Baguio",
     "signboard": "Atok or Sayangan; confirm the attraction and return schedule",
-    "returnHint": "This is a long side trip. Reserve transport and confirm the last Baguio-bound departure in advance."
+    "returnHint": "This is a long side trip. Reserve transport and confirm the last Baguio-bound departure in advance.",
+    "routeName": "Atok-bound regional service",
+    "routeReferenceUrl": "https://alternateroutes.baguio.gov.ph/jeepneyroutes/",
+    "routeVerification": "confirm-on-site"
   }
 } as const satisfies Readonly<
   Record<PlannerArea, RouteGuide>
