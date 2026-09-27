@@ -62,6 +62,35 @@ assert.deepEqual(
   "Selecting one East Baguio anchor should propose the complete core loop",
 );
 assert.equal(eastBaguioLoop.suggestedIds.length, 3);
+const eastBaguioItinerary = generateItinerary({
+  start: origin,
+  destinations: eastBaguioLoop.destinations,
+  suggestedDestinationIds: eastBaguioLoop.suggestedIds,
+  date: "2026-10-16",
+  numberOfDays: 2,
+  availableMinutes: 8 * 60,
+  travelers: 1,
+  modes: ["jeepney", "walk"],
+  preference: "balanced",
+  pace: "comfortable",
+});
+const eastLoopDayIndices = new Set(
+  eastBaguioItinerary.days.flatMap((day) =>
+    day.items
+      .filter((item) => EAST_BAGUIO_CORE_LOOP_IDS.includes(item.destination.id as typeof EAST_BAGUIO_CORE_LOOP_IDS[number]))
+      .map(() => day.index),
+  ),
+);
+assert.equal(
+  eastBaguioItinerary.days.reduce(
+    (count, day) => count + day.items.filter((item) => EAST_BAGUIO_CORE_LOOP_IDS.includes(item.destination.id as typeof EAST_BAGUIO_CORE_LOOP_IDS[number])).length,
+    0,
+  ),
+  EAST_BAGUIO_CORE_LOOP_IDS.length,
+  "Every proposed East Baguio core stop should fit the same-day loop",
+);
+assert.equal(eastLoopDayIndices.size, 1, "The East Baguio core loop should remain on one efficient day");
+assert.deepEqual(eastBaguioItinerary.suggestedDestinationIds, eastBaguioLoop.suggestedIds);
 
 assert.notEqual(
   routeEstimateKey({ lat: 16.411, lng: 120.591 }, { lat: 16.421, lng: 120.625 }, "walk"),

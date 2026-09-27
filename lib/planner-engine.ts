@@ -1076,11 +1076,14 @@ export function evaluateItineraryMove(
 
   const nextActiveMinutes = activeDayMinutes(nextTargetDay);
   const currentActiveMinutes = activeDayMinutes(targetDay);
-  const relaxedLimit = Math.max(180, itinerary.availableMinutes - 30);
-  if (nextActiveMinutes > relaxedLimit && nextActiveMinutes > currentActiveMinutes + 15) {
+  const scheduleReserve = sharesArea ? 5 : 30;
+  const safeLimit = Math.max(180, itinerary.availableMinutes - scheduleReserve);
+  if (nextActiveMinutes > safeLimit && nextActiveMinutes > currentActiveMinutes + 15) {
     return {
       allowed: false,
-      reason: `Day ${targetDayIndex + 1} would become too compressed. Keep at least 30 minutes of breathing room.`,
+      reason: sharesArea
+        ? `Day ${targetDayIndex + 1} would exceed its safe schedule even as a full ${destination.area} loop.`
+        : `Day ${targetDayIndex + 1} would become too compressed. Keep at least 30 minutes of breathing room.`,
     };
   }
 

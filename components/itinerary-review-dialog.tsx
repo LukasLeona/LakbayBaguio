@@ -54,6 +54,26 @@ type MoveFeedback = {
   text: string;
 };
 
+type ReviewDayIntensity = {
+  level: "easy" | "balanced" | "full";
+  label: string;
+};
+
+function reviewDayIntensity(
+  day: PlannedItinerary["days"][number],
+  availableMinutes: number,
+): ReviewDayIntensity {
+  const activeMinutes = day.items.reduce(
+    (total, item) => total + item.transport.minutes + item.queueMinutes + item.destination.duration,
+    0,
+  );
+  const placeCount = day.items.filter((item) => item.kind === "destination").length;
+  const utilization = activeMinutes / Math.max(1, availableMinutes);
+  if (utilization >= 0.82 || placeCount >= 6) return { level: "full", label: "Full day" };
+  if (utilization >= 0.58 || placeCount >= 4) return { level: "balanced", label: "Balanced day" };
+  return { level: "easy", label: "Easygoing day" };
+}
+
 function stopLabel(stop: PlannedStop) {
   if (stop.kind === "meal") return "Protected meal break";
   if (stop.kind === "rest") return "Recovery break";
@@ -86,6 +106,7 @@ export function ItineraryReviewDialog({
 }: ItineraryReviewDialogProps) {
   const [moving, setMoving] = useState<MovingPlace | null>(null);
   const [moveFeedback, setMoveFeedback] = useState<MoveFeedback | null>(null);
+  const [dismissedFullDays, setDismissedFullDays] = useState<Set<number>>(() => new Set());
   const holdTimer = useRef<number | null>(null);
   const holdOrigin = useRef<{ x: number; y: number } | null>(null);
   const excluded = itinerary.days.flatMap((day) => day.unscheduled);
@@ -93,12 +114,24 @@ export function ItineraryReviewDialog({
   const dayEffort = itinerary.days.map((day) => Math.max(0, day.endMinutes - day.startMinutes));
   const spread = dayEffort.length ? Math.max(...dayEffort) - Math.min(...dayEffort) : 0;
   const overloaded = uniqueExcluded.length > 0 || spread > 150;
+  const suggestedIds = useMemo(
+    () => new Set(itinerary.suggestedDestinationIds ?? []),
+    [itinerary.suggestedDestinationIds],
+  );
+  const dayIntensities = useMemo(
+    () => itinerary.days.map((day) => reviewDayIntensity(day, itinerary.availableMinutes)),
+    [itinerary],
+  );
   const moveOptions = useMemo(
     () => moving
       ? itinerary.days.map((day) => onEvaluateMove(moving.id, day.index))
       : [],
     [itinerary, moving, onEvaluateMove],
   );
+
+  useEffect(() => {
+    setDismissedFullDays(new Set());
+  }, [itinerary.id]);
 
   function clearHoldTimer() {
     if (holdTimer.current) window.clearTimeout(holdTimer.current);
@@ -186,7 +219,7 @@ export function ItineraryReviewDialog({
 
   return (
     <div className="itinerary-review-backdrop" role="presentation" onMouseDown={(event) => { if (!confirming && event.target === event.currentTarget) onEdit(); }}>
-      <section className={`itinerary-review-dialog ${confirming ? "is-confirming" : ""}`} role="dialog" aria-modal="true" aria-labelledby="itinerary-review-title" aria-busy={confirming}>
+      <section className={`itinerary-review-dialog ${confirming ? "is-confirming" : ""} ${moving ? "is-moving-place" : ""}`} role="dialog" aria-modal="true" aria-labelledby="itinerary-review-title" aria-busy={confirming}>
         <header className="itinerary-review-header">
           <div>
             <span><CalendarCheck size={15} /> BEFORE WE LOCK IT IN</span>
@@ -213,11 +246,6 @@ export function ItineraryReviewDialog({
           <div><strong>Your luggage route is accounted for</strong><span><b>Before check-in:</b> {arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))}</span><span><b>After checkout:</b> {checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}</span></div>
         </section> : null}
 
-        <section className="review-pace-plan" aria-label="Itinerary pacing safeguards">
-          <Clock3 />
-          <div><strong>{itinerary.pace === "relaxed" ? "Relaxed" : itinerary.pace === "packed" ? "Packed" : "Comfortable"} pace is built into the schedule</strong><span>Meal and recovery blocks are real agenda time. Attraction queues and traffic/loading allowances are included before deciding what fits.</span></div>
-        </section>
-
         <div className={`review-move-guide ${moving ? "active" : ""}`}>
           <GripVertical />
           <div>
@@ -237,6 +265,8 @@ export function ItineraryReviewDialog({
             const placeCount = day.items.filter((item) => item.kind === "destination").length;
             const comfortCount = day.items.filter((item) => item.kind === "meal" || item.kind === "rest").length;
             const moveOption = moveOptions[day.index];
+            const intensity = dayIntensities[day.index];
+            const primaryArea = areas.length === 1 ? areas[0] : "Baguio";
             return (
               <article
                 className={`review-day-card ${dayMoveState(day.index)}`}
@@ -247,6 +277,7 @@ export function ItineraryReviewDialog({
                 <header>
                   <div><small>DAY {day.index + 1}</small><strong>{placeCount} {placeCount === 1 ? "place" : "places"}{comfortCount ? ` · ${comfortCount} comfort ${comfortCount === 1 ? "break" : "breaks"}` : ""}</strong></div>
                   <div className="review-day-meta">
+                    <b className={`review-day-load ${intensity.level}`}>{intensity.label}</b>
                     <span><Clock3 size={13} /> {minutesToTime(day.startMinutes)}–{minutesToTime(day.endMinutes)}</span>
                     {moving ? (
                       <button
@@ -260,21 +291,27 @@ export function ItineraryReviewDialog({
                   </div>
                 </header>
                 {areas.length ? <p className="review-area-line"><MapPin size={13} /> {areas.join(" · ")}</p> : null}
+                {intensity.level === "full" && !dismissedFullDays.has(day.index) ? <aside className="review-day-callout" role="note">
+                  <AlertTriangle />
+                  <div><strong>Day {day.index + 1} is a full {primaryArea} loop</strong><p>We grouped nearby stops so you will not need to return to the same area another day. It fits the safe schedule, but it will feel busy—keep it or remove a place for more breathing room.</p></div>
+                  <button type="button" onClick={() => setDismissedFullDays((current) => new Set(current).add(day.index))}>Got it</button>
+                </aside> : null}
                 <ol>
                   {day.items.map((stop) => (
                     <li
-                      className={`review-stop ${stop.kind} ${moving?.id === stop.destination.id ? "is-moving" : ""}`}
+                      className={`review-stop ${stop.kind} ${moving?.id === stop.destination.id ? "is-moving" : moving ? "move-dimmed" : ""}`}
                       key={`${day.index}-${stop.destination.id}`}
                       draggable={stop.kind === "destination"}
                       aria-grabbed={stop.kind === "destination" ? moving?.id === stop.destination.id : undefined}
                       onDragStart={stop.kind === "destination" ? (event) => startDrag(event, stop.destination.id, stop.destination.name, day.index) : undefined}
+                      onDragEnd={stop.kind === "destination" ? () => setMoving(null) : undefined}
                       onPointerDown={stop.kind === "destination" ? (event) => scheduleLongPress(event, stop.destination.id, stop.destination.name, day.index) : undefined}
                       onPointerMove={stop.kind === "destination" ? cancelLongPressOnMove : undefined}
                       onPointerUp={stop.kind === "destination" ? clearHoldTimer : undefined}
                       onPointerCancel={stop.kind === "destination" ? clearHoldTimer : undefined}
                     >
                       <span>{stopIcon(stop)}</span>
-                      <div className="review-stop-copy"><strong>{stop.destination.name}</strong><small>{minutesToTime(stop.arrivalMinutes)} · {stopLabel(stop)}</small></div>
+                      <div className="review-stop-copy"><strong>{stop.destination.name}</strong><small>{minutesToTime(stop.arrivalMinutes)} · {stopLabel(stop)}</small>{suggestedIds.has(stop.destination.id) ? <em>Buddy suggested</em> : null}</div>
                       {stop.kind === "destination" ? <div className="review-stop-actions">
                         <button type="button" className="review-grab-button" onClick={() => beginMove(stop.destination.id, stop.destination.name, day.index)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Move ${stop.destination.name}`} title="Move to another day"><GripVertical /></button>
                         <button type="button" className="review-remove-button" onClick={() => onDefer(stop.destination.id)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Move ${stop.destination.name} out of Day ${day.index + 1}`} title="Move out of this day"><Trash2 /></button>
@@ -294,17 +331,18 @@ export function ItineraryReviewDialog({
             <div>{uniqueExcluded.map((place) => {
               const sourceDay = itinerary.days.find((day) => day.unscheduled.some((item) => item.id === place.id))?.index ?? null;
               return <article
-                className={moving?.id === place.id ? "is-moving" : ""}
+                className={moving?.id === place.id ? "is-moving" : moving ? "move-dimmed" : ""}
                 key={place.id}
                 draggable
                 aria-grabbed={moving?.id === place.id}
                 onDragStart={(event) => startDrag(event, place.id, place.name, sourceDay)}
+                onDragEnd={() => setMoving(null)}
                 onPointerDown={(event) => scheduleLongPress(event, place.id, place.name, sourceDay)}
                 onPointerMove={cancelLongPressOnMove}
                 onPointerUp={clearHoldTimer}
                 onPointerCancel={clearHoldTimer}
               >
-                <span><strong>{place.name}</strong><small>{place.area} · {place.open}–{place.close}</small></span>
+                <span><strong>{place.name}</strong><small>{place.area} · {place.open}–{place.close}</small>{suggestedIds.has(place.id) ? <em className="review-suggested-label">Buddy suggested</em> : null}</span>
                 <div className="review-excluded-actions">
                   <button type="button" className="review-grab-button" onClick={() => beginMove(place.id, place.name, sourceDay)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Add ${place.name} to a day`} title="Add back to a day"><GripVertical /></button>
                   <button type="button" className="review-remove-button" onClick={() => onDelete(place.id)} onPointerDown={(event) => event.stopPropagation()}><Trash2 size={14} /> Delete choice</button>
