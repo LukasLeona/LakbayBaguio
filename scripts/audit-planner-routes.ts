@@ -223,6 +223,45 @@ assert.equal(
 );
 assert.match(repairedOverflow.days[1].notices[0], /keeping the trip balanced/);
 
+const threeDayBalanceIds = [
+  "burnham-park",
+  "session-road",
+  "baguio-cathedral",
+  "baguio-city-market",
+  "camp-john-hay",
+  "mirador-heritage-eco-park",
+  "tam-awan-village",
+  "botanical-garden",
+  "wright-park",
+  "mines-view-park",
+  "the-mansion",
+  "good-shepherd",
+];
+const threeDayBalanceChoices = PLANNER_DESTINATIONS
+  .filter(({ id }) => threeDayBalanceIds.includes(id))
+  .map((destination) => ({ ...destination, duration: Math.min(destination.duration, 40) }));
+const threeDayBalanceAssignments = Object.fromEntries(
+  threeDayBalanceChoices.map(({ id }) => [id, ["the-mansion", "good-shepherd"].includes(id) ? 1 : 0]),
+);
+const threeDayBalanced = generateItinerary({
+  start: origin,
+  destinations: threeDayBalanceChoices,
+  date: "2026-10-16",
+  numberOfDays: 3,
+  availableMinutes: 8 * 60,
+  travelers: 1,
+  modes: ["jeepney", "walk"],
+  preference: "balanced",
+  pace: "comfortable",
+  startTime: "08:00",
+  dayAssignments: threeDayBalanceAssignments,
+  balanceOpenDays: true,
+});
+assert.ok(
+  threeDayBalanced.days[1].items.filter(({ kind }) => kind === "destination").length >= 5,
+  `A partially filled Day 2 should absorb compatible overflow and reach five places when time permits: ${JSON.stringify(threeDayBalanced.days.map((day) => ({ scheduled: day.items.filter(({ kind }) => kind === "destination").map(({ destination }) => destination.id), unscheduled: day.unscheduled.map(({ id }) => id) })))}`,
+);
+
 assert.notEqual(
   routeEstimateKey({ lat: 16.411, lng: 120.591 }, { lat: 16.421, lng: 120.625 }, "walk"),
   routeEstimateKey({ lat: 16.421, lng: 120.625 }, { lat: 16.411, lng: 120.591 }, "walk"),

@@ -70,6 +70,9 @@ function reviewDayIntensity(
   );
   const placeCount = sightseeing.length;
   const utilization = activeMinutes / Math.max(1, availableMinutes);
+  if (day.items.some((item) => item.kind === "check-out") && placeCount <= 1) {
+    return { level: "easy", label: "Checkout day" };
+  }
   if (placeCount === 0) {
     return day.items.length
       ? { level: "easy", label: "Logistics day" }
@@ -112,7 +115,7 @@ export function ItineraryReviewDialog({
 }: ItineraryReviewDialogProps) {
   const [moving, setMoving] = useState<MovingPlace | null>(null);
   const [moveFeedback, setMoveFeedback] = useState<MoveFeedback | null>(null);
-  const [dismissedFullDays, setDismissedFullDays] = useState<Set<number>>(() => new Set());
+  const [acknowledgedFullDays, setAcknowledgedFullDays] = useState<Set<number>>(() => new Set());
   const holdTimer = useRef<number | null>(null);
   const holdOrigin = useRef<{ x: number; y: number } | null>(null);
   const excluded = itinerary.days.flatMap((day) => day.unscheduled);
@@ -128,6 +131,11 @@ export function ItineraryReviewDialog({
     () => itinerary.days.map((day) => reviewDayIntensity(day, itinerary.availableMinutes)),
     [itinerary],
   );
+  const fullDayIndexes = useMemo(
+    () => dayIntensities.flatMap((intensity, index) => intensity.level === "full" ? [index] : []),
+    [dayIntensities],
+  );
+  const unconfirmedFullDays = fullDayIndexes.filter((index) => !acknowledgedFullDays.has(index));
   const moveOptions = useMemo(
     () => moving
       ? itinerary.days.map((day) => onEvaluateMove(moving.id, day.index))
@@ -136,7 +144,7 @@ export function ItineraryReviewDialog({
   );
 
   useEffect(() => {
-    setDismissedFullDays(new Set());
+    setAcknowledgedFullDays(new Set());
   }, [itinerary.id]);
 
   function clearHoldTimer() {
@@ -203,12 +211,31 @@ export function ItineraryReviewDialog({
     return "move-blocked";
   }
 
+  function cancelMove() {
+    clearHoldTimer();
+    setMoving(null);
+    setMoveFeedback(null);
+  }
+
+  function focusDayAdjustments(dayIndex: number) {
+    const removeButton = document.querySelector<HTMLButtonElement>(
+      `#review-day-${dayIndex + 1} .review-remove-button`,
+    );
+    removeButton?.scrollIntoView({ behavior: "smooth", block: "center" });
+    removeButton?.focus({ preventScroll: true });
+    setMoveFeedback({
+      tone: "error",
+      text: `Remove or move a Day ${dayIndex + 1} place, then review the updated pace before confirming.`,
+    });
+  }
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (moving) {
+        clearHoldTimer();
         setMoving(null);
         setMoveFeedback(null);
       } else if (!confirming) {
@@ -224,7 +251,20 @@ export function ItineraryReviewDialog({
   }, [confirming, moving, onEdit]);
 
   return (
-    <div className="itinerary-review-backdrop" role="presentation" onMouseDown={(event) => { if (!confirming && event.target === event.currentTarget) onEdit(); }}>
+    <div
+      className="itinerary-review-backdrop"
+      role="presentation"
+      onPointerDown={(event) => {
+        if (confirming) return;
+        const target = event.target as HTMLElement;
+        if (moving) {
+          if (target.closest('[data-move-control="true"]')) return;
+          cancelMove();
+          return;
+        }
+        if (event.target === event.currentTarget) onEdit();
+      }}
+    >
       <section className={`itinerary-review-dialog ${confirming ? "is-confirming" : ""} ${moving ? "is-moving-place" : ""}`} role="dialog" aria-modal="true" aria-labelledby="itinerary-review-title" aria-busy={confirming}>
         <header className="itinerary-review-header">
           <div>
@@ -252,7 +292,7 @@ export function ItineraryReviewDialog({
           <div><strong>Store bags before sightseeing</strong><span><b>Before check-in:</b> {arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))}</span><span><b>After checkout:</b> {checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}</span><span>Confirm the handoff on arrival and keep valuables with you.</span></div>
         </section> : null}
 
-        <div className={`review-move-guide ${moving ? "active" : ""}`}>
+        <div className={`review-move-guide ${moving ? "active" : ""}`} data-move-control={moving ? "true" : undefined}>
           <GripVertical />
           <div>
             <strong>{moving ? `Moving ${moving.name}` : "Fine-tune this route"}</strong>
@@ -260,7 +300,7 @@ export function ItineraryReviewDialog({
               ? "Green days can take this stop. Tap Move here, or drop it on a green card."
               : "Drag a place on desktop, or press and hold on mobile. Fixed hotel and departure times stay locked."}</p>
           </div>
-          {moving ? <button type="button" onClick={() => setMoving(null)}>Cancel</button> : null}
+          {moving ? <button type="button" onClick={cancelMove}>Cancel</button> : null}
         </div>
 
         {moveFeedback ? <div className={`review-move-feedback ${moveFeedback.tone}`} role="status">{moveFeedback.text}</div> : null}
@@ -287,6 +327,7 @@ export function ItineraryReviewDialog({
               <article
                 className={`review-day-card ${dayMoveState(day.index)}`}
                 key={day.index}
+                id={`review-day-${day.index + 1}`}
                 onDragOver={(event) => { if (moving) { event.preventDefault(); event.dataTransfer.dropEffect = moveOption?.allowed ? "move" : "none"; } }}
                 onDrop={(event) => { event.preventDefault(); finishMove(day.index); }}
               >
@@ -301,16 +342,30 @@ export function ItineraryReviewDialog({
                         className={moveOption?.allowed ? "allowed" : "blocked"}
                         aria-disabled={!moveOption?.allowed}
                         title={moveOption?.reason}
+                        data-move-control="true"
                         onClick={() => finishMove(day.index)}
                       ><MoveRight /> {moveOption?.allowed ? "Move here" : moving.sourceDay === day.index ? "Current day" : "Doesn't fit"}</button>
                     ) : null}
                   </div>
                 </header>
                 {areas.length ? <p className="review-area-line"><MapPin size={13} /> {areas.join(" · ")}</p> : null}
-                {intensity.level === "full" && !dismissedFullDays.has(day.index) ? <aside className="review-day-callout" role="note">
+                {intensity.level === "full" ? <aside className={`review-day-callout ${acknowledgedFullDays.has(day.index) ? "acknowledged" : ""}`} role="alert">
                   <AlertTriangle />
-                  <div><strong>Day {day.index + 1} is a full {fullDayLabel}</strong><p>We grouped nearby stops so you will not need to return to the same area another day. It fits the safe schedule, but it will feel busy—keep it or remove a place for more breathing room.</p></div>
-                  <button type="button" onClick={() => setDismissedFullDays((current) => new Set(current).add(day.index))}>Got it</button>
+                  <div><strong>Day {day.index + 1} is a full {fullDayLabel}</strong><p>You’ll visit {placeCount} places from {minutesToTime(day.startMinutes)} to {minutesToTime(day.endMinutes)} with limited downtime. Are you comfortable keeping this schedule?</p></div>
+                  <div className="review-day-callout-actions">
+                    <button
+                      type="button"
+                      className="keep"
+                      aria-pressed={acknowledgedFullDays.has(day.index)}
+                      disabled={acknowledgedFullDays.has(day.index)}
+                      onClick={() => setAcknowledgedFullDays((current) => new Set(current).add(day.index))}
+                    >{acknowledgedFullDays.has(day.index) ? <><Check /> Packed day accepted</> : "Keep this packed day"}</button>
+                    <button type="button" onClick={() => focusDayAdjustments(day.index)}>Adjust places</button>
+                  </div>
+                </aside> : null}
+                {itinerary.numberOfDays === 3 && day.index === 1 && placeCount < 5 && uniqueExcluded.length ? <aside className="review-day-constraint" role="alert">
+                  <AlertTriangle />
+                  <div><strong>Day 2 could not safely reach five places</strong><p>The remaining choices conflict with travel time, opening hours, or fixed plans. You can move a compatible place here, but the planner will not force an unsafe route.</p></div>
                 </aside> : null}
                 {!day.items.length ? <div className="review-open-day">
                   <Coffee />
@@ -321,6 +376,7 @@ export function ItineraryReviewDialog({
                       className={`review-stop ${stop.kind} ${moving?.id === stop.destination.id ? "is-moving" : moving ? "move-dimmed" : ""}`}
                       key={`${day.index}-${stop.destination.id}`}
                       draggable={stop.kind === "destination"}
+                      data-move-control={moving?.id === stop.destination.id ? "true" : undefined}
                       aria-grabbed={stop.kind === "destination" ? moving?.id === stop.destination.id : undefined}
                       onDragStart={stop.kind === "destination" ? (event) => startDrag(event, stop.destination.id, stop.destination.name, day.index) : undefined}
                       onDragEnd={stop.kind === "destination" ? () => setMoving(null) : undefined}
@@ -353,6 +409,7 @@ export function ItineraryReviewDialog({
                 className={moving?.id === place.id ? "is-moving" : moving ? "move-dimmed" : ""}
                 key={place.id}
                 draggable
+                data-move-control={moving?.id === place.id ? "true" : undefined}
                 aria-grabbed={moving?.id === place.id}
                 onDragStart={(event) => startDrag(event, place.id, place.name, sourceDay)}
                 onDragEnd={() => setMoving(null)}
@@ -373,7 +430,13 @@ export function ItineraryReviewDialog({
 
         <footer className="itinerary-review-actions">
           <button type="button" className="review-edit-button" onClick={onEdit} disabled={confirming}><Pencil /> Edit choices</button>
-          <button type="button" className="review-confirm-button" onClick={onConfirm} disabled={confirming}>{confirming ? <LoaderCircle className="spin" /> : <Check />} {confirming ? "Finalizing itinerary…" : "Use this itinerary"}</button>
+          <button
+            type="button"
+            className="review-confirm-button"
+            onClick={onConfirm}
+            disabled={confirming || unconfirmedFullDays.length > 0}
+            title={unconfirmedFullDays.length ? "Confirm each packed-day warning first." : undefined}
+          >{confirming ? <LoaderCircle className="spin" /> : <Check />} {confirming ? "Finalizing itinerary…" : unconfirmedFullDays.length ? `Review ${unconfirmedFullDays.length} packed ${unconfirmedFullDays.length === 1 ? "day" : "days"}` : "Use this itinerary"}</button>
         </footer>
         {confirming ? <div className="review-finalizing" role="status" aria-live="polite"><LoaderCircle className="spin" /><strong>Finalizing your Baguio itinerary…</strong><span>Rechecking the route, schedule, and travel time.</span></div> : null}
       </section>

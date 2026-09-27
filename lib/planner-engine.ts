@@ -828,7 +828,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
 
   let daysWithoutRoutes = buildDaysWithoutRoutes(buckets);
   if (request.balanceOpenDays) {
-    const repair = redistributeOverflowIntoOpenDays(
+    const repair = redistributeOverflowIntoAvailableDays(
       buckets,
       daysWithoutRoutes,
       request,
@@ -949,72 +949,108 @@ function applyDayAssignments(
   return buckets;
 }
 
-function redistributeOverflowIntoOpenDays(
+function redistributeOverflowIntoAvailableDays(
   currentBuckets: readonly PlannerDestination[][],
   days: readonly Pick<PlannedDay, "index" | "items" | "unscheduled">[],
   request: PlannerRequest,
   deferredIds: ReadonlySet<string>,
 ): { buckets: PlannerDestination[][]; movedToDays: Set<number> } {
-  const openDays = days
-    .filter((day) =>
-      !day.items.some((item) => item.kind === "destination")
-      && request.stay?.checkOutDay !== day.index
-      && request.departure?.dayIndex !== day.index,
-    )
+  const sightseeingCounts = new Map(days.map((day) => [
+    day.index,
+    day.items.filter((item) => item.kind === "destination").length,
+  ]));
+  const secondDayTarget = request.numberOfDays === 3
+    && request.stay?.checkOutDay !== 1
+    && request.departure?.dayIndex !== 1
+    ? 1
+    : null;
+  const availableDays = days
+    .filter((day) => {
+      if (request.stay?.checkOutDay === day.index || request.departure?.dayIndex === day.index) return false;
+      const count = sightseeingCounts.get(day.index) ?? 0;
+      return count === 0 || (day.index === secondDayTarget && count < 5);
+    })
     .map((day) => day.index);
-  if (!openDays.length) {
+  if (!availableDays.length) {
     return { buckets: currentBuckets.map((bucket) => [...bucket]), movedToDays: new Set() };
   }
 
   const finalDayIndex = request.numberOfDays - 1;
-  const overflowById = new Map<string, PlannerDestination>();
+  const overflowById = new Map<string, { destination: PlannerDestination; sourceDay: number }>();
   days.forEach((day) => {
     day.unscheduled.forEach((destination) => {
       if (deferredIds.has(destination.id)) return;
       if (destination.id === "baguio-city-market" && day.index === finalDayIndex) return;
-      overflowById.set(destination.id, destination);
+      overflowById.set(destination.id, { destination, sourceDay: day.index });
     });
   });
   if (!overflowById.size) {
     return { buckets: currentBuckets.map((bucket) => [...bucket]), movedToDays: new Set() };
   }
 
-  const overflowIds = new Set(overflowById.keys());
-  const buckets = currentBuckets.map((bucket) =>
-    bucket.filter((destination) => !overflowIds.has(destination.id)),
-  );
+  const buckets = currentBuckets.map((bucket) => [...bucket]);
   const groups = new Map<string, PlannerDestination[]>();
-  overflowById.forEach((destination) => {
+  overflowById.forEach(({ destination }) => {
     const key = destination.area === "Atok Side Trip"
       ? "Atok Side Trip"
       : destination.area;
     groups.set(key, [...(groups.get(key) ?? []), destination]);
   });
 
-  const targetLoads = new Map(openDays.map((dayIndex) => [dayIndex, 0]));
+  const targetLoads = new Map(availableDays.map((dayIndex) => {
+    const day = days[dayIndex];
+    const activeMinutes = day.items.reduce(
+      (total, item) => total + item.transport.minutes + item.queueMinutes + item.destination.duration,
+      0,
+    );
+    return [dayIndex, activeMinutes];
+  }));
+  const targetCounts = new Map(availableDays.map((dayIndex) => [
+    dayIndex,
+    sightseeingCounts.get(dayIndex) ?? 0,
+  ]));
   const movedToDays = new Set<number>();
-  const targetCapacity = Math.max(120, request.availableMinutes - 60);
+  const targetCapacity = Math.max(180, request.availableMinutes + (secondDayTarget === null ? -20 : 45));
+  const secondDayAreas = secondDayTarget === null
+    ? new Set<string>()
+    : new Set(buckets[secondDayTarget].map((destination) => destination.area));
   [...groups.values()]
-    .sort((first, second) =>
-      second.reduce((total, destination) => total + destination.duration, 0)
-        - first.reduce((total, destination) => total + destination.duration, 0),
-    )
+    .sort((first, second) => {
+      const firstMatchesSecondDay = first.some((destination) => secondDayAreas.has(destination.area));
+      const secondMatchesSecondDay = second.some((destination) => secondDayAreas.has(destination.area));
+      if (firstMatchesSecondDay !== secondMatchesSecondDay) return firstMatchesSecondDay ? -1 : 1;
+      return second.reduce((total, destination) => total + destination.duration, 0)
+        - first.reduce((total, destination) => total + destination.duration, 0);
+    })
     .forEach((group) => {
-      let targetDay = [...openDays].sort(
-        (first, second) => (targetLoads.get(first) ?? 0) - (targetLoads.get(second) ?? 0),
-      )[0];
       group.forEach((destination) => {
-        const projectedLoad = (targetLoads.get(targetDay) ?? 0) + destination.duration;
-        if (projectedLoad > targetCapacity) {
-          targetDay = [...openDays].sort(
-            (first, second) => (targetLoads.get(first) ?? 0) - (targetLoads.get(second) ?? 0),
-          )[0];
-        }
+        const sourceDay = overflowById.get(destination.id)?.sourceDay;
+        const candidateDays = [...availableDays]
+          .filter((dayIndex) => {
+            if (dayIndex === sourceDay) return false;
+            const count = targetCounts.get(dayIndex) ?? 0;
+            const isOpenDay = (sightseeingCounts.get(dayIndex) ?? 0) === 0;
+            if (!isOpenDay && dayIndex === secondDayTarget && count >= 5) return false;
+            return (targetLoads.get(dayIndex) ?? 0) + destination.duration + 8 <= targetCapacity;
+          })
+          .sort((first, second) => {
+            if (first === secondDayTarget && (targetCounts.get(first) ?? 0) < 5) return -1;
+            if (second === secondDayTarget && (targetCounts.get(second) ?? 0) < 5) return 1;
+            const firstSameArea = buckets[first].some((place) => place.area === destination.area) ? -90 : 0;
+            const secondSameArea = buckets[second].some((place) => place.area === destination.area) ? -90 : 0;
+            return (targetLoads.get(first) ?? 0) + firstSameArea
+              - ((targetLoads.get(second) ?? 0) + secondSameArea);
+          });
+        const targetDay = candidateDays[0];
+        if (targetDay === undefined) return;
+        if (sourceDay === undefined) return;
+        buckets[sourceDay] = buckets[sourceDay].filter((place) => place.id !== destination.id);
         buckets[targetDay].push(destination);
         targetLoads.set(
           targetDay,
-          (targetLoads.get(targetDay) ?? 0) + destination.duration,
+          (targetLoads.get(targetDay) ?? 0) + destination.duration + 8,
         );
+        targetCounts.set(targetDay, (targetCounts.get(targetDay) ?? 0) + 1);
         movedToDays.add(targetDay);
       });
     });
