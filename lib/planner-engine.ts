@@ -24,6 +24,15 @@ import type {
 } from "@/lib/planner-types";
 import { LTFRB_FARE_POLICY, OFFICIAL_FARE_SETTINGS } from "@/lib/fare-policy";
 import { isSupportedGoogleMapsUrl } from "@/lib/google-maps-place";
+import {
+  findRouteEstimate,
+  routeCoordinates,
+  routeEstimateKey,
+  type PlannerRouteEstimates,
+  type RouteDetailPair,
+  type RouteConfidence,
+  type RouteTerrain,
+} from "@/lib/route-estimates";
 
 export type {
   FareSettings,
@@ -35,7 +44,7 @@ export type {
 } from "@/lib/planner-types";
 
 export const PLANNING_DISCLAIMER =
-  `Travel time and routes are estimates. Fare calculations use LTFRB-published rates reviewed ${LTFRB_FARE_POLICY.reviewedLabel}; confirm the taxi meter, jeepney fare matrix, attraction hours, and loading areas locally.`;
+  `Travel times use routed road/walk measurements when available and show an uncertainty range; low-confidence fallbacks are deliberately conservative. Fare calculations use LTFRB-published rates reviewed ${LTFRB_FARE_POLICY.reviewedLabel}; confirm the taxi meter, jeepney fare matrix, attraction hours, and loading areas locally.`;
 
 export const JEEPNEY_ROAD_PATH_DISCLAIMER =
   "Road-path reference only—not live jeepney navigation. Confirm the signboard, loading point, transfer, and drop-off with a dispatcher or driver.";
@@ -86,6 +95,8 @@ export type PlannerRequest = {
   dayAssignments?: PlannerDayAssignments;
   /** Places intentionally held outside the route while the user reviews it. */
   deferredDestinationIds?: readonly string[];
+  /** Server-resolved road and walking measurements keyed by directional coordinates. */
+  routeEstimates?: PlannerRouteEstimates;
 };
 
 export type PlannerDayAssignments = Readonly<Record<string, number>>;
@@ -127,6 +138,12 @@ export type PlannedTransport = {
   stages?: PlannedCommuteStage[];
   boardings?: number;
   routeReference?: PlannedRouteReference;
+  /** Routed distance used by the schedule; omitted only on restored legacy plans. */
+  distanceKm?: number;
+  durationRange?: { minimum: number; maximum: number };
+  confidence?: RouteConfidence;
+  estimateSource?: "geoapify-routing" | "verified-corridor" | "baguio-fallback";
+  terrain?: RouteTerrain;
 };
 
 export type PlannedCommuteStage = {
@@ -209,6 +226,7 @@ export type PlannedItinerary = {
   deferredDestinationIds?: string[];
   stay?: PlannerStay;
   departure?: PlannerDeparture;
+  routeEstimates?: PlannerRouteEstimates;
   totals: ItineraryTotals;
   disclaimer: string;
 };
@@ -231,11 +249,12 @@ type DayBuildOptions = {
   checkInStay?: PlannerStay;
   checkOutStay?: PlannerStay;
   departure?: PlannerDeparture;
+  routeEstimates?: PlannerRouteEstimates;
 };
 
 type TransportOptions = Pick<
   DayBuildOptions,
-  "preference" | "pace" | "travelers" | "modes" | "fareSettings"
+  "preference" | "pace" | "travelers" | "modes" | "fareSettings" | "routeEstimates"
 >;
 
 const VALID_PREFERENCES = new Set<TravelPreference>([
@@ -712,6 +731,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     startMinutes,
     request.stay,
     pace,
+    request.routeEstimates,
   );
   const buckets = applyDayAssignments(
     automaticBuckets,
@@ -728,6 +748,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     modes,
     fareSettings,
     startMinutes,
+    routeEstimates: request.routeEstimates,
   };
 
   const dayStarts = buckets.map((_, dayIndex) =>
@@ -779,6 +800,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
       departure: request.departure,
       dayAssignments: request.dayAssignments,
       deferredDestinationIds,
+      routeEstimateKeys: Object.keys(request.routeEstimates ?? {}).sort(),
     }),
   );
 
@@ -804,6 +826,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     ...(deferredDestinationIds.length ? { deferredDestinationIds } : {}),
     ...(request.stay ? { stay: request.stay } : {}),
     ...(request.departure ? { departure: request.departure } : {}),
+    ...(request.routeEstimates ? { routeEstimates: request.routeEstimates } : {}),
     totals,
     disclaimer: PLANNING_DISCLAIMER,
   };
@@ -865,6 +888,21 @@ export function getItineraryDayAssignments(itinerary: PlannedItinerary): Record<
   return assignments;
 }
 
+/** Returns only the final walking legs that need an elevation profile. */
+export function getItineraryWalkingDetailPairs(
+  itinerary: PlannedItinerary,
+): RouteDetailPair[] {
+  const unique = new Map<string, RouteDetailPair>();
+  itinerary.days.forEach((day) => {
+    day.items.forEach((item) => {
+      if (item.stationary || item.transport.mode !== "walk" || item.distance < 0.05) return;
+      const pair = { from: item.from, to: item.destination };
+      unique.set(routeEstimateKey(pair.from, pair.to, "walk"), pair);
+    });
+  });
+  return [...unique.values()];
+}
+
 function scheduledDestinationIds(itinerary: PlannedItinerary): Set<string> {
   return new Set(
     itinerary.days.flatMap((day) =>
@@ -924,8 +962,8 @@ export function evaluateItineraryMove(
 
   const sharesArea = targetPlaces.some((place) => place.area === destination.area);
   const nearestTargetKm = targetPlaces.length
-    ? Math.min(...targetPlaces.map((place) => haversineKm(place, destination)))
-    : haversineKm(startLocationForDay(itinerary.start, itinerary.stay, targetDayIndex), destination);
+    ? Math.min(...targetPlaces.map((place) => planningRouteMetric(place, destination, itinerary.routeEstimates).distanceKm))
+    : planningRouteMetric(startLocationForDay(itinerary.start, itinerary.stay, targetDayIndex), destination, itinerary.routeEstimates).distanceKm;
   if (targetPlaces.length && !sharesArea && nearestTargetKm > 2.5) {
     return {
       allowed: false,
@@ -950,6 +988,7 @@ export function evaluateItineraryMove(
     ...(itinerary.departure ? { departure: itinerary.departure } : {}),
     dayAssignments: assignments,
     deferredDestinationIds: itinerary.deferredDestinationIds?.filter((id) => id !== destinationId),
+    routeEstimates: itinerary.routeEstimates,
   });
   const nextTargetDay = next.days[targetDayIndex];
   const movedStop = nextTargetDay.items.find(
@@ -1018,6 +1057,7 @@ export function deferItineraryDestination(
       ...(itinerary.deferredDestinationIds ?? []),
       destinationId,
     ])],
+    routeEstimates: itinerary.routeEstimates,
   });
 }
 
@@ -1029,6 +1069,23 @@ type DestinationCluster = {
   estimatedMinutes: number;
   firstIndex: number;
 };
+
+function planningRouteMetric(
+  from: PlannerLocation,
+  to: PlannerLocation,
+  estimates?: PlannerRouteEstimates,
+  mode: "walk" | "drive" = "drive",
+) {
+  const estimate = findRouteEstimate(estimates, from, to, mode);
+  const straightLineKm = haversineKm(routeCoordinates(from), routeCoordinates(to));
+  const fallbackDistanceKm = straightLineKm * (mode === "walk" ? 1.55 : 1.25);
+  return {
+    distanceKm: estimate?.distanceKm ?? fallbackDistanceKm,
+    durationMinutes: estimate?.durationMinutes
+      ?? Math.ceil(estimateTravelMinutes(fallbackDistanceKm, mode === "walk" ? "walk" : "taxi") * (mode === "walk" ? 1.12 : 1.08)),
+    estimate,
+  };
+}
 
 function destinationCentroid(
   destinations: readonly PlannerDestination[],
@@ -1047,20 +1104,18 @@ function estimateClusterMinutes(
   destinations: readonly PlannerDestination[],
   preference: TravelPreference,
   startMinutes: number,
+  routeEstimates?: PlannerRouteEstimates,
 ): number {
   if (!destinations.length) return 0;
   const centroid = destinationCentroid(destinations, destinations[0].area);
-  const ordered = optimizeRoute(centroid, destinations, preference, startMinutes);
+  const ordered = optimizeRoute(centroid, destinations, preference, startMinutes, routeEstimates);
   let minutes = ordered.reduce(
     (sum, destination) => sum + destination.duration,
     0,
   );
 
   for (let index = 1; index < ordered.length; index += 1) {
-    minutes += estimateTravelMinutes(
-      haversineKm(ordered[index - 1], ordered[index]),
-      "taxi",
-    );
+    minutes += planningRouteMetric(ordered[index - 1], ordered[index], routeEstimates).durationMinutes;
   }
 
   // Keep a small transition buffer between visits so a day feels achievable,
@@ -1074,6 +1129,7 @@ function makeDestinationCluster(
   firstIndex: number,
   preference: TravelPreference,
   startMinutes: number,
+  routeEstimates?: PlannerRouteEstimates,
   suffix = "",
 ): DestinationCluster {
   return {
@@ -1085,6 +1141,7 @@ function makeDestinationCluster(
       destinations,
       preference,
       startMinutes,
+      routeEstimates,
     ),
     firstIndex,
   };
@@ -1096,6 +1153,7 @@ function splitOversizedClusters(
   targetMinutes: number,
   preference: TravelPreference,
   startMinutes: number,
+  routeEstimates?: PlannerRouteEstimates,
 ): DestinationCluster[] {
   const result = [...clusters];
   let spareDays = Math.max(0, availableDays - result.length);
@@ -1121,6 +1179,7 @@ function splitOversizedClusters(
       candidate.destinations,
       preference,
       startMinutes,
+      routeEstimates,
     );
     const splitAt = Math.ceil(ordered.length / 2);
     const first = makeDestinationCluster(
@@ -1129,6 +1188,7 @@ function splitOversizedClusters(
       candidate.firstIndex,
       preference,
       startMinutes,
+      routeEstimates,
       `${candidate.key}-a`,
     );
     const second = makeDestinationCluster(
@@ -1137,6 +1197,7 @@ function splitOversizedClusters(
       candidate.firstIndex + splitAt,
       preference,
       startMinutes,
+      routeEstimates,
       `${candidate.key}-b`,
     );
     result.splice(candidateIndex, 1, first, second);
@@ -1149,11 +1210,14 @@ function splitOversizedClusters(
 function minimumClusterDistance(
   cluster: DestinationCluster,
   destinations: readonly PlannerDestination[],
+  routeEstimates?: PlannerRouteEstimates,
 ): number {
   if (!destinations.length) return Number.POSITIVE_INFINITY;
   return Math.min(
-    ...destinations.map((destination) =>
-      haversineKm(cluster.centroid, destination),
+    ...cluster.destinations.flatMap((clusterStop) =>
+      destinations.map((destination) =>
+        planningRouteMetric(clusterStop, destination, routeEstimates).distanceKm,
+      ),
     ),
   );
 }
@@ -1161,6 +1225,7 @@ function minimumClusterDistance(
 function rebalanceBucketCounts(
   buckets: PlannerDestination[][],
   usableDays: number,
+  routeEstimates?: PlannerRouteEstimates,
 ): void {
   if (usableDays < 2) return;
 
@@ -1184,10 +1249,10 @@ function rebalanceBucketCounts(
 
     const candidate = [...candidates].sort((first, second) => {
       const firstDistance = targetStops.length
-        ? Math.min(...targetStops.map((stop) => haversineKm(first, stop)))
+        ? Math.min(...targetStops.map((stop) => planningRouteMetric(first, stop, routeEstimates).distanceKm))
         : 0;
       const secondDistance = targetStops.length
-        ? Math.min(...targetStops.map((stop) => haversineKm(second, stop)))
+        ? Math.min(...targetStops.map((stop) => planningRouteMetric(second, stop, routeEstimates).distanceKm))
         : 0;
       const firstAreaFit = targetStops.some((stop) => stop.area === first.area) ? -1.5 : 0;
       const secondAreaFit = targetStops.some((stop) => stop.area === second.area) ? -1.5 : 0;
@@ -1216,6 +1281,7 @@ export function buildDayBuckets(
   startMinutes: number,
   stay?: PlannerStay,
   pace: PacePreference = "comfortable",
+  routeEstimates?: PlannerRouteEstimates,
 ): PlannerDestination[][] {
   const buckets = Array.from(
     { length: numberOfDays },
@@ -1283,6 +1349,7 @@ export function buildDayBuckets(
       group.firstIndex,
       preference,
       startMinutes,
+      routeEstimates,
     ),
   );
   clusters = splitOversizedClusters(
@@ -1291,6 +1358,7 @@ export function buildDayBuckets(
     targetPerDay,
     preference,
     startMinutes,
+    routeEstimates,
   );
 
   const remaining = [...clusters];
@@ -1304,10 +1372,18 @@ export function buildDayBuckets(
     let bestScore = Number.POSITIVE_INFINITY;
 
     remaining.forEach((cluster, index) => {
-      let score = haversineKm(anchor, cluster.centroid);
+      let score = Math.min(
+        ...cluster.destinations.map((destination) =>
+          planningRouteMetric(anchor, destination, routeEstimates).distanceKm,
+        ),
+      );
       if (anchor.area === cluster.area) score -= 0.75;
       if (stay && dayIndex === stay.checkInDay) {
-        score += haversineKm(cluster.centroid, stay) * 1.25;
+        score += Math.min(
+          ...cluster.destinations.map((destination) =>
+            planningRouteMetric(destination, stay, routeEstimates).distanceKm,
+          ),
+        ) * 1.25;
       }
       score += cluster.firstIndex / 100_000;
       if (score < bestScore) {
@@ -1328,7 +1404,7 @@ export function buildDayBuckets(
     let bestScore = Number.POSITIVE_INFINITY;
 
     for (let dayIndex = 0; dayIndex < regularDayCount; dayIndex += 1) {
-      const proximity = minimumClusterDistance(cluster, buckets[dayIndex]);
+      const proximity = minimumClusterDistance(cluster, buckets[dayIndex], routeEstimates);
       const overload = Math.max(
         0,
         bucketLoads[dayIndex] + cluster.estimatedMinutes - targetPerDay,
@@ -1362,9 +1438,9 @@ export function buildDayBuckets(
       const dayStops = buckets[dayIndex];
       const proximity = dayStops.length
         ? Math.min(
-            ...dayStops.map((stop) => haversineKm(stop, destination)),
+            ...dayStops.map((stop) => planningRouteMetric(stop, destination, routeEstimates).distanceKm),
           )
-        : haversineKm(startLocationForDay(start, stay, dayIndex), destination);
+        : planningRouteMetric(startLocationForDay(start, stay, dayIndex), destination, routeEstimates).distanceKm;
       const sameArea = dayStops.some((stop) => stop.area === destination.area);
       const existingNightStops = dayStops.filter(
         (stop) => stop.timeSlot === "night",
@@ -1378,7 +1454,7 @@ export function buildDayBuckets(
     buckets[bestDay].push(destination);
   });
 
-  rebalanceBucketCounts(buckets, regularDayCount);
+  rebalanceBucketCounts(buckets, regularDayCount, routeEstimates);
 
   if (protectedFinalDay && stay) {
     const finalBucket = buckets[stay.checkOutDay];
@@ -1417,6 +1493,7 @@ export function optimizeRoute(
   destinations: readonly PlannerDestination[],
   preference: TravelPreference,
   startMinutes: number,
+  routeEstimates?: PlannerRouteEstimates,
 ): PlannerDestination[] {
   const remaining = destinations.map((destination, originalIndex) => ({
     destination,
@@ -1432,9 +1509,9 @@ export function optimizeRoute(
     let bestOriginalIndex = Number.POSITIVE_INFINITY;
 
     remaining.forEach(({ destination, originalIndex }, index) => {
-      const distance = haversineKm(current, destination);
-      const estimatedArrival =
-        cursor + estimateTravelMinutes(distance, "taxi");
+      const metric = planningRouteMetric(current, destination, routeEstimates);
+      const distance = metric.distanceKm;
+      const estimatedArrival = cursor + metric.durationMinutes;
       const { open, close } = openingWindow(destination);
       const effectiveClose =
         destination.timeSlot === "night" ? 26 * 60 : close;
@@ -1467,9 +1544,7 @@ export function optimizeRoute(
 
     const [{ destination: next }] = remaining.splice(bestIndex, 1);
     route.push(next);
-    cursor +=
-      estimateTravelMinutes(haversineKm(current, next), "taxi") +
-      next.duration;
+    cursor += planningRouteMetric(current, next, routeEstimates).durationMinutes + next.duration;
     current = next;
   }
 
@@ -1480,14 +1555,15 @@ function routeDistanceWithAnchor(
   start: PlannerLocation,
   route: readonly PlannerDestination[],
   anchor: PlannerLocation,
+  routeEstimates?: PlannerRouteEstimates,
 ): number {
   let total = 0;
   let current = start;
   route.forEach((destination) => {
-    total += haversineKm(current, destination);
+    total += planningRouteMetric(current, destination, routeEstimates).distanceKm;
     current = destination;
   });
-  return total + haversineKm(current, anchor);
+  return total + planningRouteMetric(current, anchor, routeEstimates).distanceKm;
 }
 
 /** Orders a route that must finish at a fixed place, such as hotel check-in. */
@@ -1495,6 +1571,7 @@ function optimizeRouteToAnchor(
   start: PlannerLocation,
   destinations: readonly PlannerDestination[],
   anchor: PlannerLocation,
+  routeEstimates?: PlannerRouteEstimates,
 ): PlannerDestination[] {
   if (destinations.length < 2) return [...destinations];
   let best: PlannerDestination[] = [];
@@ -1510,8 +1587,8 @@ function optimizeRouteToAnchor(
       let bestScore = Number.POSITIVE_INFINITY;
       remaining.forEach((destination, index) => {
         const anchorWeight = remaining.length === 1 ? 1 : 0.18;
-        const score = haversineKm(current, destination)
-          + haversineKm(destination, anchor) * anchorWeight;
+        const score = planningRouteMetric(current, destination, routeEstimates).distanceKm
+          + planningRouteMetric(destination, anchor, routeEstimates).distanceKm * anchorWeight;
         if (score < bestScore) {
           bestScore = score;
           bestIndex = index;
@@ -1522,7 +1599,7 @@ function optimizeRouteToAnchor(
       current = next;
     }
 
-    const distance = routeDistanceWithAnchor(start, route, anchor);
+    const distance = routeDistanceWithAnchor(start, route, anchor, routeEstimates);
     if (distance < bestDistance) {
       bestDistance = distance;
       best = route;
@@ -1536,11 +1613,18 @@ function estimateAnchoredRouteMinutes(
   start: PlannerLocation,
   route: readonly PlannerDestination[],
   anchor: PlannerLocation,
+  routeEstimates?: PlannerRouteEstimates,
 ): number {
-  return route.reduce(
-    (minutes, destination) => minutes + destination.duration + 8,
-    estimateTravelMinutes(routeDistanceWithAnchor(start, route, anchor), "taxi"),
-  );
+  let current = start;
+  const minutes = route.reduce((total, destination) => {
+    const next = total
+      + planningRouteMetric(current, destination, routeEstimates).durationMinutes
+      + destination.duration
+      + 8;
+    current = destination;
+    return next;
+  }, 0);
+  return minutes + planningRouteMetric(current, anchor, routeEstimates).durationMinutes;
 }
 
 function partitionAroundCheckIn(
@@ -1549,6 +1633,7 @@ function partitionAroundCheckIn(
   anchor: PlannerLocation,
   startMinutes: number,
   deadlineMinutes: number,
+  routeEstimates?: PlannerRouteEstimates,
 ): { before: PlannerDestination[]; after: PlannerDestination[] } {
   if (!destinations.length) return { before: [], after: [] };
   const budget = Math.max(0, deadlineMinutes - startMinutes - 15);
@@ -1560,8 +1645,8 @@ function partitionAroundCheckIn(
   });
 
   const candidates = [...groups.values()].map((group) => {
-    const route = optimizeRouteToAnchor(start, group, anchor);
-    const minutes = estimateAnchoredRouteMinutes(start, route, anchor);
+    const route = optimizeRouteToAnchor(start, group, anchor, routeEstimates);
+    const minutes = estimateAnchoredRouteMinutes(start, route, anchor, routeEstimates);
     const centroid = destinationCentroid(group, group[0].area);
     return {
       route,
@@ -1572,16 +1657,16 @@ function partitionAroundCheckIn(
 
   let before = candidates.sort((first, second) => second.score - first.score)[0]?.route ?? [];
   if (!before.length) {
-    const fallback = optimizeRouteToAnchor(start, destinations, anchor);
+    const fallback = optimizeRouteToAnchor(start, destinations, anchor, routeEstimates);
     let used = 0;
     let current = start;
     before = fallback.filter((destination) => {
       const next = used
-        + estimateTravelMinutes(haversineKm(current, destination), "taxi")
+        + planningRouteMetric(current, destination, routeEstimates).durationMinutes
         + destination.duration
-        + estimateTravelMinutes(haversineKm(destination, anchor), "taxi");
+        + planningRouteMetric(destination, anchor, routeEstimates).durationMinutes;
       if (next > budget) return false;
-      used += estimateTravelMinutes(haversineKm(current, destination), "taxi")
+      used += planningRouteMetric(current, destination, routeEstimates).durationMinutes
         + destination.duration;
       current = destination;
       return true;
@@ -1848,7 +1933,7 @@ export function buildDayItinerary(
       from: current,
       arrivalMinutes: scheduledArrival,
       waitMinutes: wait,
-      distance,
+      distance: transport.distanceKm ?? distance,
       transport,
       number: items.length + 1,
       placeMapUrl,
@@ -1973,7 +2058,7 @@ export function buildDayItinerary(
           ).minutes
         : 0;
       return {
-        distance,
+        distance: transport.distanceKm ?? distance,
         transport,
         arrival,
         scheduledArrival,
@@ -2052,12 +2137,13 @@ export function buildDayItinerary(
         options.checkInStay,
         cursor,
         checkInMinutes,
+        options.routeEstimates,
       );
       partition.before.forEach((destination) => {
         scheduleDestination(destination, checkInMinutes, options.checkInStay ?? null);
       });
       appendStayCheckIn();
-      const postCheckIn = optimizeRoute(current, partition.after, options.preference, cursor);
+      const postCheckIn = optimizeRoute(current, partition.after, options.preference, cursor, options.routeEstimates);
       postCheckIn.forEach((destination) => scheduleDestination(destination, null));
       notices.push(`The day starts with the confirmed early luggage handoff at ${options.checkInStay.name}; valuables should stay with you.`);
     } else if (arrivalLuggagePlan === "terminal-storage") {
@@ -2087,25 +2173,26 @@ export function buildDayItinerary(
         terminalPickup,
         cursor,
         pickupTarget,
+        options.routeEstimates,
       );
       partition.before.forEach((destination) => {
         scheduleDestination(destination, pickupTarget, terminalPickup);
       });
       appendFixedStop("bag-pickup", terminalPickup, pickupTarget, googleSearchUrl(start.googleQuery || start.name));
       appendStayCheckIn();
-      const postCheckIn = optimizeRoute(current, partition.after, options.preference, cursor);
+      const postCheckIn = optimizeRoute(current, partition.after, options.preference, cursor, options.routeEstimates);
       postCheckIn.forEach((destination) => scheduleDestination(destination, null));
       notices.push(`The route returns to ${start.name} for the bags before check-in. Use this only after the terminal confirms storage.`);
     } else {
       appendStayCheckIn();
-      const postCheckIn = optimizeRoute(current, daytime, options.preference, cursor);
+      const postCheckIn = optimizeRoute(current, daytime, options.preference, cursor, options.routeEstimates);
       postCheckIn.forEach((destination) => scheduleDestination(destination, null));
       notices.push("You chose to keep your luggage, so sightseeing starts only after check-in.");
     }
   } else if (protectFinalDayFromSightseeing) {
     unscheduled.push(...daytime);
   } else {
-    const ordered = optimizeRoute(current, daytime, options.preference, cursor);
+    const ordered = optimizeRoute(current, daytime, options.preference, cursor, options.routeEstimates);
     ordered.forEach((destination) => scheduleDestination(
       destination,
       checkoutBagPickupTarget,
@@ -2208,7 +2295,7 @@ export function buildDayItinerary(
         arrivalMinutes: scheduledArrival,
         waitMinutes: wait,
         queueMinutes,
-        distance,
+        distance: transport.distanceKm ?? distance,
         transport,
         number: items.length + 1,
         eveningAddOn: true,
@@ -2287,13 +2374,15 @@ export function chooseTransport(
 ): PlannedTransport {
   const allowed = new Set(options.modes);
   const walkLimit = options.preference === "less-walking" ? 0.45 : 0.85;
+  const walkMetric = planningRouteMetric(from, to, options.routeEstimates, "walk");
+  const roadMetric = planningRouteMetric(from, to, options.routeEstimates, "drive");
   const jeepneyIsSuitable =
-    distance <= 10 &&
+    roadMetric.distanceKm <= 10 &&
     to.area !== "Atok Side Trip" &&
     to.area !== "Tuba / Asin";
   let mode: TransportMode;
 
-  if (allowed.has("walk") && distance <= walkLimit) {
+  if (allowed.has("walk") && walkMetric.distanceKm <= walkLimit) {
     mode = "walk";
   } else if (
     (options.preference === "fastest" ||
@@ -2308,12 +2397,12 @@ export function chooseTransport(
     allowed.has("taxi")
   ) {
     const jeepneyTotal =
-      calculateJeepneyFare(distance, options.fareSettings) *
+      calculateJeepneyFare(roadMetric.distanceKm, options.fareSettings) *
       options.travelers;
     const taxiTotal = calculateTaxiFare(
-      distance,
+      roadMetric.distanceKm,
       options.fareSettings,
-      estimateTravelMinutes(distance, "taxi"),
+      roadMetric.durationMinutes,
     );
     mode = jeepneyTotal <= taxiTotal ? "jeepney" : "taxi";
   } else if (allowed.has("jeepney") && jeepneyIsSuitable) {
@@ -2328,11 +2417,13 @@ export function chooseTransport(
     mode = "jeepney";
   }
 
-  const vehicleMinutes = estimateTravelMinutes(distance, mode);
+  const selectedMetric = mode === "walk" ? walkMetric : roadMetric;
+  const effectiveDistance = selectedMetric.distanceKm;
+  const vehicleMinutes = selectedMetric.durationMinutes;
   const pacePolicy = PACE_POLICIES[options.pace];
   const guide = to.routeGuide || GENERIC_ROUTE_GUIDE;
   const jeepneyCommute = mode === "jeepney"
-    ? buildJeepneyCommute(from, to, distance, vehicleMinutes, options.pace, guide)
+    ? buildJeepneyCommute(from, to, effectiveDistance, vehicleMinutes, options.pace, guide)
     : null;
   const baseMinutes = jeepneyCommute?.baseMinutes ?? vehicleMinutes;
   const bufferMinutes = distance < 0.05
@@ -2347,18 +2438,32 @@ export function chooseTransport(
   const minutes = baseMinutes + bufferMinutes;
   const singleBoardingFare =
     mode === "jeepney"
-      ? calculateJeepneyFare(distance, options.fareSettings)
+      ? calculateJeepneyFare(effectiveDistance, options.fareSettings)
       : 0;
   const boardings = jeepneyCommute?.boardings ?? (mode === "jeepney" ? 1 : 0);
   const farePerPerson = singleBoardingFare * Math.max(1, boardings);
   const vehicleFare =
     mode === "taxi"
-      ? calculateTaxiFare(distance, options.fareSettings, minutes)
+      ? calculateTaxiFare(effectiveDistance, options.fareSettings, minutes)
       : 0;
   const totalFare =
     mode === "jeepney"
       ? farePerPerson * options.travelers
       : vehicleFare;
+  const durationRange = jeepneyCommute
+    ? {
+        minimum: Math.max(1, minutes - Math.ceil(bufferMinutes / 2)),
+        maximum: Math.ceil(minutes * 1.25 + 5),
+      }
+    : selectedMetric.estimate
+      ? {
+          minimum: selectedMetric.estimate.durationRange.minimum + bufferMinutes,
+          maximum: selectedMetric.estimate.durationRange.maximum + bufferMinutes,
+        }
+      : {
+          minimum: Math.max(1, Math.floor(minutes * 0.9)),
+          maximum: Math.ceil(minutes * 1.35),
+        };
 
   return {
     mode,
@@ -2368,6 +2473,15 @@ export function chooseTransport(
     farePerPerson: roundMoney(farePerPerson),
     vehicleFare: roundMoney(vehicleFare),
     totalFare: roundMoney(totalFare),
+    distanceKm: roundDistance(effectiveDistance),
+    durationRange,
+    confidence: mode === "jeepney"
+      ? (roadMetric.estimate ? "medium" : "low")
+      : (selectedMetric.estimate?.confidence ?? "low"),
+    estimateSource: selectedMetric.estimate?.source ?? "baguio-fallback",
+    ...(mode === "walk" && selectedMetric.estimate?.terrain
+      ? { terrain: selectedMetric.estimate.terrain }
+      : {}),
     instructions: buildDirections(from, to, mode, boardings),
     loadingMapUrl:
       mode === "jeepney"
@@ -2764,6 +2878,17 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
       );
       if (item.transport.bufferMinutes > 0) {
         lines.push(`   Travel allowance: ${formatDuration(item.transport.baseMinutes)} typical + ${formatDuration(item.transport.bufferMinutes)} for traffic/loading.`);
+      }
+      if (item.transport.durationRange) {
+        const estimateSource = item.transport.estimateSource === "verified-corridor"
+          ? "verified public corridor"
+          : item.transport.estimateSource === "geoapify-routing"
+            ? "routed road/walk measurement"
+            : "conservative fallback";
+        lines.push(`   Planning range: ${item.transport.durationRange.minimum}–${item.transport.durationRange.maximum} minutes · ${item.transport.confidence ?? "low"} confidence · ${estimateSource}.`);
+      }
+      if (item.transport.terrain) {
+        lines.push(`   Terrain: ${item.transport.terrain.level}; ${item.transport.terrain.elevationGainMeters} m climb${item.transport.terrain.warning ? `. ${item.transport.terrain.warning}` : "."}`);
       }
       if (item.queueMinutes > 0) {
         lines.push(`   Queue allowance: ${formatDuration(item.queueMinutes)}.`);

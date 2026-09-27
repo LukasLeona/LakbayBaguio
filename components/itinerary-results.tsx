@@ -16,6 +16,7 @@ import {
   Heart,
   Lightbulb,
   MapPin,
+  Mountain,
   Navigation,
   Pencil,
   Printer,
@@ -80,6 +81,18 @@ function fareLabel(stop: PlannedStop) {
     return `${formatCurrency(stop.transport.farePerPerson)} each · ${rides} ${rides === 1 ? "ride" : "rides"} · ${formatCurrency(stop.transport.totalFare)} total`;
   }
   return `${formatCurrency(stop.transport.vehicleFare)} per vehicle`;
+}
+
+function confidenceLabel(stop: PlannedStop) {
+  if (stop.transport.confidence === "high") return "High-confidence route";
+  if (stop.transport.confidence === "medium") return "Medium-confidence estimate";
+  return "Low-confidence fallback";
+}
+
+function routeSourceLabel(stop: PlannedStop) {
+  if (stop.transport.estimateSource === "verified-corridor") return "verified public corridor";
+  if (stop.transport.estimateSource === "geoapify-routing") return "road/walk network";
+  return "conservative fallback";
 }
 
 function fixedStopLabel(stop: PlannedStop) {
@@ -344,11 +357,13 @@ export function ItineraryResults({
                         <span className="transport-icon"><TransportIcon mode={stop.transport.mode} /></span>
                         <div><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong><small>{stop.destination.routeGuide.modeLabel}</small></div>
                         <div className="transport-stats">
-                          <span>{stop.distance.toFixed(1)} km est.</span>
+                          <span>{stop.distance.toFixed(1)} km {stop.transport.estimateSource !== "baguio-fallback" ? "routed" : "est."}</span>
                           <span>{formatDuration(stop.transport.minutes)}</span>
                           <span>{fareLabel(stop)}</span>
                         </div>
                       </header>
+                      {stop.transport.durationRange ? <p className={`route-estimate-confidence confidence-${stop.transport.confidence ?? "low"}`}><Route size={14} /> <strong>{stop.transport.durationRange.minimum}–{stop.transport.durationRange.maximum} min</strong><span>{confidenceLabel(stop)} · {routeSourceLabel(stop)}</span></p> : null}
+                      {stop.transport.terrain ? <p className={`terrain-note terrain-${stop.transport.terrain.level}`}><Mountain size={14} /><span><strong>{stop.transport.terrain.level === "steep" ? "Steep walk" : stop.transport.terrain.level === "hilly" ? "Hilly walk" : "Gentle walk"}</strong> · {stop.transport.terrain.elevationGainMeters} m climb{stop.transport.terrain.warning ? ` — ${stop.transport.terrain.warning}` : ""}</span></p> : null}
                       {stop.transport.bufferMinutes > 0 ? <p className="travel-buffer-note"><ShieldCheck size={14} /> {stop.transport.mode === "jeepney" ? `${formatDuration(stop.transport.baseMinutes)} covers walking, queues, ride${(stop.transport.boardings ?? 1) > 1 ? "s, transfer" : ""}, and final access` : `${formatDuration(stop.transport.baseMinutes)} typical travel`} + {formatDuration(stop.transport.bufferMinutes)} traffic/loading allowance.</p> : null}
                       {stop.queueMinutes > 0 ? <p className="queue-note"><Clock3 size={14} /> {formatDuration(stop.queueMinutes)} is reserved for entrance, ticketing, or a short queue before the visit.</p> : null}
                       {stop.waitMinutes > 0 ? <p className="wait-note"><Clock3 size={14} /> {stop.kind === "destination" ? `Includes a ${formatDuration(stop.waitMinutes)} wait for opening.` : `${formatDuration(stop.waitMinutes)} is protected before this fixed-time agenda item.`}</p> : null}
@@ -451,6 +466,8 @@ export function ItineraryResults({
                 <p className="print-place-meta">{fixedStopMeta(stop, itinerary)}{stop.destination.duration ? ` · ${formatDuration(stop.destination.duration)}` : ""}</p>
                 {isComfortStop(stop) ? <p className="print-leg"><strong>{stop.kind === "meal" ? "Protected meal time" : "Protected recovery time"}:</strong> {stop.destination.description}</p> : stop.stationary && stop.kind === "check-out" ? <p className="print-leg"><strong>Checkout reminder:</strong> You are already at your stay. Pack up, return the key if needed, and check out without rushing. We hope you enjoyed your stay in Baguio.</p> : <>
                   <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
+                  {stop.transport.durationRange ? <p className="print-leg"><strong>Planning range:</strong> {stop.transport.durationRange.minimum}–{stop.transport.durationRange.maximum} min · {confidenceLabel(stop)} · {routeSourceLabel(stop)}.</p> : null}
+                  {stop.transport.terrain ? <p className="print-leg"><strong>Terrain:</strong> {stop.transport.terrain.level} · {stop.transport.terrain.elevationGainMeters} m climb{stop.transport.terrain.warning ? ` · ${stop.transport.terrain.warning}` : ""}</p> : null}
                   {stop.transport.bufferMinutes > 0 ? <p className="print-leg">Travel estimate includes {formatDuration(stop.transport.bufferMinutes)} for traffic/loading uncertainty.</p> : null}
                   {stop.queueMinutes > 0 ? <p className="print-leg">Queue allowance: {formatDuration(stop.queueMinutes)}.</p> : null}
                   {stop.transport.mode === "jeepney" && stop.transport.stages?.length ? <div className="print-jeepney-commute"><p><strong>Complete jeepney commute · {stop.transport.boardings ?? 1} {(stop.transport.boardings ?? 1) === 1 ? "boarding" : "boardings"}</strong></p><ol>{stop.transport.stages.map((stage) => <li key={`${stage.kind}-${stage.label}`}><strong>{stage.label} ({formatDuration(stage.minutes)}):</strong> {stage.detail}{stage.mapUrl ? <> — <a href={stage.mapUrl}>{stage.mapLabel || "Map"}</a></> : null}</li>)}</ol>{stop.transport.routeReference ? <p><strong>Route reference:</strong> {stop.transport.routeReference.name}{stop.transport.routeReference.serviceHours ? ` · ${stop.transport.routeReference.serviceHours}` : ""}<br /><a href={stop.transport.routeReference.sourceUrl}>Baguio City route directory</a><br /><strong>Map warning:</strong> {stop.transport.routeReference.disclaimer}</p> : null}</div> : null}

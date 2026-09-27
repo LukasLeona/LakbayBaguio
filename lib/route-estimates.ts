@@ -19,7 +19,7 @@ export type PlannerRouteEstimate = {
   durationMinutes: number;
   durationRange: { minimum: number; maximum: number };
   confidence: RouteConfidence;
-  source: "geoapify-routing";
+  source: "geoapify-routing" | "verified-corridor";
   terrain?: RouteTerrain;
 };
 
@@ -27,6 +27,7 @@ export type PlannerRouteEstimates = Record<string, PlannerRouteEstimate>;
 
 export type RouteEstimateLocation = Coordinates & {
   name?: string;
+  navigation?: Coordinates;
 };
 
 export type RouteDetailPair = {
@@ -42,8 +43,13 @@ export type RouteEstimateResponse = {
 
 const COORDINATE_PRECISION = 5;
 
-export function routeCoordinateKey(location: Coordinates) {
-  return `${location.lat.toFixed(COORDINATE_PRECISION)},${location.lng.toFixed(COORDINATE_PRECISION)}`;
+export function routeCoordinates(location: RouteEstimateLocation): Coordinates {
+  return location.navigation ?? location;
+}
+
+export function routeCoordinateKey(location: RouteEstimateLocation) {
+  const point = routeCoordinates(location);
+  return `${point.lat.toFixed(COORDINATE_PRECISION)},${point.lng.toFixed(COORDINATE_PRECISION)}`;
 }
 
 export function routeEstimateKey(
@@ -72,8 +78,9 @@ export function uniqueRouteLocations(
 ) {
   const unique = new Map<string, RouteEstimateLocation>();
   locations.forEach((location) => {
-    if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) return;
-    unique.set(routeCoordinateKey(location), location);
+    const point = routeCoordinates(location);
+    if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return;
+    unique.set(routeCoordinateKey(location), { ...location, lat: point.lat, lng: point.lng, navigation: undefined });
   });
   return [...unique.values()];
 }
@@ -98,7 +105,10 @@ export async function fetchPlannerRouteEstimates(
     body: JSON.stringify({
       locations: uniqueRouteLocations(locations),
       modes: options.modes ?? ["walk", "drive"],
-      detailPairs: options.detailPairs ?? [],
+      detailPairs: (options.detailPairs ?? []).map(({ from, to }) => ({
+        from: routeCoordinates(from),
+        to: routeCoordinates(to),
+      })),
     }),
     cache: "no-store",
     signal: options.signal,

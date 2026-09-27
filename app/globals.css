@@ -841,6 +841,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .travel-buffer-note { color: #386a5b; }
 .queue-note { color: #6f5b2e; }
 .travel-buffer-note svg, .queue-note svg { flex: 0 0 auto; }
+.route-estimate-confidence { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; margin: 9px 0 0; padding: 7px 9px; border: 1px solid #c9ddd3; border-radius: 10px; color: #315e52; background: #edf5ef; font-size: .49rem; line-height: 1.4; }
+.route-estimate-confidence svg { flex: 0 0 auto; }
+.route-estimate-confidence strong { color: var(--pine-900); }
+.route-estimate-confidence span { color: var(--muted); }
+.route-estimate-confidence.confidence-medium { border-color: #e3d39c; background: #fff8db; }
+.route-estimate-confidence.confidence-low { border-color: #ecc5b8; color: #804631; background: #fff0e9; }
+.terrain-note { display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; padding: 8px 9px; border-radius: 10px; color: #3c6157; background: #eef3ea; font-size: .49rem; line-height: 1.45; }
+.terrain-note svg { flex: 0 0 auto; margin-top: 1px; }
+.terrain-note.terrain-hilly { color: #76551d; background: #fff1bd; }
+.terrain-note.terrain-steep { color: #843b2c; background: #ffe7df; }
 .transport-card ol { display: grid; gap: 5px; margin: 11px 0 0; padding-left: 18px; color: var(--muted); font-size: .53rem; line-height: 1.5; }
 .transport-card li::marker { color: #80a095; font-weight: 800; }
 .jeepney-commute { margin-top: 11px; padding: 11px; border: 1px solid #c5d7ce; border-radius: 14px; background: rgba(255,255,255,.72); }

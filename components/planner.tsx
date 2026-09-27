@@ -47,6 +47,7 @@ import {
   evaluateItineraryMove,
   generateItinerary,
   getItineraryDayAssignments,
+  getItineraryWalkingDetailPairs,
   googleSearchUrl,
   parseTimeToMinutes,
   validatePlannerRequest,
@@ -54,6 +55,11 @@ import {
   type PlannedItinerary,
   type PlannerRequest,
 } from "@/lib/planner-engine";
+import {
+  fetchPlannerRouteEstimates,
+  mergeRouteEstimates,
+  type RouteEstimateLocation,
+} from "@/lib/route-estimates";
 import type {
   ArrivalLuggagePlan,
   AutoPickTheme,
@@ -73,6 +79,15 @@ import { getPlace } from "@/lib/places";
 import { isPlannedItinerary } from "@/lib/shared-itinerary";
 
 const DRAFT_STORAGE_KEY = "lakbay-baguio-planner";
+
+function requestRouteLocations(request: PlannerRequest): RouteEstimateLocation[] {
+  return [
+    request.start,
+    ...request.destinations,
+    ...(request.stay ? [request.stay] : []),
+    ...(request.departure ? [request.departure.location] : []),
+  ];
+}
 
 const AUTO_PICK_THEMES: { value: AutoPickTheme; label: string }[] = [
   { value: "balanced", label: "Balanced Baguio highlights" },
@@ -591,11 +606,36 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     }
     setError("");
     setGenerating(true);
-    window.setTimeout(() => {
-      const next = generateItinerary(request);
-      setReviewResult(next);
-      setGenerating(false);
-    }, 900);
+    const generationStartedAt = Date.now();
+    let routingWarning = "";
+    let next: PlannedItinerary;
+    try {
+      const locations = requestRouteLocations(request);
+      const matrix = await fetchPlannerRouteEstimates(locations);
+      routingWarning = matrix.warning ?? "";
+      let routeEstimates = matrix.estimates;
+      next = generateItinerary({ ...request, routeEstimates });
+
+      const walkingPairs = getItineraryWalkingDetailPairs(next);
+      if (matrix.configured && walkingPairs.length) {
+        const details = await fetchPlannerRouteEstimates(locations, {
+          modes: [],
+          detailPairs: walkingPairs,
+        });
+        routingWarning ||= details.warning ?? "";
+        routeEstimates = mergeRouteEstimates(routeEstimates, details.estimates);
+        next = generateItinerary({ ...request, routeEstimates });
+      }
+    } catch {
+      routingWarning = "Live routing was unavailable, so this preview uses conservative Baguio estimates. Check the low-confidence legs before leaving.";
+      next = generateItinerary(request);
+    }
+
+    const remainingDelay = Math.max(0, 900 - (Date.now() - generationStartedAt));
+    await new Promise<void>((resolve) => window.setTimeout(resolve, remainingDelay));
+    setReviewResult(next);
+    if (routingWarning) setToast(routingWarning);
+    setGenerating(false);
   }
 
   function confirmReviewedPlan() {
@@ -659,6 +699,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       ...(reviewResult.departure ? { departure: reviewResult.departure } : {}),
       dayAssignments: getItineraryDayAssignments(reviewResult),
       deferredDestinationIds: reviewResult.deferredDestinationIds?.filter((id) => id !== destinationId),
+      routeEstimates: reviewResult.routeEstimates,
     });
 
     setSelectedIds((current) => current.filter((id) => id !== destinationId));

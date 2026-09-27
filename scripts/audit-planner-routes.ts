@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { PLANNER_DESTINATIONS, PLANNER_START_LOCATIONS } from "../lib/planner-data";
-import { summarizeRouteTerrain } from "../lib/geoapify-routing";
+import { getVerifiedWalkingCorridor, summarizeRouteTerrain } from "../lib/geoapify-routing";
 import { routeEstimateKey } from "../lib/route-estimates";
 import {
   buildDayRouteUrls,
@@ -104,6 +104,11 @@ for (const routeUrl of routeUrls) {
 const minesView = PLANNER_DESTINATIONS.find(({ id }) => id === "mines-view-park");
 const goodShepherd = PLANNER_DESTINATIONS.find(({ id }) => id === "good-shepherd");
 assert.ok(minesView && goodShepherd, "Mines View corridor destinations must exist");
+const verifiedMinesViewWalk = getVerifiedWalkingCorridor({ from: minesView, to: goodShepherd });
+assert.equal(verifiedMinesViewWalk?.distanceKm, 0.55);
+assert.equal(verifiedMinesViewWalk?.durationMinutes, 14);
+assert.equal(verifiedMinesViewWalk?.terrain?.level, "steep");
+assert.equal(verifiedMinesViewWalk?.source, "verified-corridor");
 
 const corridorUrl = new URL(googleDirectionsUrl(minesView, goodShepherd, "walk"));
 assert.equal(corridorUrl.searchParams.get("origin"), "16.4196515,120.6269696");
@@ -116,6 +121,45 @@ assert.ok(
   !corridorUrl.toString().includes("Good+Shepherd+Convent"),
   "Mines View corridor must not fall back to an ambiguous place name",
 );
+
+const routedWalkKey = routeEstimateKey(minesView, goodShepherd, "walk");
+const routedWalk = chooseTransport(
+  minesView,
+  goodShepherd,
+  haversineKm(minesView, goodShepherd),
+  {
+    preference: "cheapest",
+    pace: "comfortable",
+    travelers: 1,
+    modes: ["walk"],
+    fareSettings: DEFAULT_FARE_SETTINGS,
+    routeEstimates: {
+      [routedWalkKey]: {
+        mode: "walk",
+        distanceKm: 0.55,
+        durationMinutes: 14,
+        durationRange: { minimum: 13, maximum: 18 },
+        confidence: "high",
+        source: "geoapify-routing",
+        terrain: {
+          elevationGainMeters: 45,
+          elevationLossMeters: 2,
+          averageClimbPercent: 8.2,
+          maximumGradePercent: 12,
+          level: "steep",
+          warning: "Steep uphill sections—allow extra time.",
+        },
+      },
+    },
+  },
+);
+assert.equal(routedWalk.mode, "walk");
+assert.equal(routedWalk.distanceKm, 0.55);
+assert.equal(routedWalk.baseMinutes, 14);
+assert.equal(routedWalk.confidence, "high");
+assert.equal(routedWalk.estimateSource, "geoapify-routing");
+assert.equal(routedWalk.terrain?.level, "steep");
+assert.ok((routedWalk.durationRange?.maximum ?? 0) > routedWalk.baseMinutes);
 
 const directJeepney = chooseTransport(
   origin,

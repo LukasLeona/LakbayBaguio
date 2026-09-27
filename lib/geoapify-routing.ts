@@ -21,6 +21,47 @@ type RoutingPayload = { results?: RoutingResult[] };
 const MATRIX_CELL_LIMIT = 900;
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1_000;
 const requestCache = new Map<string, { expiresAt: number; estimate: PlannerRouteEstimate }>();
+const matrixRequestCache = new Map<string, { expiresAt: number; estimates: PlannerRouteEstimates }>();
+const MINES_VIEW = { lat: 16.4196515, lng: 120.6269696 };
+const GOOD_SHEPHERD = { lat: 16.4214729, lng: 120.6251922 };
+const VERIFIED_WALKING_CORRIDORS: PlannerRouteEstimates = {
+  [routeEstimateKey(MINES_VIEW, GOOD_SHEPHERD, "walk")]: {
+    mode: "walk",
+    distanceKm: 0.55,
+    durationMinutes: 14,
+    durationRange: { minimum: 13, maximum: 18 },
+    confidence: "high",
+    source: "verified-corridor",
+    terrain: {
+      elevationGainMeters: 18,
+      elevationLossMeters: 2,
+      averageClimbPercent: 3.3,
+      maximumGradePercent: 10,
+      level: "steep",
+      warning: "Steep uphill connection—use the public road, allow extra time, and consider a taxi if carrying luggage.",
+    },
+  },
+  [routeEstimateKey(GOOD_SHEPHERD, MINES_VIEW, "walk")]: {
+    mode: "walk",
+    distanceKm: 0.55,
+    durationMinutes: 12,
+    durationRange: { minimum: 11, maximum: 16 },
+    confidence: "high",
+    source: "verified-corridor",
+    terrain: {
+      elevationGainMeters: 2,
+      elevationLossMeters: 18,
+      averageClimbPercent: 0.4,
+      maximumGradePercent: 10,
+      level: "steep",
+      warning: "Steep downhill connection—use the public road and take extra care in wet weather.",
+    },
+  },
+};
+
+export function getVerifiedWalkingCorridor(pair: RouteDetailPair) {
+  return VERIFIED_WALKING_CORRIDORS[routeEstimateKey(pair.from, pair.to, "walk")];
+}
 
 function rounded(value: number, digits = 1) {
   const factor = 10 ** digits;
@@ -131,6 +172,12 @@ export async function fetchGeoapifyMatrix(
   for (const mode of modes) {
     for (let sourceOffset = 0; sourceOffset < locations.length; sourceOffset += sourceChunkSize) {
       const sources = locations.slice(sourceOffset, sourceOffset + sourceChunkSize);
+      const requestKey = `${mode}:${sources.map(({ lat, lng }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join("|")}>${locations.map(({ lat, lng }) => `${lat.toFixed(5)},${lng.toFixed(5)}`).join("|")}`;
+      const cached = matrixRequestCache.get(requestKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        Object.assign(estimates, cached.estimates);
+        continue;
+      }
       const response = await geoapifyFetch(
         `https://api.geoapify.com/v1/routematrix?apiKey=${encodeURIComponent(apiKey)}`,
         {
@@ -145,6 +192,7 @@ export async function fetchGeoapifyMatrix(
         },
       );
       const payload = await response.json() as MatrixPayload;
+      const requestEstimates: PlannerRouteEstimates = {};
       payload.sources_to_targets?.forEach((row, localSourceIndex) => {
         const from = sources[localSourceIndex];
         if (!from) return;
@@ -152,8 +200,13 @@ export async function fetchGeoapifyMatrix(
           const to = locations[targetIndex];
           if (!to || from === to) return;
           const estimate = matrixEstimate(cell, mode);
-          if (estimate) estimates[routeEstimateKey(from, to, mode)] = estimate;
+          if (estimate) requestEstimates[routeEstimateKey(from, to, mode)] = estimate;
         });
+      });
+      Object.assign(estimates, requestEstimates);
+      matrixRequestCache.set(requestKey, {
+        expiresAt: Date.now() + CACHE_TTL_MS,
+        estimates: requestEstimates,
       });
     }
   }
@@ -166,6 +219,8 @@ async function fetchWalkingDetail(
   apiKey: string,
 ): Promise<[string, PlannerRouteEstimate] | null> {
   const key = routeEstimateKey(pair.from, pair.to, "walk");
+  const verified = getVerifiedWalkingCorridor(pair);
+  if (verified) return [key, verified];
   const cached = requestCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return [key, cached.estimate];
   const params = new URLSearchParams({
@@ -182,6 +237,7 @@ async function fetchWalkingDetail(
   const time = Number(result?.time);
   if (!Number.isFinite(distance) || distance <= 0 || !Number.isFinite(time) || time <= 0) return null;
   const durationMinutes = Math.max(1, Math.ceil(time / 60));
+  const terrain = summarizeRouteTerrain(elevationPoints(result?.legs), distance);
   const estimate: PlannerRouteEstimate = {
     mode: "walk",
     distanceKm: rounded(distance / 1_000, 2),
@@ -189,9 +245,7 @@ async function fetchWalkingDetail(
     durationRange: durationRange(durationMinutes, "walk"),
     confidence: "high",
     source: "geoapify-routing",
-    ...(summarizeRouteTerrain(elevationPoints(result?.legs), distance)
-      ? { terrain: summarizeRouteTerrain(elevationPoints(result?.legs), distance) }
-      : {}),
+    ...(terrain ? { terrain } : {}),
   };
   requestCache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, estimate });
   return [key, estimate];

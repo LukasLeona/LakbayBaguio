@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   const locations = uniqueRouteLocations(rawLocations.map(validPoint).filter(Boolean) as RouteEstimateLocation[]);
   const modes = validModes(body.modes);
   const detailPairs = validPairs(body.detailPairs);
-  if (locations.length < 2 || !modes.length) {
+  if (locations.length < 2 || (!modes.length && !detailPairs.length)) {
     return NextResponse.json({ error: "At least two valid Baguio locations are required." }, { status: 422 });
   }
 
