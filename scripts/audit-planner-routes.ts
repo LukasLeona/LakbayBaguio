@@ -8,10 +8,12 @@ import {
   calculateJeepneyFare,
   chooseTransport,
   DEFAULT_FARE_SETTINGS,
+  generateItinerary,
   googleDirectionsUrl,
   googleLocationUrl,
   haversineKm,
   JEEPNEY_ROAD_PATH_DISCLAIMER,
+  itineraryToText,
   terminalIdentityTextLines,
   type PlannedDay,
 } from "../lib/planner-engine";
@@ -32,6 +34,22 @@ assert.equal(adjustedFarePolicy.jeepney.modern.minimum, 17);
 assert.equal(adjustedFarePolicy.jeepney.modern.perKilometer, 2.4);
 assert.equal(calculateJeepneyFare(4, octoberFareProfile.minimumSettings), 14);
 assert.equal(calculateJeepneyFare(4, octoberFareProfile.maximumSettings), 17);
+const octoberItinerary = generateItinerary({
+  start: origin,
+  destinations: PLANNER_DESTINATIONS.slice(0, 2),
+  date: "2026-10-16",
+  numberOfDays: 1,
+  availableMinutes: 12 * 60,
+  travelers: 1,
+  modes: ["jeepney"],
+  preference: "cheapest",
+  jeepneyClass: "unsure",
+});
+assert.equal(octoberItinerary.farePolicy.id, "puj-2026-09-28");
+assert.equal(octoberItinerary.jeepneyClass, "unsure");
+assert.ok(octoberItinerary.totals.fareMinimum < octoberItinerary.totals.fareMaximum);
+assert.match(itineraryToText(octoberItinerary), /Traditional PUJ|traditional-to-modern range/);
+assert.match(itineraryToText(octoberItinerary), /Effective September 28, 2026/);
 
 assert.notEqual(
   routeEstimateKey({ lat: 16.411, lng: 120.591 }, { lat: 16.421, lng: 120.625 }, "walk"),

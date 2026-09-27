@@ -24,9 +24,9 @@ import type {
   TravelPreference,
 } from "@/lib/planner-types";
 import {
-  LTFRB_FARE_POLICY,
   OFFICIAL_FARE_SETTINGS,
   resolveFareProfile,
+  resolveFarePolicy,
   type FarePolicyVersion,
 } from "@/lib/fare-policy";
 import { isSupportedGoogleMapsUrl } from "@/lib/google-maps-place";
@@ -51,7 +51,7 @@ export type {
 } from "@/lib/planner-types";
 
 export const PLANNING_DISCLAIMER =
-  `Travel times use routed road/walk measurements when available and show an uncertainty range; low-confidence fallbacks are deliberately conservative. Fare calculations use LTFRB-published rates reviewed ${LTFRB_FARE_POLICY.reviewedLabel}; confirm the taxi meter, jeepney fare matrix, attraction hours, and loading areas locally.`;
+  `Travel times use routed road/walk measurements when available and show an uncertainty range; low-confidence fallbacks are deliberately conservative. Fare calculations use date-versioned published rates; confirm the taxi meter, jeepney fare matrix, attraction hours, and loading areas locally.`;
 
 export const JEEPNEY_ROAD_PATH_DISCLAIMER =
   "Road-path reference only—not live jeepney navigation. Confirm the signboard, loading point, transfer, and drop-off with a dispatcher or driver.";
@@ -879,7 +879,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     ...(request.departure ? { departure: request.departure } : {}),
     ...(request.routeEstimates ? { routeEstimates: request.routeEstimates } : {}),
     totals,
-    disclaimer: PLANNING_DISCLAIMER,
+    disclaimer: `${PLANNING_DISCLAIMER} This plan uses the ${fareProfile.policy.effectiveLabel.toLowerCase()} jeepney policy, reviewed ${fareProfile.policy.reviewedLabel}.`,
   };
 }
 
@@ -2922,6 +2922,18 @@ export function buildDayRouteUrls(
 }
 
 export function itineraryToText(itinerary: PlannedItinerary): string {
+  const farePolicy = itinerary.farePolicy ?? resolveFarePolicy(itinerary.date);
+  const jeepneyClass = itinerary.jeepneyClass ?? "unsure";
+  const fareMinimum = itinerary.totals.fareMinimum ?? itinerary.totals.fare;
+  const fareMaximum = itinerary.totals.fareMaximum ?? itinerary.totals.fare;
+  const totalFareText = fareMinimum === fareMaximum
+    ? formatCurrency(fareMaximum)
+    : `${formatCurrency(fareMinimum)}–${formatCurrency(fareMaximum)}`;
+  const jeepneyClassText = jeepneyClass === "traditional"
+    ? "Traditional PUJ"
+    : jeepneyClass === "modern"
+      ? "Modern PUJ"
+      : "Vehicle type not specified (traditional-to-modern range)";
   const lines = [
     "LAKBAY BAGUIO ITINERARY",
     `Starting point: ${itinerary.start.name}`,
@@ -2931,7 +2943,10 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     `Pace: ${itinerary.pace === "relaxed" ? "Relaxed" : itinerary.pace === "packed" ? "Packed" : "Comfortable"} (meal, rest, queue, and commute allowances included)`,
     `Scheduled stops: ${itinerary.totals.scheduledStops}`,
     `Estimated travel: ${formatDuration(itinerary.totals.travelMinutes)}`,
-    `Estimated transport: ${formatCurrency(itinerary.totals.fare)}`,
+    `Estimated transport: ${totalFareText}`,
+    `Jeepney fare basis: ${jeepneyClassText}; ${farePolicy.effectiveLabel}; source reviewed ${farePolicy.reviewedLabel}`,
+    `Fare source: ${farePolicy.sourceUrl}`,
+    `Fare reminder: ${farePolicy.verificationNote}`,
     ...(itinerary.stay
       ? [
           `Stay: ${itinerary.stay.name} (${itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"}), check-in Day ${itinerary.stay.checkInDay + 1} at ${minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)}, checkout Day ${(itinerary.stay.checkOutDay ?? itinerary.numberOfDays - 1) + 1} at ${minutesToTime(parseTimeToMinutes(itinerary.stay.checkOutTime || "11:00") ?? 660)}`,
@@ -2994,9 +3009,13 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
         }
       }
       if (item.transport.mode !== "walk") {
+        const perPersonMinimum = item.transport.farePerPersonMinimum ?? item.transport.farePerPerson;
+        const perPersonMaximum = item.transport.farePerPersonMaximum ?? item.transport.farePerPerson;
+        const totalMinimum = item.transport.totalFareMinimum ?? item.transport.totalFare;
+        const totalMaximum = item.transport.totalFareMaximum ?? item.transport.totalFare;
         const fare =
           item.transport.mode === "jeepney"
-            ? `${formatCurrency(item.transport.farePerPerson)} each for ${item.transport.boardings ?? 1} ${(item.transport.boardings ?? 1) === 1 ? "ride" : "rides"}; ${formatCurrency(item.transport.totalFare)} total`
+            ? `${perPersonMinimum === perPersonMaximum ? formatCurrency(perPersonMaximum) : `${formatCurrency(perPersonMinimum)}–${formatCurrency(perPersonMaximum)}`} each for ${item.transport.boardings ?? 1} ${(item.transport.boardings ?? 1) === 1 ? "ride" : "rides"}; ${totalMinimum === totalMaximum ? formatCurrency(totalMaximum) : `${formatCurrency(totalMinimum)}–${formatCurrency(totalMaximum)}`} total; ${jeepneyClassText}; ${farePolicy.effectiveLabel}`
             : `${formatCurrency(item.transport.vehicleFare)} per vehicle`;
         lines.push(`   Estimated fare: ${fare}.`);
       }
@@ -3019,7 +3038,7 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
   lines.push("Agyaman kami iti panagbisita yo ditoy Baguio. Agsubli kayo manen!");
   lines.push("Thank you for visiting Baguio. We hope to welcome you back again.");
   lines.push("");
-  lines.push(PLANNING_DISCLAIMER);
+  lines.push(itinerary.disclaimer || PLANNING_DISCLAIMER);
   return lines.join("\n");
 }
 

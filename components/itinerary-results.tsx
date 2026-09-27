@@ -30,6 +30,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { ItineraryShareDialog } from "@/components/itinerary-share-dialog";
+import { resolveFarePolicy } from "@/lib/fare-policy";
 import { getPlannerDestinationById, getPlannerStartLocationById } from "@/lib/planner-data";
 import {
   arrivalLuggagePlanLabel,
@@ -54,6 +55,7 @@ import {
   type PlannerLocation,
   type PlannedStop,
   type TransportMode,
+  type JeepneyVehicleClass,
 } from "@/lib/planner-engine";
 
 type ItineraryResultsProps = {
@@ -78,9 +80,25 @@ function fareLabel(stop: PlannedStop) {
   if (stop.transport.mode === "walk") return "Free";
   if (stop.transport.mode === "jeepney") {
     const rides = stop.transport.boardings ?? 1;
-    return `${formatCurrency(stop.transport.farePerPerson)} each · ${rides} ${rides === 1 ? "ride" : "rides"} · ${formatCurrency(stop.transport.totalFare)} total`;
+    const perPersonMinimum = stop.transport.farePerPersonMinimum ?? stop.transport.farePerPerson;
+    const perPersonMaximum = stop.transport.farePerPersonMaximum ?? stop.transport.farePerPerson;
+    const totalMinimum = stop.transport.totalFareMinimum ?? stop.transport.totalFare;
+    const totalMaximum = stop.transport.totalFareMaximum ?? stop.transport.totalFare;
+    return `${fareRange(perPersonMinimum, perPersonMaximum)} each · ${rides} ${rides === 1 ? "ride" : "rides"} · ${fareRange(totalMinimum, totalMaximum)} total`;
   }
   return `${formatCurrency(stop.transport.vehicleFare)} per vehicle`;
+}
+
+function fareRange(minimum: number, maximum: number) {
+  return minimum === maximum
+    ? formatCurrency(maximum)
+    : `${formatCurrency(minimum)}–${formatCurrency(maximum)}`;
+}
+
+function jeepneyClassLabel(vehicleClass: JeepneyVehicleClass | undefined) {
+  if (vehicleClass === "traditional") return "Traditional PUJ";
+  if (vehicleClass === "modern") return "Modern PUJ";
+  return "Vehicle type not specified · traditional-to-modern range";
 }
 
 function confidenceLabel(stop: PlannedStop) {
@@ -168,6 +186,11 @@ export function ItineraryResults({
 }: ItineraryResultsProps) {
   const [copied, setCopied] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const farePolicy = itinerary.farePolicy ?? resolveFarePolicy(itinerary.date);
+  const jeepneyClass = itinerary.jeepneyClass ?? "unsure";
+  const totalFareMinimum = itinerary.totals.fareMinimum ?? itinerary.totals.fare;
+  const totalFareMaximum = itinerary.totals.fareMaximum ?? itinerary.totals.fare;
+  const totalFare = fareRange(totalFareMinimum, totalFareMaximum);
   const canonicalStart = getPlannerStartLocationById(itinerary.start.id) ?? itinerary.start;
   const canonicalDeparture = itinerary.departure
     ? getPlannerStartLocationById(itinerary.departure.location.id) ?? itinerary.departure.location
@@ -288,8 +311,13 @@ export function ItineraryResults({
           <article aria-label={`${itinerary.numberOfDays} travel ${itinerary.numberOfDays === 1 ? "day" : "days"}`}><div><i><CalendarDays /></i><strong>{itinerary.numberOfDays}</strong></div><span>Travel days</span></article>
           <article aria-label={`${itinerary.totals.scheduledStops} scheduled stops`}><div><i><MapPin /></i><strong>{itinerary.totals.scheduledStops}</strong></div><span>Scheduled stops</span></article>
           <article aria-label={`${formatDuration(itinerary.totals.travelMinutes)} estimated travel time`}><div><i><Clock3 /></i><strong>{formatDuration(itinerary.totals.travelMinutes)}</strong></div><span>Travel time</span></article>
-          <article aria-label={`${formatCurrency(itinerary.totals.fare)} estimated transport fare`}><div><i><WalletCards /></i><strong>{formatCurrency(itinerary.totals.fare)}</strong></div><span>Transport</span></article>
+          <article aria-label={`${totalFare} estimated transport fare`}><div><i><WalletCards /></i><strong>{totalFare}</strong></div><span>Transport</span></article>
         </div>
+        {itinerary.modes.includes("jeepney") ? <section className="itinerary-fare-policy" aria-label="Jeepney fare basis">
+          <span><BusFront /></span>
+          <div><strong>{jeepneyClassLabel(jeepneyClass)}</strong><small>{farePolicy.effectiveLabel} · source reviewed {farePolicy.reviewedLabel}</small><p>{farePolicy.verificationNote}</p></div>
+          <a href={farePolicy.sourceUrl} target="_blank" rel="noreferrer">Fare source <ExternalLink size={11} /></a>
+        </section> : null}
       </section>
 
       <section className="itinerary-day-selector" aria-label="Choose itinerary day">
@@ -363,6 +391,7 @@ export function ItineraryResults({
                         </div>
                       </header>
                       {stop.transport.durationRange ? <p className={`route-estimate-confidence confidence-${stop.transport.confidence ?? "low"}`}><Route size={14} /> <strong>{stop.transport.durationRange.minimum}–{stop.transport.durationRange.maximum} min</strong><span>{confidenceLabel(stop)} · {routeSourceLabel(stop)}</span></p> : null}
+                      {stop.transport.mode === "jeepney" ? <p className="jeepney-fare-basis"><WalletCards size={14} /><span><strong>{jeepneyClassLabel(stop.transport.jeepneyClass ?? jeepneyClass)}</strong> · {farePolicy.effectiveLabel}. Confirm the posted fare matrix before paying.</span></p> : null}
                       {stop.transport.terrain ? <p className={`terrain-note terrain-${stop.transport.terrain.level}`}><Mountain size={14} /><span><strong>{stop.transport.terrain.level === "steep" ? "Steep walk" : stop.transport.terrain.level === "hilly" ? "Hilly walk" : "Gentle walk"}</strong> · {stop.transport.terrain.elevationGainMeters} m climb{stop.transport.terrain.warning ? ` — ${stop.transport.terrain.warning}` : ""}</span></p> : null}
                       {stop.transport.bufferMinutes > 0 ? <p className="travel-buffer-note"><ShieldCheck size={14} /> {stop.transport.mode === "jeepney" ? `${formatDuration(stop.transport.baseMinutes)} covers walking, queues, ride${(stop.transport.boardings ?? 1) > 1 ? "s, transfer" : ""}, and final access` : `${formatDuration(stop.transport.baseMinutes)} typical travel`} + {formatDuration(stop.transport.bufferMinutes)} traffic/loading allowance.</p> : null}
                       {stop.queueMinutes > 0 ? <p className="queue-note"><Clock3 size={14} /> {formatDuration(stop.queueMinutes)} is reserved for entrance, ticketing, or a short queue before the visit.</p> : null}
@@ -453,7 +482,8 @@ export function ItineraryResults({
           {canonicalStart.terminalIdentity ? <div className="print-terminal-identity"><p><strong>{canonicalStart.terminalIdentity.branchLabel} — {canonicalStart.terminalIdentity.officialName}</strong></p><p>{canonicalStart.terminalIdentity.address}</p><p>Coordinates: {canonicalStart.lat.toFixed(5)}, {canonicalStart.lng.toFixed(5)}</p><p><strong>Ticket reminder:</strong> {canonicalStart.terminalIdentity.warning}</p></div> : null}
           {itinerary.stay ? <><p>Stay: {itinerary.stay.name} · {itinerary.stay.kind === "hotel" ? "Hotel" : "Airbnb"} · Check-in Day {itinerary.stay.checkInDay + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkInTime) ?? 0)} · Checkout Day {(itinerary.stay.checkOutDay ?? itinerary.numberOfDays - 1) + 1} at {minutesToTime(parseTimeToMinutes(itinerary.stay.checkOutTime || "11:00") ?? 660)}</p><p>Luggage: {arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))} · {checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}</p></> : null}
           <p>Pace: {itinerary.pace === "relaxed" ? "Relaxed" : itinerary.pace === "packed" ? "Packed" : "Comfortable"} · meal, rest, queue, and commute allowances included</p>
-          <p>{itinerary.date ? `Trip date: ${formatTripDate(itinerary.date)} · ` : ""}{itinerary.totals.scheduledStops} stops · {formatDuration(itinerary.totals.travelMinutes)} travel · {formatCurrency(itinerary.totals.fare)} transport</p>
+          <p>{itinerary.date ? `Trip date: ${formatTripDate(itinerary.date)} · ` : ""}{itinerary.totals.scheduledStops} stops · {formatDuration(itinerary.totals.travelMinutes)} travel · {totalFare} transport</p>
+          {itinerary.modes.includes("jeepney") ? <p><strong>Jeepney fare basis:</strong> {jeepneyClassLabel(jeepneyClass)} · {farePolicy.effectiveLabel} · source reviewed {farePolicy.reviewedLabel}. {farePolicy.verificationNote} <a href={farePolicy.sourceUrl}>Fare source</a></p> : null}
           {canonicalDeparture?.terminalIdentity ? <div className="print-terminal-identity departure"><p><strong>Departure: {canonicalDeparture.terminalIdentity.branchLabel} — {canonicalDeparture.terminalIdentity.officialName}</strong></p><p>{canonicalDeparture.terminalIdentity.address}</p><p>Coordinates: {canonicalDeparture.lat.toFixed(5)}, {canonicalDeparture.lng.toFixed(5)}</p><p><strong>Ticket reminder:</strong> {canonicalDeparture.terminalIdentity.warning}</p></div> : null}
         </header>
         {currentItinerary.days.map((printDay) => (
@@ -466,6 +496,7 @@ export function ItineraryResults({
                 <p className="print-place-meta">{fixedStopMeta(stop, itinerary)}{stop.destination.duration ? ` · ${formatDuration(stop.destination.duration)}` : ""}</p>
                 {isComfortStop(stop) ? <p className="print-leg"><strong>{stop.kind === "meal" ? "Protected meal time" : "Protected recovery time"}:</strong> {stop.destination.description}</p> : stop.stationary && stop.kind === "check-out" ? <p className="print-leg"><strong>Checkout reminder:</strong> You are already at your stay. Pack up, return the key if needed, and check out without rushing. We hope you enjoyed your stay in Baguio.</p> : <>
                   <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
+                  {stop.transport.mode === "jeepney" ? <p className="print-leg"><strong>Fare basis:</strong> {jeepneyClassLabel(stop.transport.jeepneyClass ?? jeepneyClass)} · {farePolicy.effectiveLabel}. Confirm the posted fare matrix before paying.</p> : null}
                   {stop.transport.durationRange ? <p className="print-leg"><strong>Planning range:</strong> {stop.transport.durationRange.minimum}–{stop.transport.durationRange.maximum} min · {confidenceLabel(stop)} · {routeSourceLabel(stop)}.</p> : null}
                   {stop.transport.terrain ? <p className="print-leg"><strong>Terrain:</strong> {stop.transport.terrain.level} · {stop.transport.terrain.elevationGainMeters} m climb{stop.transport.terrain.warning ? ` · ${stop.transport.terrain.warning}` : ""}</p> : null}
                   {stop.transport.bufferMinutes > 0 ? <p className="print-leg">Travel estimate includes {formatDuration(stop.transport.bufferMinutes)} for traffic/loading uncertainty.</p> : null}
