@@ -52,16 +52,19 @@ type MovingPlace = {
 type MoveFeedback = {
   tone: "success" | "error";
   text: string;
+  destinationId?: string;
+  targetDayIndex?: number;
 };
 
 type ReviewDayIntensity = {
-  level: "easy" | "balanced" | "full";
+  level: "easy" | "balanced" | "full" | "attention";
   label: string;
 };
 
 function reviewDayIntensity(
   day: PlannedItinerary["days"][number],
   availableMinutes: number,
+  hasRemainingPlaces: boolean,
 ): ReviewDayIntensity {
   const sightseeing = day.items.filter((item) => item.kind === "destination");
   const activeMinutes = sightseeing.reduce(
@@ -77,6 +80,9 @@ function reviewDayIntensity(
     return day.items.length
       ? { level: "easy", label: "Logistics day" }
       : { level: "easy", label: "Open day" };
+  }
+  if (day.index === 1 && placeCount < 4 && hasRemainingPlaces) {
+    return { level: "attention", label: "Needs more stops" };
   }
   if (placeCount >= 4) return { level: "full", label: "Full day" };
   if (placeCount >= 3 || (placeCount >= 2 && utilization >= 0.5)) return { level: "balanced", label: "Balanced day" };
@@ -121,8 +127,10 @@ export function ItineraryReviewDialog({
   const dialogRef = useRef<HTMLElement | null>(null);
   const edgeScrollFrame = useRef<number | null>(null);
   const edgePointerY = useRef<number | null>(null);
-  const excluded = itinerary.days.flatMap((day) => day.unscheduled);
-  const uniqueExcluded = [...new Map(excluded.map((place) => [place.id, place])).values()];
+  const uniqueExcluded = useMemo(() => {
+    const excluded = itinerary.days.flatMap((day) => day.unscheduled);
+    return [...new Map(excluded.map((place) => [place.id, place])).values()];
+  }, [itinerary.days]);
   const dayEffort = itinerary.days.map((day) => Math.max(0, day.endMinutes - day.startMinutes));
   const spread = dayEffort.length ? Math.max(...dayEffort) - Math.min(...dayEffort) : 0;
   const overloaded = uniqueExcluded.length > 0 || spread > 150;
@@ -131,8 +139,8 @@ export function ItineraryReviewDialog({
     [itinerary.suggestedDestinationIds],
   );
   const dayIntensities = useMemo(
-    () => itinerary.days.map((day) => reviewDayIntensity(day, itinerary.availableMinutes)),
-    [itinerary],
+    () => itinerary.days.map((day) => reviewDayIntensity(day, itinerary.availableMinutes, uniqueExcluded.length > 0)),
+    [itinerary, uniqueExcluded.length],
   );
   const fullDayIndexes = useMemo(
     () => dayIntensities.flatMap((intensity, index) => intensity.level === "full" ? [index] : []),
@@ -144,6 +152,13 @@ export function ItineraryReviewDialog({
       ? itinerary.days.map((day) => onEvaluateMove(moving.id, day.index))
       : [],
     [itinerary, moving, onEvaluateMove],
+  );
+  const excludedMoveOptions = useMemo(
+    () => new Map(uniqueExcluded.map((place) => [
+      place.id,
+      itinerary.days.map((day) => onEvaluateMove(place.id, day.index)),
+    ])),
+    [itinerary.days, onEvaluateMove, uniqueExcluded],
   );
 
   useEffect(() => {
@@ -239,12 +254,24 @@ export function ItineraryReviewDialog({
 
   function finishMove(targetDayIndex: number) {
     if (!moving) return;
-    const evaluation = onMove(moving.id, targetDayIndex);
+    const destinationId = moving.id;
+    const evaluation = onMove(destinationId, targetDayIndex);
     setMoveFeedback({
       tone: evaluation.allowed ? "success" : "error",
       text: evaluation.reason,
+      destinationId,
+      targetDayIndex,
     });
-    if (evaluation.allowed) setMoving(null);
+    if (evaluation.allowed) {
+      setMoving(null);
+    } else {
+      window.requestAnimationFrame(() => {
+        document.getElementById(`review-excluded-${destinationId}`)?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      });
+    }
   }
 
   function dayMoveState(dayIndex: number) {
@@ -344,7 +371,7 @@ export function ItineraryReviewDialog({
             <strong>{moving ? `Moving ${moving.name}` : "Fine-tune this route"}</strong>
             <p>{moving
               ? "Choose a day below—there is no need to keep holding. Green days can take this stop."
-              : "Drag a place on desktop, or press and hold on mobile. Fixed hotel and departure times stay locked."}</p>
+              : "Tap the move handle on mobile, or drag a place on desktop. Fixed hotel and departure times stay locked."}</p>
           </div>
           {moving ? <button type="button" onClick={cancelMove}>Cancel</button> : null}
         </div>
@@ -363,7 +390,7 @@ export function ItineraryReviewDialog({
               className={current ? "current" : option?.allowed ? "allowed" : "blocked"}
               onClick={() => finishMove(day.index)}
               title={option?.reason}
-            ><b>Day {day.index + 1}</b><small>{current ? "Current" : option?.allowed ? "Fits here" : "Why not?"}</small></button>;
+            ><b>Day {day.index + 1}</b><small>{current ? "Current" : option?.allowed ? "Fits here" : "Unavailable"}</small></button>;
           })}</div>
           {moveFeedback ? <p className={moveFeedback.tone} role="status">{moveFeedback.text}</p> : null}
           <button type="button" className="review-move-tray-cancel" onClick={cancelMove}><X /> Cancel</button>
@@ -410,7 +437,7 @@ export function ItineraryReviewDialog({
                         title={moveOption?.reason}
                         data-move-control="true"
                         onClick={() => finishMove(day.index)}
-                      ><MoveRight /> {moveOption?.allowed ? "Move here" : dayMoveState(day.index) === "move-current" ? "Current day" : "See reason"}</button>
+                      ><MoveRight /> {moveOption?.allowed ? "Move here" : dayMoveState(day.index) === "move-current" ? "Current day" : "Unavailable"}</button>
                     ) : null}
                   </div>
                 </header>
@@ -464,12 +491,13 @@ export function ItineraryReviewDialog({
 
         {uniqueExcluded.length ? (
           <section className="review-excluded">
-            <header><AlertTriangle size={17} /><div><strong>Your remaining selected places</strong><p>They are still selected. Move one to a day to test the exact route, time, and opening-hour fit.</p></div></header>
+            <header><AlertTriangle size={17} /><div><strong>Your remaining selected places</strong><p>Each place shows which days fit and the exact route, time, or opening-hour reason—no extra tap needed.</p></div></header>
             <div>{uniqueExcluded.map((place) => {
               const sourceDay = itinerary.days.find((day) => day.unscheduled.some((item) => item.id === place.id))?.index ?? null;
               return <article
-                className={moving?.id === place.id ? "is-moving" : moving ? "move-dimmed" : ""}
+                className={`${moving?.id === place.id ? "is-moving" : moving ? "move-dimmed" : ""} ${moveFeedback?.tone === "error" && moveFeedback.destinationId === place.id ? "has-move-error" : ""}`}
                 key={place.id}
+                id={`review-excluded-${place.id}`}
                 draggable
                 data-move-control={moving?.id === place.id ? "true" : undefined}
                 aria-grabbed={moving?.id === place.id}
@@ -480,11 +508,22 @@ export function ItineraryReviewDialog({
                 onPointerUp={() => { clearHoldTimer(); stopEdgeAutoScroll(); }}
                 onPointerCancel={() => { clearHoldTimer(); stopEdgeAutoScroll(); }}
               >
-                <span><strong>{place.name}</strong><small>{place.area} · {place.open}–{place.close}</small>{suggestedIds.has(place.id) ? <em className="review-suggested-label">Buddy suggested</em> : null}</span>
+                <span className="review-excluded-copy"><strong>{place.name}</strong><small>{place.area} · {place.open}–{place.close}</small>{suggestedIds.has(place.id) ? <em className="review-suggested-label">Buddy suggested</em> : null}</span>
                 <div className="review-excluded-actions" data-move-control="true">
                   <button type="button" className="review-grab-button" onClick={() => beginMove(place.id, place.name, sourceDay)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Add ${place.name} to a day`} title="Add back to a day"><GripVertical /></button>
                   <button type="button" className="review-remove-button" onClick={() => onDelete(place.id)} onPointerDown={(event) => event.stopPropagation()}><Trash2 size={14} /> Delete choice</button>
                 </div>
+                <ul className="review-excluded-fit" aria-label={`Day-by-day fit for ${place.name}`}>
+                  {(excludedMoveOptions.get(place.id) ?? []).map((option, dayIndex) => {
+                    const highlighted = moveFeedback?.tone === "error"
+                      && moveFeedback.destinationId === place.id
+                      && moveFeedback.targetDayIndex === dayIndex;
+                    return <li className={`${option.allowed ? "allowed" : "blocked"} ${highlighted ? "highlighted" : ""}`} key={dayIndex}>
+                      <span className="review-fit-day">{option.allowed ? <Check /> : <AlertTriangle />}<b>Day {dayIndex + 1}</b></span>
+                      <span className="review-fit-copy"><strong>{option.allowed ? "Can be added" : "Doesn’t fit this day"}</strong><small>{option.reason}</small></span>
+                    </li>;
+                  })}
+                </ul>
               </article>;
             })}</div>
           </section>

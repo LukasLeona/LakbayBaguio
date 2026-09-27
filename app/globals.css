@@ -1925,6 +1925,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .review-day-load.easy { color: #315f50; background: #e3eee6; }
 .review-day-load.balanced { color: #6b571e; background: #f7eab9; }
 .review-day-load.full { color: #82453a; background: #f8ddd5; }
+.review-day-load.attention { color: #8b3029; background: #f9dcd7; }
 .review-day-meta > span { display: flex; align-items: center; gap: 5px; padding: 7px 9px; border-radius: 999px; color: #665d50; background: #f0eee5; font-size: .51rem; font-weight: 750; }
 .review-day-meta > button { min-height: 27px; display: flex; align-items: center; gap: 4px; padding: 5px 8px; border-radius: 9px; cursor: pointer; font-size: .47rem; font-weight: 850; }
 .review-day-meta > button svg { width: 12px; height: 12px; }
@@ -1979,14 +1980,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .review-excluded > header { display: flex; align-items: center; gap: 9px; color: #7b332d; }
 .review-excluded > header strong { display: block; font-size: .66rem; }
 .review-excluded > header p { margin: 1px 0 0; font-size: .51rem; }
-.review-excluded > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; margin-top: 10px; }
-.review-excluded article { display: flex; align-items: center; justify-content: space-between; gap: 9px; padding: 9px 10px; border: 1px solid transparent; border-radius: 12px; background: rgba(255,255,255,.7); cursor: grab; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
-.review-excluded article > span { min-width: 0; display: grid; }
+.review-excluded > div { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; }
+.review-excluded article { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 9px; padding: 9px 10px; border: 1px solid transparent; border-radius: 12px; background: rgba(255,255,255,.7); cursor: grab; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.review-excluded article.has-move-error { border-color: #c95f54; box-shadow: 0 0 0 3px rgba(187,73,63,.1); }
+.review-excluded-copy { min-width: 0; display: grid; }
 .review-excluded article strong { font-size: .56rem; }
 .review-excluded article small { color: #76674f; font-size: .47rem; }
 .review-suggested-label { width: max-content; margin-top: 3px; padding: 2px 5px; border-radius: 999px; color: #436d5f; background: #dfece2; font-size: .38rem; font-style: normal; font-weight: 900; text-transform: uppercase; }
 .review-excluded-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; }
 .review-excluded-actions > button { font-size: .49rem; font-weight: 800; }
+.review-excluded-fit { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; margin: 2px 0 0; padding: 8px 0 0; border-top: 1px solid rgba(123,51,45,.13); list-style: none; }
+.review-excluded-fit li { min-width: 0; display: grid; grid-template-columns: 50px minmax(0,1fr); align-items: start; gap: 7px; padding: 7px 8px; border: 1px solid transparent; border-radius: 9px; line-height: 1.35; }
+.review-fit-day { display: flex; align-items: center; gap: 3px; padding-top: 1px; white-space: nowrap; }
+.review-fit-day svg { width: 10px; height: 10px; }
+.review-fit-day b { font-size: .46rem; }
+.review-fit-copy { min-width: 0; display: grid; gap: 2px; }
+.review-fit-copy strong { font-size: .47rem; }
+.review-fit-copy small { color: inherit; font-size: .45rem; line-height: 1.42; }
+.review-excluded-fit li.allowed { color: #225a45; background: #e7f3eb; }
+.review-excluded-fit li.blocked { color: #7e3b34; background: #fae9e6; }
+.review-excluded-fit li.highlighted { border-color: #c75f55; background: #f8dcd7; animation: review-fit-pulse .7s ease 2; }
+@keyframes review-fit-pulse { 50% { transform: translateX(3px); } }
 .itinerary-review-actions { position: sticky; bottom: -24px; display: flex; justify-content: end; gap: 9px; margin: 18px -24px -24px; padding: 14px 24px 20px; border-top: 1px solid rgba(32,67,56,.1); background: rgba(248,245,234,.94); backdrop-filter: blur(12px); }
 .itinerary-review-actions button { min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 18px; border-radius: 14px; cursor: pointer; font-size: .61rem; font-weight: 850; }
 .itinerary-review-actions button svg { width: 16px; }
@@ -2011,6 +2025,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .review-luggage-plan > div { grid-template-columns: 1fr; }
   .review-luggage-plan strong { grid-column: 1; }
   .review-day-grid, .review-excluded > div { grid-template-columns: 1fr; }
+  .review-excluded-fit { grid-template-columns: 1fr; }
+  .review-excluded-fit li { grid-template-columns: 55px minmax(0,1fr); padding: 8px 9px; }
+  .review-fit-day b, .review-fit-copy strong { font-size: .52rem; }
+  .review-fit-copy small { font-size: .5rem; }
   .review-day-card > header { padding: 12px 12px 8px; }
   .review-area-line { margin-inline: 12px; }
   .review-day-callout { grid-template-columns: 30px minmax(0,1fr); }

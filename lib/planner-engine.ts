@@ -810,31 +810,75 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     startLocationForDay(request.start, request.stay, dayIndex),
   );
 
-  const buildDaysWithoutRoutes = (dayBuckets: readonly PlannerDestination[][]) =>
-    dayBuckets.map((bucket, dayIndex) => {
-      const daytimeCount = bucket.filter((destination) => destination.timeSlot !== "night").length;
-      const middleDayTarget = request.numberOfDays === 3 && dayIndex === 1 && daytimeCount >= 4
-        ? Math.min(5, daytimeCount)
-        : 0;
-      const day = buildDayItinerary(dayStarts[dayIndex], bucket, {
-        ...dayOptions,
-        dayIndex,
-        ...(middleDayTarget ? { minimumDestinationTarget: middleDayTarget } : {}),
-        ...(request.stay?.checkInDay === dayIndex ? { checkInStay: request.stay } : {}),
-        ...(request.stay?.checkOutDay === dayIndex ? { checkOutStay: request.stay } : {}),
-        ...(request.departure?.dayIndex === dayIndex ? { departure: request.departure } : {}),
-      });
-      const heldForThisDay = destinations.filter((destination) =>
-        deferredIds.has(destination.id)
-        && (request.dayAssignments?.[destination.id] ?? 0) === dayIndex,
-      );
-      return heldForThisDay.length
-        ? { ...day, unscheduled: [...day.unscheduled, ...heldForThisDay] }
-        : day;
+  const buildDayWithoutRoutes = (
+    bucket: readonly PlannerDestination[],
+    dayIndex: number,
+    forcedMiddleDayTarget = 0,
+  ) => {
+    const daytimeCount = bucket.filter((destination) => destination.timeSlot !== "night").length;
+    const automaticMiddleDayTarget = request.numberOfDays === 3 && dayIndex === 1 && daytimeCount >= 4
+      ? Math.min(5, daytimeCount)
+      : 0;
+    const middleDayTarget = dayIndex === 1
+      ? Math.max(automaticMiddleDayTarget, forcedMiddleDayTarget)
+      : 0;
+    const day = buildDayItinerary(dayStarts[dayIndex], bucket, {
+      ...dayOptions,
+      dayIndex,
+      ...(middleDayTarget ? { minimumDestinationTarget: middleDayTarget } : {}),
+      ...(request.stay?.checkInDay === dayIndex ? { checkInStay: request.stay } : {}),
+      ...(request.stay?.checkOutDay === dayIndex ? { checkOutStay: request.stay } : {}),
+      ...(request.departure?.dayIndex === dayIndex ? { departure: request.departure } : {}),
     });
+    const heldForThisDay = destinations.filter((destination) =>
+      deferredIds.has(destination.id)
+      && (request.dayAssignments?.[destination.id] ?? 0) === dayIndex,
+    );
+    return heldForThisDay.length
+      ? { ...day, unscheduled: [...day.unscheduled, ...heldForThisDay] }
+      : day;
+  };
+
+  const buildDaysWithoutRoutes = (
+    dayBuckets: readonly PlannerDestination[][],
+    forcedMiddleDayTarget = 0,
+  ) => dayBuckets.map((bucket, dayIndex) =>
+    buildDayWithoutRoutes(bucket, dayIndex, forcedMiddleDayTarget));
 
   let daysWithoutRoutes = buildDaysWithoutRoutes(buckets);
+  const packedMiddleDayTarget = resolvePackedMiddleDayTarget(
+    buckets,
+    daysWithoutRoutes,
+    request,
+    deferredIds,
+  );
+  if (packedMiddleDayTarget) {
+    daysWithoutRoutes = buildDaysWithoutRoutes(buckets, packedMiddleDayTarget);
+  }
   if (request.balanceOpenDays) {
+    if (packedMiddleDayTarget) {
+      const packedRepair = packMiddleDayOverflow(
+        buckets,
+        daysWithoutRoutes,
+        deferredIds,
+        packedMiddleDayTarget,
+        (bucket) => buildDayWithoutRoutes(bucket, 1, packedMiddleDayTarget),
+      );
+      if (packedRepair.moved) {
+        buckets = packedRepair.buckets;
+        daysWithoutRoutes = buildDaysWithoutRoutes(buckets, packedMiddleDayTarget).map((day) =>
+          day.index === 1
+            ? {
+                ...day,
+                notices: [
+                  "Day 2 received the best-fitting remaining places after checking the real route, opening hours, meal break, and visit times.",
+                  ...day.notices,
+                ],
+              }
+            : day,
+        );
+      }
+    }
     const repair = redistributeOverflowIntoAvailableDays(
       buckets,
       daysWithoutRoutes,
@@ -843,7 +887,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     );
     if (repair.movedToDays.size) {
       buckets = repair.buckets;
-      daysWithoutRoutes = buildDaysWithoutRoutes(buckets).map((day) =>
+      daysWithoutRoutes = buildDaysWithoutRoutes(buckets, packedMiddleDayTarget).map((day) =>
         repair.movedToDays.has(day.index)
           ? {
               ...day,
@@ -954,6 +998,160 @@ function applyDayAssignments(
   });
 
   return buckets;
+}
+
+function resolvePackedMiddleDayTarget(
+  currentBuckets: readonly PlannerDestination[][],
+  days: readonly Pick<PlannedDay, "index" | "items" | "unscheduled">[],
+  request: PlannerRequest,
+  deferredIds: ReadonlySet<string>,
+) {
+  if (
+    request.numberOfDays !== 3
+    || request.stay?.checkOutDay === 1
+    || request.departure?.dayIndex === 1
+  ) return 0;
+
+  const candidates = new Set(
+    (currentBuckets[1] ?? [])
+      .filter((destination) => destination.timeSlot !== "night" && !deferredIds.has(destination.id))
+      .map((destination) => destination.id),
+  );
+  days.forEach((day) => {
+    day.unscheduled.forEach((destination) => {
+      if (destination.timeSlot !== "night" && !deferredIds.has(destination.id)) {
+        candidates.add(destination.id);
+      }
+    });
+  });
+  return candidates.size >= 4 ? Math.min(5, candidates.size) : 0;
+}
+
+type PackedMiddleTrialDay = Pick<
+  PlannedDay,
+  "items" | "unscheduled" | "endMinutes" | "totalTravelMinutes"
+>;
+
+function packMiddleDayOverflow(
+  currentBuckets: readonly PlannerDestination[][],
+  days: readonly Pick<
+    PlannedDay,
+    "index" | "items" | "unscheduled" | "endMinutes" | "totalTravelMinutes"
+  >[],
+  deferredIds: ReadonlySet<string>,
+  target: number,
+  buildMiddleDay: (bucket: readonly PlannerDestination[]) => PackedMiddleTrialDay,
+): { buckets: PlannerDestination[][]; moved: boolean } {
+  const middleDayIndex = 1;
+  const middleDay = days[middleDayIndex];
+  const buckets = currentBuckets.map((bucket) => [...bucket]);
+  if (!middleDay || target < 4) return { buckets, moved: false };
+
+  const initialScheduledIds = new Set(
+    middleDay.items
+      .filter((item) => item.kind === "destination")
+      .map((item) => item.destination.id),
+  );
+  if (initialScheduledIds.size >= target) return { buckets, moved: false };
+
+  const middleBucketIds = new Set(buckets[middleDayIndex].map((destination) => destination.id));
+  const baseHasSideTrip = buckets[middleDayIndex].some((destination) => destination.area === "Atok Side Trip");
+  const baseHasCityStop = buckets[middleDayIndex].some((destination) => destination.area !== "Atok Side Trip");
+  const overflowById = new Map<string, PlannerDestination>();
+  days.forEach((day) => {
+    day.unscheduled.forEach((destination) => {
+      if (
+        deferredIds.has(destination.id)
+        || destination.timeSlot === "night"
+        || middleBucketIds.has(destination.id)
+        || (baseHasSideTrip && destination.area !== "Atok Side Trip")
+        || (baseHasCityStop && destination.area === "Atok Side Trip")
+      ) return;
+      overflowById.set(destination.id, destination);
+    });
+  });
+  const candidates = [...overflowById.values()];
+  if (!candidates.length) return { buckets, moved: false };
+
+  type SearchState = {
+    chosenIndexes: number[];
+    day: PackedMiddleTrialDay;
+    scheduledIds: Set<string>;
+  };
+  const initialState: SearchState = {
+    chosenIndexes: [],
+    day: middleDay,
+    scheduledIds: initialScheduledIds,
+  };
+  let best = initialState;
+  let frontier = [initialState];
+  const maxDepth = Math.min(
+    candidates.length,
+    Math.max(1, target - initialScheduledIds.size + 2),
+    5,
+  );
+
+  const isBetter = (candidate: SearchState, current: SearchState) => {
+    if (candidate.scheduledIds.size !== current.scheduledIds.size) {
+      return candidate.scheduledIds.size > current.scheduledIds.size;
+    }
+    if (candidate.chosenIndexes.length !== current.chosenIndexes.length) {
+      return candidate.chosenIndexes.length < current.chosenIndexes.length;
+    }
+    if (candidate.day.endMinutes !== current.day.endMinutes) {
+      return candidate.day.endMinutes < current.day.endMinutes;
+    }
+    return candidate.day.totalTravelMinutes < current.day.totalTravelMinutes;
+  };
+
+  for (let depth = 1; depth <= maxDepth && frontier.length; depth += 1) {
+    const expanded: SearchState[] = [];
+    frontier.forEach((state) => {
+      const firstCandidateIndex = (state.chosenIndexes.at(-1) ?? -1) + 1;
+      for (let candidateIndex = firstCandidateIndex; candidateIndex < candidates.length; candidateIndex += 1) {
+        const chosenIndexes = [...state.chosenIndexes, candidateIndex];
+        const trialBucket = [
+          ...buckets[middleDayIndex],
+          ...chosenIndexes.map((index) => candidates[index]),
+        ];
+        const trialDay = buildMiddleDay(trialBucket);
+        const scheduledIds = new Set(
+          trialDay.items
+            .filter((item) => item.kind === "destination")
+            .map((item) => item.destination.id),
+        );
+        if ([...initialScheduledIds].some((id) => !scheduledIds.has(id))) continue;
+        const next = { chosenIndexes, day: trialDay, scheduledIds };
+        expanded.push(next);
+        if (isBetter(next, best)) best = next;
+      }
+    });
+    if (best.scheduledIds.size >= target) break;
+    frontier = expanded
+      .sort((first, second) => {
+        if (first.scheduledIds.size !== second.scheduledIds.size) {
+          return second.scheduledIds.size - first.scheduledIds.size;
+        }
+        if (first.day.endMinutes !== second.day.endMinutes) {
+          return first.day.endMinutes - second.day.endMinutes;
+        }
+        return first.day.totalTravelMinutes - second.day.totalTravelMinutes;
+      })
+      .slice(0, 36);
+  }
+
+  const movedDestinations = best.chosenIndexes
+    .map((index) => candidates[index])
+    .filter((destination) => best.scheduledIds.has(destination.id));
+  if (!movedDestinations.length || best.scheduledIds.size <= initialScheduledIds.size) {
+    return { buckets, moved: false };
+  }
+
+  const movedIds = new Set(movedDestinations.map((destination) => destination.id));
+  const repairedBuckets = buckets.map((bucket) =>
+    bucket.filter((destination) => !movedIds.has(destination.id)));
+  repairedBuckets[middleDayIndex].push(...movedDestinations);
+  return { buckets: repairedBuckets, moved: true };
 }
 
 function redistributeOverflowIntoAvailableDays(
@@ -1253,7 +1451,7 @@ export function evaluateItineraryMove(
   const nextPlaceCount = nextTargetDay.items.filter((item) => item.kind === "destination").length;
   const packedMiddleDay = itinerary.numberOfDays === 3 && targetDayIndex === 1 && nextPlaceCount <= 7;
   const safeLimit = packedMiddleDay
-    ? Math.max(itinerary.availableMinutes, 11 * 60 - scheduleReserve)
+    ? Math.max(itinerary.availableMinutes, 12 * 60 - scheduleReserve)
     : Math.max(180, itinerary.availableMinutes - scheduleReserve);
   if (nextActiveMinutes > safeLimit && nextActiveMinutes > currentActiveMinutes + 15) {
     return {
@@ -2082,6 +2280,153 @@ function suggestionsForProtectedGap(
   return suggestions;
 }
 
+const PACKED_MIDDLE_VISIT_MINUTES: Readonly<Record<string, number>> = {
+  "valley-of-colors": 30,
+  "diplomat-hotel": 30,
+  "lions-head": 30,
+  "camp-john-hay": 120,
+  "ili-likha": 60,
+  "igorot-stone-kingdom": 75,
+};
+
+function packedMiddleVisitProfile(destination: PlannerDestination): PlannerDestination {
+  const duration = PACKED_MIDDLE_VISIT_MINUTES[destination.id];
+  return duration && duration < destination.duration
+    ? { ...destination, duration }
+    : destination;
+}
+
+function optimizePackedMiddleRoute(
+  start: PlannerLocation,
+  destinations: readonly PlannerDestination[],
+  options: DayBuildOptions,
+  sightseeingEnd: number,
+): PlannerDestination[] {
+  if (destinations.length < 2) return [...destinations];
+  if (destinations.length > 7) {
+    return optimizeRoute(
+      start,
+      destinations,
+      options.preference,
+      options.startMinutes,
+      options.routeEstimates,
+      true,
+    );
+  }
+
+  const pacePolicy = PACE_POLICIES[options.pace];
+  const route = [...destinations];
+  const transportCache = new Map<string, PlannedTransport>();
+  const transportFor = (from: PlannerLocation, to: PlannerDestination) => {
+    const key = `${from.lat.toFixed(5)},${from.lng.toFixed(5)}>${to.id}`;
+    const cached = transportCache.get(key);
+    if (cached) return cached;
+    const transport = chooseTransport(
+      from,
+      to,
+      haversineKm(from, to),
+      options,
+    );
+    transportCache.set(key, transport);
+    return transport;
+  };
+  let bestRoute = [...route];
+  let bestScore = {
+    scheduled: -1,
+    lateMinutes: Number.POSITIVE_INFINITY,
+    endMinutes: Number.POSITIVE_INFINITY,
+    travelMinutes: Number.POSITIVE_INFINITY,
+  };
+
+  const scoreRoute = (candidateRoute: readonly PlannerDestination[]) => {
+    let current: PlannerLocation = start;
+    let cursor = options.startMinutes;
+    let lunchTaken = false;
+    let lastRecoveryAt = cursor;
+    let scheduled = 0;
+    let lateMinutes = 0;
+    let travelMinutes = 0;
+
+    candidateRoute.forEach((destination) => {
+      const { open, close } = openingWindow(destination);
+      const queueMinutes = queueMinutesFor(destination, options.pace);
+      const project = () => {
+        const transport = transportFor(current, destination);
+        const arrival = cursor + transport.minutes;
+        const scheduledArrival = Math.max(arrival, open);
+        return {
+          transport,
+          scheduledArrival,
+          finish: scheduledArrival + queueMinutes + destination.duration,
+        };
+      };
+      let projected = project();
+      const breakFits = (duration: number) => {
+        const shiftedArrival = Math.max(
+          cursor + duration + projected.transport.minutes,
+          open,
+        );
+        const shiftedFinish = shiftedArrival + queueMinutes + destination.duration;
+        return shiftedFinish <= close && shiftedFinish <= sightseeingEnd;
+      };
+      if (
+        !lunchTaken
+        && cursor >= 11 * 60 + 30
+        && cursor <= 14 * 60
+        && breakFits(pacePolicy.lunchMinutes)
+      ) {
+        cursor += pacePolicy.lunchMinutes;
+        lastRecoveryAt = cursor;
+        lunchTaken = true;
+        projected = project();
+      } else if (
+        cursor - lastRecoveryAt >= pacePolicy.maxActiveMinutes
+        && breakFits(pacePolicy.restMinutes)
+      ) {
+        cursor += pacePolicy.restMinutes;
+        lastRecoveryAt = cursor;
+        projected = project();
+      }
+
+      if (projected.finish > close || projected.finish > sightseeingEnd) {
+        lateMinutes += Math.max(1, projected.finish - Math.min(close, sightseeingEnd));
+        return;
+      }
+      scheduled += 1;
+      travelMinutes += projected.transport.minutes;
+      cursor = projected.finish;
+      current = destination;
+    });
+
+    return { scheduled, lateMinutes, endMinutes: cursor, travelMinutes };
+  };
+
+  const isBetter = (candidate: typeof bestScore, current: typeof bestScore) => {
+    if (candidate.scheduled !== current.scheduled) return candidate.scheduled > current.scheduled;
+    if (candidate.lateMinutes !== current.lateMinutes) return candidate.lateMinutes < current.lateMinutes;
+    if (candidate.endMinutes !== current.endMinutes) return candidate.endMinutes < current.endMinutes;
+    return candidate.travelMinutes < current.travelMinutes;
+  };
+
+  const visit = (index: number) => {
+    if (index === route.length) {
+      const score = scoreRoute(route);
+      if (isBetter(score, bestScore)) {
+        bestScore = score;
+        bestRoute = [...route];
+      }
+      return;
+    }
+    for (let swapIndex = index; swapIndex < route.length; swapIndex += 1) {
+      [route[index], route[swapIndex]] = [route[swapIndex], route[index]];
+      visit(index + 1);
+      [route[index], route[swapIndex]] = [route[swapIndex], route[index]];
+    }
+  };
+  visit(0);
+  return bestRoute;
+}
+
 export function buildDayItinerary(
   start: PlannerLocation,
   bucket: readonly PlannerDestination[],
@@ -2090,9 +2435,10 @@ export function buildDayItinerary(
   const nightStops = bucket.filter(
     (destination) => destination.timeSlot === "night",
   );
+  const packedMiddleDay = (options.minimumDestinationTarget ?? 0) >= 4;
   const daytime = bucket.filter(
     (destination) => destination.timeSlot !== "night",
-  );
+  ).map((destination) => packedMiddleDay ? packedMiddleVisitProfile(destination) : destination);
   const items: PlannedStop[] = [];
   const unscheduled: PlannerDestination[] = [];
   const notices: string[] = [];
@@ -2108,11 +2454,10 @@ export function buildDayItinerary(
   const packedArrivalRoute = daytime.some((destination) =>
     destination.tags.includes("classic-east-loop") || destination.tags.includes("arrival-city-loop"),
   );
-  const packedMiddleDay = (options.minimumDestinationTarget ?? 0) >= 4;
   const sightseeingEnd = options.checkInStay && nightStops.length && packedArrivalRoute
     ? Math.max(dayEnd + 90, 20 * 60 + 30)
     : packedMiddleDay
-      ? Math.max(dayEnd, Math.min(20 * 60, options.startMinutes + 11 * 60))
+      ? Math.max(dayEnd, Math.min(20 * 60, options.startMinutes + 12 * 60))
       : dayEnd;
   const stayDestination = options.checkInStay
     ? stayToDestination(options.checkInStay)
@@ -2370,7 +2715,7 @@ export function buildDayItinerary(
       const shiftedFinish = shiftedArrival + queueMinutes + destination.duration;
       return (
         shiftedFinish <= close
-        && shiftedArrival <= sightseeingEnd
+        && (packedMiddleDay ? shiftedFinish <= sightseeingEnd : shiftedArrival <= sightseeingEnd)
         && (deadline === null || shiftedFinish + projected.onwardMinutes <= deadline + deadlineGrace)
         && (departureMinutes === null || shiftedFinish + projected.travelToDeparture <= departureMinutes - 30)
       );
@@ -2408,7 +2753,7 @@ export function buildDayItinerary(
 
     if (
       projected.finish > close ||
-      projected.scheduledArrival > sightseeingEnd ||
+      (packedMiddleDay ? projected.finish > sightseeingEnd : projected.scheduledArrival > sightseeingEnd) ||
       (deadline !== null && projected.finish + projected.onwardMinutes > deadline + deadlineGrace) ||
       (departureMinutes !== null && projected.finish + projected.travelToDeparture > departureMinutes - 30)
     ) {
@@ -2508,14 +2853,16 @@ export function buildDayItinerary(
   } else if (protectFinalDayFromSightseeing) {
     unscheduled.push(...daytime);
   } else {
-    const ordered = optimizeRoute(
-      current,
-      daytime,
-      options.preference,
-      cursor,
-      options.routeEstimates,
-      packedMiddleDay,
-    );
+    const ordered = packedMiddleDay && !options.checkOutStay && !options.departure
+      ? optimizePackedMiddleRoute(current, daytime, options, sightseeingEnd)
+      : optimizeRoute(
+          current,
+          daytime,
+          options.preference,
+          cursor,
+          options.routeEstimates,
+          packedMiddleDay,
+        );
     ordered.forEach((destination) => scheduleDestination(
       destination,
       checkoutBagPickupTarget,

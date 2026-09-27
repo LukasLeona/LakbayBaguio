@@ -288,8 +288,8 @@ const packedMiddleDay = generateItinerary({
 });
 const packedMiddleStops = packedMiddleDay.days[1].items.filter(({ kind }) => kind === "destination");
 assert.ok(
-  packedMiddleStops.length >= 4 && packedMiddleStops.length <= 7,
-  `A three-day trip should keep four to seven selected attractions on its packed middle day: ${JSON.stringify({ scheduled: packedMiddleStops.map(({ destination }) => destination.id), unscheduled: packedMiddleDay.days[1].unscheduled.map(({ id }) => id), notices: packedMiddleDay.days[1].notices })}`,
+  packedMiddleStops.length >= 5 && packedMiddleStops.length <= 7,
+  `A three-day trip should keep five to seven selected attractions on its packed middle day when six candidates exist: ${JSON.stringify({ scheduled: packedMiddleStops.map(({ destination }) => destination.id), unscheduled: packedMiddleDay.days[1].unscheduled.map(({ id }) => id), notices: packedMiddleDay.days[1].notices })}`,
 );
 assert.ok(
   packedMiddleDay.days[1].items.some(({ kind }) => kind === "meal"),
@@ -309,6 +309,75 @@ if (packedMiddleOverflow) {
     "An unscheduled place must be allowed to retry its original day and receive the real fit reason",
   );
 }
+
+const screenshotSelectionIds = [
+  ...classicArrivalIds,
+  ...packedMiddleIds,
+  "baguio-city-market",
+];
+const screenshotChoices = PLANNER_DESTINATIONS.filter(({ id }) => screenshotSelectionIds.includes(id));
+const screenshotPackedArrival = shouldUsePackedArrivalRoute(screenshotChoices, {
+  numberOfDays: 3,
+  hasArrivalDayStay: true,
+});
+const screenshotSelection = completeEastBaguioCoreLoop(
+  screenshotChoices,
+  PLANNER_DESTINATIONS,
+  { completeLoop: true, compactForPackedDay: true },
+);
+const screenshotItinerary = generateItinerary({
+  start: origin,
+  destinations: screenshotSelection.destinations,
+  suggestedDestinationIds: screenshotSelection.suggestedIds,
+  dayAssignments: defaultPlannerDayAssignments(
+    screenshotSelection.destinations,
+    3,
+    screenshotPackedArrival,
+  ),
+  date: "2026-10-16",
+  numberOfDays: 3,
+  availableMinutes: 6 * 60,
+  travelers: 2,
+  modes: ["jeepney", "walk"],
+  preference: "balanced",
+  pace: "comfortable",
+  startTime: "08:00",
+  stay: testStay,
+  balanceOpenDays: true,
+});
+const screenshotDayOneStops = screenshotItinerary.days[0].items.filter(({ kind }) => kind === "destination");
+const screenshotDayTwoStops = screenshotItinerary.days[1].items.filter(({ kind }) => kind === "destination");
+assert.ok(
+  screenshotDayOneStops.length >= 9,
+  "The requested packed arrival loop must remain intact while Day 2 is repaired",
+);
+assert.ok(
+  screenshotDayTwoStops.length >= 5 && screenshotDayTwoStops.length <= 7,
+  `The real packed-arrival selection should schedule five to seven Day 2 attractions: ${JSON.stringify({ scheduled: screenshotDayTwoStops.map(({ destination, arrivalMinutes, departureMinutes }) => ({ id: destination.id, arrivalMinutes, departureMinutes })), unscheduled: screenshotItinerary.days.flatMap((day) => day.unscheduled.map(({ id }) => id)), notices: screenshotItinerary.days[1].notices })}`,
+);
+assert.ok(
+  screenshotItinerary.days[1].items.some(({ kind }) => kind === "meal"),
+  "The repaired Day 2 must retain a protected meal",
+);
+assert.ok(
+  screenshotItinerary.days[2].items.some(({ destination }) => destination.id === "baguio-city-market"),
+  "The market must remain on the checkout day after Day 2 packing",
+);
+const expectedPackedDurations: Record<string, number> = {
+  "valley-of-colors": 30,
+  "diplomat-hotel": 30,
+  "lions-head": 30,
+  "camp-john-hay": 120,
+};
+screenshotDayTwoStops.forEach((stop) => {
+  const expectedDuration = expectedPackedDurations[stop.destination.id];
+  if (expectedDuration !== undefined) assert.equal(stop.destination.duration, expectedDuration);
+  const [closeHour, closeMinute] = stop.destination.close.split(":").map(Number);
+  assert.ok(
+    stop.departureMinutes <= closeHour * 60 + closeMinute,
+    `${stop.destination.name} must finish before its closing time`,
+  );
+});
 
 assert.notEqual(
   routeEstimateKey({ lat: 16.411, lng: 120.591 }, { lat: 16.421, lng: 120.625 }, "walk"),
