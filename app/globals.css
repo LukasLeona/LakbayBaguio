@@ -843,6 +843,29 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .travel-buffer-note svg, .queue-note svg { flex: 0 0 auto; }
 .transport-card ol { display: grid; gap: 5px; margin: 11px 0 0; padding-left: 18px; color: var(--muted); font-size: .53rem; line-height: 1.5; }
 .transport-card li::marker { color: #80a095; font-weight: 800; }
+.jeepney-commute { margin-top: 11px; padding: 11px; border: 1px solid #c5d7ce; border-radius: 14px; background: rgba(255,255,255,.72); }
+.jeepney-commute > header { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+.jeepney-commute > header > div { display: grid; }
+.jeepney-commute > header strong { color: var(--pine-900); font-size: .61rem; }
+.jeepney-commute > header small { color: var(--muted); font-size: .48rem; }
+.jeepney-commute > header > span { flex: 0 0 auto; padding: 4px 6px; border-radius: 999px; font-size: .39rem; font-weight: 900; letter-spacing: .06em; }
+.jeepney-commute > header > span.official { color: #285a4d; background: #dcebe3; }
+.jeepney-commute > header > span.confirm { color: #795b21; background: #fff0bd; }
+.transport-card .jeepney-commute > ol { position: relative; display: grid; gap: 0; margin: 10px 0 0; padding: 0; list-style: none; }
+.jeepney-commute > ol::before { content: ""; position: absolute; left: 12px; top: 15px; bottom: 15px; border-left: 1px dashed #afc5bb; }
+.jeepney-commute > ol > li { position: relative; display: grid; grid-template-columns: 25px minmax(0,1fr); gap: 8px; padding: 6px 0; }
+.jeepney-commute > ol > li > span { position: relative; z-index: 1; width: 25px; height: 25px; display: grid; place-items: center; border: 3px solid #f8faf5; border-radius: 50%; color: white; background: #598779; }
+.jeepney-commute > ol > li > div { min-width: 0; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: baseline; gap: 1px 8px; }
+.jeepney-commute > ol > li strong { color: var(--ink); font-size: .53rem; }
+.jeepney-commute > ol > li small { color: #42695e; font-size: .47rem; font-weight: 800; }
+.jeepney-commute > ol > li p { grid-column: 1 / -1; margin: 1px 0 0; color: var(--muted); font-size: .49rem; line-height: 1.4; }
+.jeepney-commute > ol > li a { grid-column: 1 / -1; width: max-content; display: inline-flex; align-items: center; gap: 3px; margin-top: 2px; color: var(--pine-700); font-size: .46rem; font-weight: 800; }
+.jeepney-commute > footer { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 7px; padding-top: 8px; border-top: 1px solid #dce5dd; font-size: .47rem; }
+.jeepney-commute > footer strong { color: var(--pine-900); }
+.jeepney-commute > footer span { color: var(--muted); }
+.jeepney-commute > footer a { display: inline-flex; align-items: center; gap: 3px; color: var(--pine-700); font-weight: 800; }
+.jeepney-road-warning { display: flex; align-items: flex-start; gap: 6px; margin: 9px 0 0; padding: 8px 9px; border-radius: 10px; color: #725317; background: #fff0bd; font-size: .49rem; font-weight: 700; line-height: 1.4; }
+.jeepney-road-warning svg { flex: 0 0 auto; margin-top: 1px; }
 .verified-pin-note { display: flex; align-items: center; gap: 5px; margin: 9px 0 0; color: #2f6757; font-size: .5rem; font-weight: 750; line-height: 1.4; }
 .verified-pin-note svg { flex: 0 0 auto; }
 .checkout-reminder-card { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; align-items: center; gap: 11px; padding: 13px; border: 1px solid #e6cc8b; border-radius: 15px; background: linear-gradient(135deg,#fff9e8,#f5edda); }
@@ -1023,6 +1046,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .fare-policy-card > summary, .fare-policy-rates { padding-inline: 12px; }
   .route-stop-content > header { flex-direction: column; }
   .visit-time { align-self: start; }
+  .jeepney-commute > header { align-items: flex-start; flex-direction: column; }
 }
 
 @page { size: A4 portrait; margin: 12mm 11mm 14mm; }
@@ -1051,6 +1075,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .print-itinerary section p, .print-itinerary section ol { margin-block: 3px; }
   .print-itinerary .print-place-meta { color: #607970; font-size: 7.5pt; }
   .print-itinerary .print-leg { margin-top: 7px; }
+  .print-itinerary .print-jeepney-commute { break-inside: avoid; margin: 3mm 0; padding: 3mm; border: 1px solid #c8d8cf; border-radius: 3mm; background: #f5f8f3 !important; }
+  .print-itinerary .print-jeepney-commute p { margin: 2px 0; }
+  .print-itinerary .print-jeepney-commute a { color: #25574b; text-decoration: underline; }
   .print-itinerary ol { padding-left: 18px; }
   .print-itinerary li { margin-bottom: 2px; }
   .print-itinerary .print-map-link { margin-top: 6px; font-size: 7.5pt; font-weight: 700; }

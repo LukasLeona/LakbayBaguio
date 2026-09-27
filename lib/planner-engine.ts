@@ -2768,16 +2768,30 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
       if (item.queueMinutes > 0) {
         lines.push(`   Queue allowance: ${formatDuration(item.queueMinutes)}.`);
       }
+      if (item.transport.mode === "jeepney" && item.transport.stages?.length) {
+        lines.push(`   Complete commute (${item.transport.boardings ?? 1} ${item.transport.boardings === 1 ? "boarding" : "boardings"}):`);
+        item.transport.stages.forEach((stage) => {
+          lines.push(`   - ${stage.label}: ${formatDuration(stage.minutes)}. ${stage.detail}`);
+          if (stage.mapUrl) lines.push(`     ${stage.mapLabel || "Map"}: ${stage.mapUrl}`);
+        });
+        if (item.transport.routeReference) {
+          lines.push(`   Route reference: ${item.transport.routeReference.name}${item.transport.routeReference.serviceHours ? ` · ${item.transport.routeReference.serviceHours}` : ""}`);
+          lines.push(`   Official directory: ${item.transport.routeReference.sourceUrl}`);
+          lines.push(`   Map warning: ${item.transport.routeReference.disclaimer}`);
+        }
+      }
       if (item.transport.mode !== "walk") {
         const fare =
           item.transport.mode === "jeepney"
-            ? `${formatCurrency(item.transport.farePerPerson)} each; ${formatCurrency(item.transport.totalFare)} total`
+            ? `${formatCurrency(item.transport.farePerPerson)} each for ${item.transport.boardings ?? 1} ${(item.transport.boardings ?? 1) === 1 ? "ride" : "rides"}; ${formatCurrency(item.transport.totalFare)} total`
             : `${formatCurrency(item.transport.vehicleFare)} per vehicle`;
         lines.push(`   Estimated fare: ${fare}.`);
       }
-      item.transport.instructions.forEach((instruction) =>
-        lines.push(`   - ${instruction}`),
-      );
+      if (item.transport.mode !== "jeepney" || !item.transport.stages?.length) {
+        item.transport.instructions.forEach((instruction) =>
+          lines.push(`   - ${instruction}`),
+        );
+      }
       if (item.destination.activities?.length) {
         lines.push(`   Try: ${item.destination.activities.join("; ")}`);
       }

@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import { PLANNER_DESTINATIONS, PLANNER_START_LOCATIONS } from "../lib/planner-data";
 import {
   buildDayRouteUrls,
+  chooseTransport,
+  DEFAULT_FARE_SETTINGS,
   googleDirectionsUrl,
   googleLocationUrl,
+  haversineKm,
+  JEEPNEY_ROAD_PATH_DISCLAIMER,
   terminalIdentityTextLines,
   type PlannedDay,
 } from "../lib/planner-engine";
@@ -101,6 +105,67 @@ assert.ok(
   "Mines View corridor must not fall back to an ambiguous place name",
 );
 
+const directJeepney = chooseTransport(
+  origin,
+  minesView,
+  haversineKm(origin, minesView),
+  {
+    preference: "cheapest",
+    pace: "comfortable",
+    travelers: 2,
+    modes: ["jeepney"],
+    fareSettings: DEFAULT_FARE_SETTINGS,
+  },
+);
+assert.equal(directJeepney.mode, "jeepney");
+assert.equal(directJeepney.boardings, 1);
+assert.deepEqual(
+  directJeepney.stages?.map(({ kind }) => kind),
+  ["access-walk", "wait", "ride", "final-walk"],
+  "A direct jeepney commute must account for access, waiting, riding, and final walking",
+);
+assert.equal(
+  directJeepney.baseMinutes,
+  directJeepney.stages?.reduce((total, stage) => total + stage.minutes, 0),
+);
+assert.equal(directJeepney.minutes, directJeepney.baseMinutes + directJeepney.bufferMinutes);
+assert.match(
+  directJeepney.stages?.find(({ kind }) => kind === "access-walk")?.mapUrl ?? "",
+  /travelmode=walking/,
+  "Access directions must use walking mode",
+);
+assert.match(
+  directJeepney.stages?.find(({ kind }) => kind === "final-walk")?.mapUrl ?? "",
+  /travelmode=walking/,
+  "Entrance directions must use walking mode",
+);
+assert.match(
+  directJeepney.legMapUrl,
+  /travelmode=driving/,
+  "The separate road-path reference should use road geometry",
+);
+assert.equal(directJeepney.routeReference?.disclaimer, JEEPNEY_ROAD_PATH_DISCLAIMER);
+
+const campJohnHay = PLANNER_DESTINATIONS.find(({ id }) => id === "camp-john-hay");
+assert.ok(campJohnHay, "Camp John Hay must exist for the cross-corridor route audit");
+const transferJeepney = chooseTransport(
+  minesView,
+  campJohnHay,
+  haversineKm(minesView, campJohnHay),
+  {
+    preference: "cheapest",
+    pace: "comfortable",
+    travelers: 2,
+    modes: ["jeepney"],
+    fareSettings: DEFAULT_FARE_SETTINGS,
+  },
+);
+assert.equal(transferJeepney.boardings, 2);
+assert.equal(transferJeepney.stages?.filter(({ kind }) => kind === "ride").length, 2);
+assert.ok(transferJeepney.stages?.some(({ kind }) => kind === "transfer-walk"));
+assert.ok(transferJeepney.stages?.some(({ kind }) => kind === "transfer-wait"));
+assert.equal(transferJeepney.totalFare, transferJeepney.farePerPerson * 2);
+
 console.log(
-  `Route audit passed: ${PLANNER_DESTINATIONS.length} destinations and ${routeUrls.length} multi-stop route segments use exact coordinates.`,
+  `Route audit passed: ${PLANNER_DESTINATIONS.length} destinations, ${routeUrls.length} route segments, and direct/transfer jeepney journeys are explicit.`,
 );

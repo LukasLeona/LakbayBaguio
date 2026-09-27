@@ -44,10 +44,12 @@ import {
   getArrivalLuggagePlan,
   getCheckoutLuggagePlan,
   itineraryToText,
+  JEEPNEY_ROAD_PATH_DISCLAIMER,
   minutesToTime,
   parseTimeToMinutes,
   transportLabel,
   type PlannedItinerary,
+  type PlannedCommuteStage,
   type PlannerLocation,
   type PlannedStop,
   type TransportMode,
@@ -74,7 +76,8 @@ function TransportIcon({ mode }: { mode: TransportMode }) {
 function fareLabel(stop: PlannedStop) {
   if (stop.transport.mode === "walk") return "Free";
   if (stop.transport.mode === "jeepney") {
-    return `${formatCurrency(stop.transport.farePerPerson)} each · ${formatCurrency(stop.transport.totalFare)} total`;
+    const rides = stop.transport.boardings ?? 1;
+    return `${formatCurrency(stop.transport.farePerPerson)} each · ${rides} ${rides === 1 ? "ride" : "rides"} · ${formatCurrency(stop.transport.totalFare)} total`;
   }
   return `${formatCurrency(stop.transport.vehicleFare)} per vehicle`;
 }
@@ -105,6 +108,12 @@ function isComfortStop(stop: PlannedStop) {
   return stop.kind === "meal" || stop.kind === "rest";
 }
 
+function CommuteStageIcon({ stage }: { stage: PlannedCommuteStage }) {
+  if (stage.kind === "ride") return <BusFront size={14} aria-hidden="true" />;
+  if (stage.kind === "wait" || stage.kind === "transfer-wait") return <Clock3 size={14} aria-hidden="true" />;
+  return <Footprints size={14} aria-hidden="true" />;
+}
+
 function canonicalRouteLocation(location: PlannerLocation): PlannerLocation {
   return location.id
     ? getPlannerStartLocationById(location.id) ?? getPlannerDestinationById(location.id) ?? location
@@ -122,7 +131,7 @@ function canonicalizeStop(stop: PlannedStop): PlannedStop {
     from,
     transport: {
       ...stop.transport,
-      legMapUrl: stop.stationary
+      legMapUrl: stop.stationary || stop.transport.mode === "jeepney"
         ? stop.transport.legMapUrl
         : googleDirectionsUrl(from, destination, stop.transport.mode),
     },
@@ -340,14 +349,19 @@ export function ItineraryResults({
                           <span>{fareLabel(stop)}</span>
                         </div>
                       </header>
-                      {stop.transport.bufferMinutes > 0 ? <p className="travel-buffer-note"><ShieldCheck size={14} /> {formatDuration(stop.transport.baseMinutes)} typical travel + {formatDuration(stop.transport.bufferMinutes)} traffic/loading allowance.</p> : null}
+                      {stop.transport.bufferMinutes > 0 ? <p className="travel-buffer-note"><ShieldCheck size={14} /> {stop.transport.mode === "jeepney" ? `${formatDuration(stop.transport.baseMinutes)} covers walking, queues, ride${(stop.transport.boardings ?? 1) > 1 ? "s, transfer" : ""}, and final access` : `${formatDuration(stop.transport.baseMinutes)} typical travel`} + {formatDuration(stop.transport.bufferMinutes)} traffic/loading allowance.</p> : null}
                       {stop.queueMinutes > 0 ? <p className="queue-note"><Clock3 size={14} /> {formatDuration(stop.queueMinutes)} is reserved for entrance, ticketing, or a short queue before the visit.</p> : null}
                       {stop.waitMinutes > 0 ? <p className="wait-note"><Clock3 size={14} /> {stop.kind === "destination" ? `Includes a ${formatDuration(stop.waitMinutes)} wait for opening.` : `${formatDuration(stop.waitMinutes)} is protected before this fixed-time agenda item.`}</p> : null}
-                      <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
+                      {stop.transport.mode === "jeepney" && stop.transport.stages?.length ? <section className="jeepney-commute" aria-label={`Complete jeepney commute to ${stop.destination.name}`}>
+                        <header><div><strong>Complete commute</strong><small>{stop.transport.boardings ?? 1} {(stop.transport.boardings ?? 1) === 1 ? "boarding" : "boardings"} · fare counted per boarding</small></div>{stop.transport.routeReference ? <span className={stop.transport.routeReference.verification === "official-directory" ? "official" : "confirm"}>{stop.transport.routeReference.verification === "official-directory" ? "CITY ROUTE REFERENCE" : "CONFIRM ON SITE"}</span> : null}</header>
+                        <ol>{stop.transport.stages.map((stage) => <li key={`${stage.kind}-${stage.label}`}><span><CommuteStageIcon stage={stage} /></span><div><strong>{stage.label}</strong><small>{formatDuration(stage.minutes)}</small><p>{stage.detail}</p>{stage.mapUrl ? <a href={stage.mapUrl} target="_blank" rel="noreferrer">{stage.mapLabel || "Open map"} <ExternalLink size={11} /></a> : null}</div></li>)}</ol>
+                        {stop.transport.routeReference ? <footer><strong>{stop.transport.routeReference.name}</strong>{stop.transport.routeReference.serviceHours ? <span>{stop.transport.routeReference.serviceHours}</span> : null}<a href={stop.transport.routeReference.sourceUrl} target="_blank" rel="noreferrer">Baguio City route directory <ExternalLink size={11} /></a></footer> : null}
+                      </section> : <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>}
+                      {stop.transport.mode === "jeepney" ? <p className="jeepney-road-warning"><AlertTriangle size={14} /> {stop.transport.routeReference?.disclaimer || JEEPNEY_ROAD_PATH_DISCLAIMER}</p> : null}
                       {stop.destination.navigation ? <p className="verified-pin-note"><ShieldCheck size={14} /> {stop.destination.navigation.entranceLabel} · pin reviewed {formatTripDate(stop.destination.navigation.verifiedAt)}</p> : null}
                       <div className="route-link-row">
-                        {stop.transport.loadingMapUrl ? <a href={stop.transport.loadingMapUrl} target="_blank" rel="noreferrer"><MapPin size={14} /> Loading area <ExternalLink size={12} /></a> : null}
-                        <a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)} target="_blank" rel="noreferrer"><Navigation size={14} /> Open this leg <ExternalLink size={12} /></a>
+                        {stop.transport.loadingMapUrl ? <a href={stop.transport.loadingMapUrl} target="_blank" rel="noreferrer"><MapPin size={14} /> {stop.transport.mode === "jeepney" ? "Access / loading map" : "Loading area"} <ExternalLink size={12} /></a> : null}
+                        {stop.transport.mode === "jeepney" ? <a href={stop.transport.legMapUrl} target="_blank" rel="noreferrer"><Navigation size={14} /> Road-path reference <ExternalLink size={12} /></a> : <a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)} target="_blank" rel="noreferrer"><Navigation size={14} /> Open this leg <ExternalLink size={12} /></a>}
                         <a href={stop.placeMapUrl} target="_blank" rel="noreferrer"><Route size={14} /> {stop.destination.navigation ? "Exact entrance" : stop.kind === "check-in" || stop.kind === "check-out" ? "Open saved stay" : stop.kind === "departure" ? "Open departure point" : "View place"} <ExternalLink size={12} /></a>
                       </div>
                     </section>}
@@ -439,8 +453,9 @@ export function ItineraryResults({
                   <p className="print-leg"><strong>{transportLabel(stop.transport.mode)} from {canonicalRouteLocation(stop.from).name}</strong> · {stop.distance.toFixed(1)} km · {formatDuration(stop.transport.minutes)} · {fareLabel(stop)}</p>
                   {stop.transport.bufferMinutes > 0 ? <p className="print-leg">Travel estimate includes {formatDuration(stop.transport.bufferMinutes)} for traffic/loading uncertainty.</p> : null}
                   {stop.queueMinutes > 0 ? <p className="print-leg">Queue allowance: {formatDuration(stop.queueMinutes)}.</p> : null}
-                  <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
-                  <p className="print-map-link"><a href={googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)}>Open this leg in Google Maps</a></p>
+                  {stop.transport.mode === "jeepney" && stop.transport.stages?.length ? <div className="print-jeepney-commute"><p><strong>Complete jeepney commute · {stop.transport.boardings ?? 1} {(stop.transport.boardings ?? 1) === 1 ? "boarding" : "boardings"}</strong></p><ol>{stop.transport.stages.map((stage) => <li key={`${stage.kind}-${stage.label}`}><strong>{stage.label} ({formatDuration(stage.minutes)}):</strong> {stage.detail}{stage.mapUrl ? <> — <a href={stage.mapUrl}>{stage.mapLabel || "Map"}</a></> : null}</li>)}</ol>{stop.transport.routeReference ? <p><strong>Route reference:</strong> {stop.transport.routeReference.name}{stop.transport.routeReference.serviceHours ? ` · ${stop.transport.routeReference.serviceHours}` : ""}<br /><a href={stop.transport.routeReference.sourceUrl}>Baguio City route directory</a><br /><strong>Map warning:</strong> {stop.transport.routeReference.disclaimer}</p> : null}</div> : null}
+                  {stop.transport.mode !== "jeepney" || !stop.transport.stages?.length ? <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol> : null}
+                  <p className="print-map-link"><a href={stop.transport.mode === "jeepney" ? stop.transport.legMapUrl : googleDirectionsUrl(canonicalRouteLocation(stop.from), stop.destination, stop.transport.mode)}>{stop.transport.mode === "jeepney" ? "Open road-path reference in Google Maps" : "Open this leg in Google Maps"}</a></p>
                 </>}
                 {stop.gapSuggestions?.length ? <ul>{stop.gapSuggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>)}</ul> : null}
               </section>
