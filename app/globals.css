@@ -1921,6 +1921,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .review-day-callout strong { display: block; font-size: .59rem; }
 .review-day-callout p { margin: 2px 0 0; font-size: .49rem; line-height: 1.4; }
 .review-day-callout button { position: relative; z-index: 1; padding: 6px 8px; border: 1px solid #d6ad5d; border-radius: 9px; color: #684716; background: rgba(255,255,255,.62); cursor: pointer; font-size: .47rem; font-weight: 850; }
+.review-open-day { min-height: 126px; display: flex; align-items: center; justify-content: center; gap: 11px; margin: 4px 12px 12px; padding: 18px; border: 1px dashed #b9cdbf; border-radius: 15px; color: #315f4f; background: #f1f7ef; text-align: left; }
+.review-open-day > svg { flex: 0 0 auto; width: 32px; height: 32px; padding: 8px; border-radius: 11px; color: var(--pine-950); background: var(--lime); }
+.review-open-day strong { display: block; font-size: .62rem; }
+.review-open-day p { max-width: 330px; margin: 3px 0 0; color: #65766d; font-size: .49rem; line-height: 1.45; }
 .review-day-card ol { display: grid; gap: 6px; margin: 0; padding: 0 12px 12px; list-style: none; }
 .review-stop { min-height: 47px; display: grid; grid-template-columns: 29px minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid transparent; border-radius: 13px; background: #f5f3eb; transition: opacity .18s ease, border-color .18s ease, transform .18s ease; }
 .review-stop.destination { cursor: grab; touch-action: pan-y; -webkit-user-select: none; user-select: none; }

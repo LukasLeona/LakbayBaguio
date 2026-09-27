@@ -320,7 +320,10 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           setStartTime(`${String(Math.floor(pending.startMinutes / 60) % 24).padStart(2, "0")}:${String(pending.startMinutes % 60).padStart(2, "0")}`);
           setAvailableHours(Math.round(pending.availableMinutes / 60));
           setTravelers(pending.travelers);
-          setSelectedIds(pending.selectedDestinationIds.filter((id) => Boolean(getPlannerDestinationById(id))));
+          const pendingSuggestedIds = new Set(pending.suggestedDestinationIds ?? []);
+          setSelectedIds(pending.selectedDestinationIds.filter(
+            (id) => !pendingSuggestedIds.has(id) && Boolean(getPlannerDestinationById(id)),
+          ));
           setPreference(pending.preference);
           setModes(pending.modes);
           if (pending.stay) {
@@ -572,9 +575,6 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       ...eastLoop.suggestedIds,
       ...(addFinalDayMarket ? [addFinalDayMarket.id] : []),
     ];
-    if (suggestedDestinationIds.length) {
-      setSelectedIds((current) => [...new Set([...current, ...suggestedDestinationIds])]);
-    }
     const request: PlannerRequest = {
       start: selectedStart,
       destinations: planDestinations,
@@ -588,6 +588,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       pace: DEFAULT_PLANNER_SETTINGS.pace,
       suggestedDestinationIds,
       dayAssignments: defaultPlannerDayAssignments(planDestinations, numberOfDays, packedArrivalRoute),
+      balanceOpenDays: true,
       startTime,
       ...(stay ? { stay } : {}),
       ...(departureLocation

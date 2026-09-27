@@ -107,6 +107,8 @@ export type PlannerRequest = {
   deferredDestinationIds?: readonly string[];
   /** Nearby places proposed by Buddy rather than explicitly selected. */
   suggestedDestinationIds?: readonly string[];
+  /** Initial generation may move overflow into otherwise open sightseeing days. */
+  balanceOpenDays?: boolean;
   /** Server-resolved road and walking measurements keyed by directional coordinates. */
   routeEstimates?: PlannerRouteEstimates;
 };
@@ -780,7 +782,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     pace,
     request.routeEstimates,
   );
-  const buckets = applyDayAssignments(
+  let buckets = applyDayAssignments(
     automaticBuckets,
     routeDestinations,
     request.dayAssignments,
@@ -806,22 +808,47 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
     startLocationForDay(request.start, request.stay, dayIndex),
   );
 
-  const daysWithoutRoutes = buckets.map((bucket, dayIndex) => {
-    const day = buildDayItinerary(dayStarts[dayIndex], bucket, {
-      ...dayOptions,
-      dayIndex,
-      ...(request.stay?.checkInDay === dayIndex ? { checkInStay: request.stay } : {}),
-      ...(request.stay?.checkOutDay === dayIndex ? { checkOutStay: request.stay } : {}),
-      ...(request.departure?.dayIndex === dayIndex ? { departure: request.departure } : {}),
+  const buildDaysWithoutRoutes = (dayBuckets: readonly PlannerDestination[][]) =>
+    dayBuckets.map((bucket, dayIndex) => {
+      const day = buildDayItinerary(dayStarts[dayIndex], bucket, {
+        ...dayOptions,
+        dayIndex,
+        ...(request.stay?.checkInDay === dayIndex ? { checkInStay: request.stay } : {}),
+        ...(request.stay?.checkOutDay === dayIndex ? { checkOutStay: request.stay } : {}),
+        ...(request.departure?.dayIndex === dayIndex ? { departure: request.departure } : {}),
+      });
+      const heldForThisDay = destinations.filter((destination) =>
+        deferredIds.has(destination.id)
+        && (request.dayAssignments?.[destination.id] ?? 0) === dayIndex,
+      );
+      return heldForThisDay.length
+        ? { ...day, unscheduled: [...day.unscheduled, ...heldForThisDay] }
+        : day;
     });
-    const heldForThisDay = destinations.filter((destination) =>
-      deferredIds.has(destination.id)
-      && (request.dayAssignments?.[destination.id] ?? 0) === dayIndex,
+
+  let daysWithoutRoutes = buildDaysWithoutRoutes(buckets);
+  if (request.balanceOpenDays) {
+    const repair = redistributeOverflowIntoOpenDays(
+      buckets,
+      daysWithoutRoutes,
+      request,
+      deferredIds,
     );
-    return heldForThisDay.length
-      ? { ...day, unscheduled: [...day.unscheduled, ...heldForThisDay] }
-      : day;
-  });
+    if (repair.movedToDays.size) {
+      buckets = repair.buckets;
+      daysWithoutRoutes = buildDaysWithoutRoutes(buckets).map((day) =>
+        repair.movedToDays.has(day.index)
+          ? {
+              ...day,
+              notices: [
+                "This day received nearby places that could not fit a fuller day, keeping the trip balanced without dropping your choices.",
+                ...day.notices,
+              ],
+            }
+          : day,
+      );
+    }
+  }
 
   const days = daysWithoutRoutes.map((day) => {
     const routeMapUrls = buildDayRouteUrls(dayStarts[day.index], day);
@@ -854,6 +881,7 @@ export function generateItinerary(request: PlannerRequest): PlannedItinerary {
       dayAssignments: request.dayAssignments,
       deferredDestinationIds,
       suggestedDestinationIds: request.suggestedDestinationIds,
+      balanceOpenDays: request.balanceOpenDays,
       routeEstimateKeys: Object.keys(request.routeEstimates ?? {}).sort(),
     }),
   );
@@ -919,6 +947,79 @@ function applyDayAssignments(
   });
 
   return buckets;
+}
+
+function redistributeOverflowIntoOpenDays(
+  currentBuckets: readonly PlannerDestination[][],
+  days: readonly Pick<PlannedDay, "index" | "items" | "unscheduled">[],
+  request: PlannerRequest,
+  deferredIds: ReadonlySet<string>,
+): { buckets: PlannerDestination[][]; movedToDays: Set<number> } {
+  const openDays = days
+    .filter((day) =>
+      !day.items.some((item) => item.kind === "destination")
+      && request.stay?.checkOutDay !== day.index
+      && request.departure?.dayIndex !== day.index,
+    )
+    .map((day) => day.index);
+  if (!openDays.length) {
+    return { buckets: currentBuckets.map((bucket) => [...bucket]), movedToDays: new Set() };
+  }
+
+  const finalDayIndex = request.numberOfDays - 1;
+  const overflowById = new Map<string, PlannerDestination>();
+  days.forEach((day) => {
+    day.unscheduled.forEach((destination) => {
+      if (deferredIds.has(destination.id)) return;
+      if (destination.id === "baguio-city-market" && day.index === finalDayIndex) return;
+      overflowById.set(destination.id, destination);
+    });
+  });
+  if (!overflowById.size) {
+    return { buckets: currentBuckets.map((bucket) => [...bucket]), movedToDays: new Set() };
+  }
+
+  const overflowIds = new Set(overflowById.keys());
+  const buckets = currentBuckets.map((bucket) =>
+    bucket.filter((destination) => !overflowIds.has(destination.id)),
+  );
+  const groups = new Map<string, PlannerDestination[]>();
+  overflowById.forEach((destination) => {
+    const key = destination.area === "Atok Side Trip"
+      ? "Atok Side Trip"
+      : destination.area;
+    groups.set(key, [...(groups.get(key) ?? []), destination]);
+  });
+
+  const targetLoads = new Map(openDays.map((dayIndex) => [dayIndex, 0]));
+  const movedToDays = new Set<number>();
+  const targetCapacity = Math.max(120, request.availableMinutes - 60);
+  [...groups.values()]
+    .sort((first, second) =>
+      second.reduce((total, destination) => total + destination.duration, 0)
+        - first.reduce((total, destination) => total + destination.duration, 0),
+    )
+    .forEach((group) => {
+      let targetDay = [...openDays].sort(
+        (first, second) => (targetLoads.get(first) ?? 0) - (targetLoads.get(second) ?? 0),
+      )[0];
+      group.forEach((destination) => {
+        const projectedLoad = (targetLoads.get(targetDay) ?? 0) + destination.duration;
+        if (projectedLoad > targetCapacity) {
+          targetDay = [...openDays].sort(
+            (first, second) => (targetLoads.get(first) ?? 0) - (targetLoads.get(second) ?? 0),
+          )[0];
+        }
+        buckets[targetDay].push(destination);
+        targetLoads.set(
+          targetDay,
+          (targetLoads.get(targetDay) ?? 0) + destination.duration,
+        );
+        movedToDays.add(targetDay);
+      });
+    });
+
+  return { buckets, movedToDays };
 }
 
 function itineraryDestinations(itinerary: PlannedItinerary): PlannerDestination[] {

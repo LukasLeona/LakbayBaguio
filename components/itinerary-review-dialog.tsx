@@ -70,6 +70,11 @@ function reviewDayIntensity(
   );
   const placeCount = sightseeing.length;
   const utilization = activeMinutes / Math.max(1, availableMinutes);
+  if (placeCount === 0) {
+    return day.items.length
+      ? { level: "easy", label: "Logistics day" }
+      : { level: "easy", label: "Open day" };
+  }
   if (placeCount >= 5 || (placeCount >= 4 && utilization >= 0.72)) return { level: "full", label: "Full day" };
   if (placeCount >= 3 || (placeCount >= 2 && utilization >= 0.5)) return { level: "balanced", label: "Balanced day" };
   return { level: "easy", label: "Easygoing day" };
@@ -307,7 +312,10 @@ export function ItineraryReviewDialog({
                   <div><strong>Day {day.index + 1} is a full {fullDayLabel}</strong><p>We grouped nearby stops so you will not need to return to the same area another day. It fits the safe schedule, but it will feel busy—keep it or remove a place for more breathing room.</p></div>
                   <button type="button" onClick={() => setDismissedFullDays((current) => new Set(current).add(day.index))}>Got it</button>
                 </aside> : null}
-                <ol>
+                {!day.items.length ? <div className="review-open-day">
+                  <Coffee />
+                  <div><strong>Keep this day open—or add another place</strong><p>Your selected stops already fit elsewhere. Use this as a recovery day, or choose Edit choices to add more of Baguio.</p></div>
+                </div> : <ol>
                   {day.items.map((stop) => (
                     <li
                       className={`review-stop ${stop.kind} ${moving?.id === stop.destination.id ? "is-moving" : moving ? "move-dimmed" : ""}`}
@@ -329,7 +337,7 @@ export function ItineraryReviewDialog({
                       </div> : null}
                     </li>
                   ))}
-                </ol>
+                </ol>}
                 <footer><span>{formatDuration(day.totalTravelMinutes)} travel</span><span>{day.totalDistance.toFixed(1)} km estimated</span></footer>
               </article>
             );

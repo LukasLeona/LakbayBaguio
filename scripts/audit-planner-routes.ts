@@ -145,6 +145,7 @@ const classicArrivalItinerary = generateItinerary({
   pace: "comfortable",
   startTime: "08:00",
   stay: testStay,
+  balanceOpenDays: true,
 });
 const arrivalDayDestinationIds = classicArrivalItinerary.days[0].items
   .filter(({ kind }) => kind === "destination")
@@ -172,6 +173,55 @@ assert.ok(
   PLANNER_BAGGAGE_OPTIONS["victory-liner"].some(({ name }) => name.includes("Genesis Transport")),
   "Early-arrival reminders should include the Genesis terminal counter alternative",
 );
+
+const overflowChoices = PLANNER_DESTINATIONS.filter(({ id }) => [
+  "botanical-garden",
+  "wright-park",
+  "mines-view-park",
+  "good-shepherd",
+].includes(id));
+const overflowAssignments = Object.fromEntries(
+  overflowChoices.map(({ id }) => [id, 0]),
+);
+const unbalancedOverflow = generateItinerary({
+  start: origin,
+  destinations: overflowChoices,
+  date: "2026-10-16",
+  numberOfDays: 2,
+  availableMinutes: 4 * 60,
+  travelers: 1,
+  modes: ["jeepney", "walk"],
+  preference: "balanced",
+  pace: "comfortable",
+  startTime: "08:00",
+  dayAssignments: overflowAssignments,
+  balanceOpenDays: false,
+});
+assert.equal(unbalancedOverflow.days[1].items.filter(({ kind }) => kind === "destination").length, 0);
+assert.equal(unbalancedOverflow.days[0].unscheduled.length, 2);
+
+const repairedOverflow = generateItinerary({
+  start: origin,
+  destinations: overflowChoices,
+  date: "2026-10-16",
+  numberOfDays: 2,
+  availableMinutes: 4 * 60,
+  travelers: 1,
+  modes: ["jeepney", "walk"],
+  preference: "balanced",
+  pace: "comfortable",
+  startTime: "08:00",
+  dayAssignments: overflowAssignments,
+  balanceOpenDays: true,
+});
+assert.equal(repairedOverflow.days[0].unscheduled.length, 0);
+assert.equal(repairedOverflow.days[1].unscheduled.length, 0);
+assert.equal(
+  repairedOverflow.days[1].items.filter(({ kind }) => kind === "destination").length,
+  2,
+  "An open sightseeing day should absorb overflow from a full day",
+);
+assert.match(repairedOverflow.days[1].notices[0], /keeping the trip balanced/);
 
 assert.notEqual(
   routeEstimateKey({ lat: 16.411, lng: 120.591 }, { lat: 16.421, lng: 120.625 }, "walk"),
