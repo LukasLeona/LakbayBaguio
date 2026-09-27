@@ -123,7 +123,7 @@ function fixedStopMeta(stop: PlannedStop, itinerary: PlannedItinerary) {
   if (stop.kind === "check-in") return `${itinerary.stay?.kind === "airbnb" ? "Airbnb" : "Hotel"} · Fixed check-in`;
   if (stop.kind === "check-out") return `${itinerary.stay?.kind === "airbnb" ? "Airbnb" : "Hotel"} · Fixed checkout`;
   if (stop.kind === "departure") return "Final transfer · Departure point";
-  if (stop.kind === "bag-drop") return "Confirmed luggage handoff";
+  if (stop.kind === "bag-drop") return "Planned luggage handoff—confirm on arrival";
   if (stop.kind === "bag-pickup") return "Return for stored luggage";
   return `${stop.destination.area} · ${stop.destination.category}`;
 }

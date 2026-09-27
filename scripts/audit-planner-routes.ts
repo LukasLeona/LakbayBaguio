@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
-import { PLANNER_DESTINATIONS, PLANNER_START_LOCATIONS } from "../lib/planner-data";
+import { PLANNER_BAGGAGE_OPTIONS, PLANNER_DESTINATIONS, PLANNER_START_LOCATIONS } from "../lib/planner-data";
 import { getVerifiedWalkingCorridor, summarizeRouteTerrain } from "../lib/geoapify-routing";
 import { resolveFarePolicy, resolveFareProfile } from "../lib/fare-policy";
-import { completeEastBaguioCoreLoop, EAST_BAGUIO_CORE_LOOP_IDS } from "../lib/planner-recommendations";
+import {
+  completeEastBaguioCoreLoop,
+  defaultPlannerDayAssignments,
+  EAST_BAGUIO_CORE_LOOP_IDS,
+} from "../lib/planner-recommendations";
 import { routeEstimateKey } from "../lib/route-estimates";
 import {
   buildDayRouteUrls,
@@ -18,7 +22,7 @@ import {
   terminalIdentityTextLines,
   type PlannedDay,
 } from "../lib/planner-engine";
-import type { StartLocation } from "../lib/planner-types";
+import type { PlannerStay, StartLocation } from "../lib/planner-types";
 
 const startLocations = PLANNER_START_LOCATIONS as readonly StartLocation[];
 const origin = startLocations[0];
@@ -61,7 +65,7 @@ assert.deepEqual(
   [...EAST_BAGUIO_CORE_LOOP_IDS].sort(),
   "Selecting one East Baguio anchor should propose the complete core loop",
 );
-assert.equal(eastBaguioLoop.suggestedIds.length, 3);
+assert.equal(eastBaguioLoop.suggestedIds.length, 4);
 const eastBaguioItinerary = generateItinerary({
   start: origin,
   destinations: eastBaguioLoop.destinations,
@@ -91,6 +95,77 @@ assert.equal(
 );
 assert.equal(eastLoopDayIndices.size, 1, "The East Baguio core loop should remain on one efficient day");
 assert.deepEqual(eastBaguioItinerary.suggestedDestinationIds, eastBaguioLoop.suggestedIds);
+
+const classicArrivalIds = [
+  "botanical-garden",
+  "burnham-park",
+  "baguio-cathedral",
+  "session-road",
+  "baguio-night-market",
+  "baguio-city-market",
+];
+const classicArrivalSelection = completeEastBaguioCoreLoop(
+  PLANNER_DESTINATIONS.filter(({ id }) => classicArrivalIds.includes(id)),
+  PLANNER_DESTINATIONS,
+);
+const testStay: PlannerStay = {
+  id: "stay-hotel",
+  kind: "hotel",
+  name: "456 Hotel",
+  googleMapsUrl: "https://www.google.com/maps?q=16.4059,120.5913",
+  googleQuery: "456 Hotel Baguio",
+  checkInDay: 0,
+  checkInTime: "14:00",
+  checkOutDay: 2,
+  checkOutTime: "11:30",
+  finalDayPreference: "pasalubong",
+  arrivalLuggagePlan: "terminal-storage",
+  checkoutLuggagePlan: "property-storage",
+  lat: 16.4059,
+  lng: 120.5913,
+  locationPrecision: "pin",
+};
+const classicArrivalItinerary = generateItinerary({
+  start: origin,
+  destinations: classicArrivalSelection.destinations,
+  suggestedDestinationIds: classicArrivalSelection.suggestedIds,
+  dayAssignments: defaultPlannerDayAssignments(classicArrivalSelection.destinations, 3),
+  date: "2026-10-16",
+  numberOfDays: 3,
+  availableMinutes: 6 * 60,
+  travelers: 2,
+  modes: ["jeepney", "walk"],
+  preference: "balanced",
+  pace: "comfortable",
+  startTime: "08:00",
+  stay: testStay,
+});
+const arrivalDayDestinationIds = classicArrivalItinerary.days[0].items
+  .filter(({ kind }) => kind === "destination")
+  .map(({ destination }) => destination.id);
+assert.deepEqual(
+  arrivalDayDestinationIds.slice(0, EAST_BAGUIO_CORE_LOOP_IDS.length).sort(),
+  [...EAST_BAGUIO_CORE_LOOP_IDS].sort(),
+  "The complete East Baguio loop should run before check-in on the arrival day",
+);
+assert.deepEqual(
+  arrivalDayDestinationIds.slice(EAST_BAGUIO_CORE_LOOP_IDS.length),
+  ["burnham-park", "baguio-cathedral", "session-road", "baguio-night-market"],
+  "The compact city loop should resume after hotel rest and finish at Night Market",
+);
+assert.equal(classicArrivalItinerary.days[0].unscheduled.length, 0);
+assert.ok(
+  classicArrivalItinerary.days[0].items[0].kind === "bag-drop",
+  "The route should store luggage before the first attraction",
+);
+assert.ok(
+  classicArrivalItinerary.days[2].items.some(({ destination }) => destination.id === "baguio-city-market"),
+  "Baguio City Market should default to the final day",
+);
+assert.ok(
+  PLANNER_BAGGAGE_OPTIONS["victory-liner"].some(({ name }) => name.includes("Genesis Transport")),
+  "Early-arrival reminders should include the Genesis terminal counter alternative",
+);
 
 assert.notEqual(
   routeEstimateKey({ lat: 16.411, lng: 120.591 }, { lat: 16.421, lng: 120.625 }, "walk"),

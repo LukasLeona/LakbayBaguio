@@ -63,14 +63,15 @@ function reviewDayIntensity(
   day: PlannedItinerary["days"][number],
   availableMinutes: number,
 ): ReviewDayIntensity {
-  const activeMinutes = day.items.reduce(
+  const sightseeing = day.items.filter((item) => item.kind === "destination");
+  const activeMinutes = sightseeing.reduce(
     (total, item) => total + item.transport.minutes + item.queueMinutes + item.destination.duration,
     0,
   );
-  const placeCount = day.items.filter((item) => item.kind === "destination").length;
+  const placeCount = sightseeing.length;
   const utilization = activeMinutes / Math.max(1, availableMinutes);
-  if (utilization >= 0.82 || placeCount >= 6) return { level: "full", label: "Full day" };
-  if (utilization >= 0.58 || placeCount >= 4) return { level: "balanced", label: "Balanced day" };
+  if (placeCount >= 5 || (placeCount >= 4 && utilization >= 0.72)) return { level: "full", label: "Full day" };
+  if (placeCount >= 3 || (placeCount >= 2 && utilization >= 0.5)) return { level: "balanced", label: "Balanced day" };
   return { level: "easy", label: "Easygoing day" };
 }
 
@@ -241,9 +242,9 @@ export function ItineraryReviewDialog({
           </div>
         </div>
 
-        {itinerary.stay ? <section className="review-luggage-plan" aria-label="Confirmed luggage plan">
+        {itinerary.stay ? <section className="review-luggage-plan" aria-label="Planned luggage reminder">
           <BaggageClaim />
-          <div><strong>Your luggage route is accounted for</strong><span><b>Before check-in:</b> {arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))}</span><span><b>After checkout:</b> {checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}</span></div>
+          <div><strong>Store bags before sightseeing</strong><span><b>Before check-in:</b> {arrivalLuggagePlanLabel(getArrivalLuggagePlan(itinerary.stay))}</span><span><b>After checkout:</b> {checkoutLuggagePlanLabel(getCheckoutLuggagePlan(itinerary.stay))}</span><span>Confirm the handoff on arrival and keep valuables with you.</span></div>
         </section> : null}
 
         <div className={`review-move-guide ${moving ? "active" : ""}`}>
@@ -266,7 +267,17 @@ export function ItineraryReviewDialog({
             const comfortCount = day.items.filter((item) => item.kind === "meal" || item.kind === "rest").length;
             const moveOption = moveOptions[day.index];
             const intensity = dayIntensities[day.index];
-            const primaryArea = areas.length === 1 ? areas[0] : "Baguio";
+            const areaCounts = day.items
+              .filter((item) => item.kind === "destination")
+              .reduce<Record<string, number>>((counts, item) => ({
+                ...counts,
+                [item.destination.area]: (counts[item.destination.area] ?? 0) + 1,
+              }), {});
+            const [dominantArea, dominantCount = 0] = Object.entries(areaCounts)
+              .sort((first, second) => second[1] - first[1])[0] ?? [];
+            const fullDayLabel = dominantArea && dominantCount >= 3
+              ? `${dominantArea} loop`
+              : "sightseeing day";
             return (
               <article
                 className={`review-day-card ${dayMoveState(day.index)}`}
@@ -293,7 +304,7 @@ export function ItineraryReviewDialog({
                 {areas.length ? <p className="review-area-line"><MapPin size={13} /> {areas.join(" · ")}</p> : null}
                 {intensity.level === "full" && !dismissedFullDays.has(day.index) ? <aside className="review-day-callout" role="note">
                   <AlertTriangle />
-                  <div><strong>Day {day.index + 1} is a full {primaryArea} loop</strong><p>We grouped nearby stops so you will not need to return to the same area another day. It fits the safe schedule, but it will feel busy—keep it or remove a place for more breathing room.</p></div>
+                  <div><strong>Day {day.index + 1} is a full {fullDayLabel}</strong><p>We grouped nearby stops so you will not need to return to the same area another day. It fits the safe schedule, but it will feel busy—keep it or remove a place for more breathing room.</p></div>
                   <button type="button" onClick={() => setDismissedFullDays((current) => new Set(current).add(day.index))}>Got it</button>
                 </aside> : null}
                 <ol>

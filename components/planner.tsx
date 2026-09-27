@@ -42,7 +42,10 @@ import {
   getPlannerStartLocationById,
 } from "@/lib/planner-data";
 import { LTFRB_FARE_POLICY, resolveFarePolicy } from "@/lib/fare-policy";
-import { completeEastBaguioCoreLoop } from "@/lib/planner-recommendations";
+import {
+  completeEastBaguioCoreLoop,
+  defaultPlannerDayAssignments,
+} from "@/lib/planner-recommendations";
 import {
   deferItineraryDestination,
   evaluateItineraryMove,
@@ -62,11 +65,7 @@ import {
   type RouteEstimateLocation,
 } from "@/lib/route-estimates";
 import type {
-  ArrivalLuggagePlan,
   AutoPickTheme,
-  CheckoutLuggagePlan,
-  FinalDayPreference,
-  LuggagePlan,
   PlannerCategoryFilter,
   PlannerDestination,
   StartLocation,
@@ -136,12 +135,8 @@ type PlannerDraft = {
     checkInDay: number;
     checkInTime: string;
     checkOutTime: string;
-    finalDayPreference: FinalDayPreference;
     departureLocationId: string;
     departureTime: string;
-    arrivalLuggagePlan?: ArrivalLuggagePlan;
-    checkoutLuggagePlan?: CheckoutLuggagePlan;
-    luggagePlan?: LuggagePlan;
   };
 };
 
@@ -165,13 +160,6 @@ function isTransportMode(value: unknown): value is TransportMode {
 
 function isAutoPickTheme(value: unknown): value is AutoPickTheme {
   return AUTO_PICK_THEMES.some((theme) => theme.value === value);
-}
-
-function isFinalDayPreference(value: unknown): value is FinalDayPreference {
-  return value === "relax"
-    || value === "pasalubong"
-    || value === "easy-stop"
-    || value === "sightseeing";
 }
 
 function matchesCategory(destination: PlannerDestination, filter: PlannerCategoryFilter) {
@@ -231,11 +219,8 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [checkInDay, setCheckInDay] = useState(0);
   const [checkInTime, setCheckInTime] = useState("14:00");
   const [checkOutTime, setCheckOutTime] = useState("");
-  const [finalDayPreference, setFinalDayPreference] = useState<FinalDayPreference>("relax");
   const [departureLocationId, setDepartureLocationId] = useState("");
   const [departureTime, setDepartureTime] = useState("");
-  const [arrivalLuggagePlan, setArrivalLuggagePlan] = useState<ArrivalLuggagePlan>("unresolved");
-  const [checkoutLuggagePlan, setCheckoutLuggagePlan] = useState<CheckoutLuggagePlan>("unresolved");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [preference, setPreference] = useState<TravelPreference>(DEFAULT_PLANNER_SETTINGS.preference);
   const [modes, setModes] = useState<TransportMode[]>([...DEFAULT_PLANNER_SETTINGS.modes]);
@@ -315,17 +300,8 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           if (Number.isInteger(draft.stay.checkInDay)) setCheckInDay(Math.max(0, draft.stay.checkInDay));
           if (typeof draft.stay.checkInTime === "string") setCheckInTime(draft.stay.checkInTime);
           if (typeof draft.stay.checkOutTime === "string") setCheckOutTime(draft.stay.checkOutTime);
-          if (isFinalDayPreference(draft.stay.finalDayPreference)) setFinalDayPreference(draft.stay.finalDayPreference);
           if (typeof draft.stay.departureLocationId === "string") setDepartureLocationId(draft.stay.departureLocationId);
           if (typeof draft.stay.departureTime === "string") setDepartureTime(draft.stay.departureTime);
-          if (["unresolved", "property-drop", "terminal-storage", "carry"].includes(draft.stay.arrivalLuggagePlan ?? "")) {
-            setArrivalLuggagePlan(draft.stay.arrivalLuggagePlan as ArrivalLuggagePlan);
-          } else if (draft.stay.luggagePlan === "carry" || draft.stay.luggagePlan === "property-drop") {
-            setArrivalLuggagePlan(draft.stay.luggagePlan);
-          }
-          if (["unresolved", "property-storage", "departure-storage", "carry"].includes(draft.stay.checkoutLuggagePlan ?? "")) {
-            setCheckoutLuggagePlan(draft.stay.checkoutLuggagePlan as CheckoutLuggagePlan);
-          }
         }
       }
 
@@ -353,9 +329,6 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
             setCheckInDay(pending.stay.checkInDay);
             setCheckInTime(pending.stay.checkInTime);
             setCheckOutTime(pending.stay.checkOutTime || "");
-            setFinalDayPreference(pending.stay.finalDayPreference || "relax");
-            setArrivalLuggagePlan(pending.stay.arrivalLuggagePlan ?? (pending.stay.luggagePlan === "property-drop" ? "property-drop" : "carry"));
-            setCheckoutLuggagePlan(pending.stay.checkoutLuggagePlan ?? "carry");
           }
           if (pending.departure) {
             setDepartureLocationId(pending.departure.location.id);
@@ -380,9 +353,9 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
   useEffect(() => {
     if (!restored) return;
-    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, checkOutTime, finalDayPreference, departureLocationId, departureTime, arrivalLuggagePlan, checkoutLuggagePlan } };
+    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, checkOutTime, departureLocationId, departureTime } };
     try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)); } catch { /* Storage is optional. */ }
-  }, [arrivalLuggagePlan, autoPickTheme, availableHours, checkInDay, checkInTime, checkOutTime, checkoutLuggagePlan, departureLocationId, departureTime, finalDayPreference, includeStay, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
+  }, [autoPickTheme, availableHours, checkInDay, checkInTime, checkOutTime, departureLocationId, departureTime, includeStay, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
 
   useEffect(() => {
     setCheckInDay((current) => Math.min(current, numberOfDays - 1));
@@ -522,6 +495,9 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   async function buildPlan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (generating) return;
+    const departureLocation = departureLocationId
+      ? getPlannerStartLocationById(departureLocationId)
+      : undefined;
     let stay: PlannerRequest["stay"];
     if (includeStay) {
       if (parseTimeToMinutes(checkOutTime) === null) {
@@ -544,9 +520,9 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           checkInTime,
           checkOutDay: numberOfDays - 1,
           checkOutTime,
-          finalDayPreference,
-          arrivalLuggagePlan,
-          checkoutLuggagePlan,
+          finalDayPreference: "pasalubong",
+          arrivalLuggagePlan: selectedStart.terminal ? "terminal-storage" : "property-drop",
+          checkoutLuggagePlan: departureLocation ? "departure-storage" : "property-storage",
         });
       } catch (stayError) {
         setGenerating(false);
@@ -558,19 +534,23 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       }
     }
     const market = getPlannerDestinationById("baguio-city-market");
-    const requestedDestinations = stay?.finalDayPreference === "pasalubong"
+    const addFinalDayMarket = numberOfDays > 1
       && market
       && !selectedDestinations.some((destination) => destination.id === market.id)
-      ? [...selectedDestinations, market]
+      ? market
+      : null;
+    const requestedDestinations = addFinalDayMarket
+      ? [...selectedDestinations, addFinalDayMarket]
       : selectedDestinations;
     const eastLoop = completeEastBaguioCoreLoop(requestedDestinations, PLANNER_DESTINATIONS);
     const planDestinations = eastLoop.destinations;
-    if (eastLoop.suggestedIds.length) {
-      setSelectedIds((current) => [...new Set([...current, ...eastLoop.suggestedIds])]);
+    const suggestedDestinationIds = [
+      ...eastLoop.suggestedIds,
+      ...(addFinalDayMarket ? [addFinalDayMarket.id] : []),
+    ];
+    if (suggestedDestinationIds.length) {
+      setSelectedIds((current) => [...new Set([...current, ...suggestedDestinationIds])]);
     }
-    const departureLocation = departureLocationId
-      ? getPlannerStartLocationById(departureLocationId)
-      : undefined;
     const request: PlannerRequest = {
       start: selectedStart,
       destinations: planDestinations,
@@ -582,7 +562,8 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       jeepneyClass: "unsure",
       preference,
       pace: DEFAULT_PLANNER_SETTINGS.pace,
-      suggestedDestinationIds: eastLoop.suggestedIds,
+      suggestedDestinationIds,
+      dayAssignments: defaultPlannerDayAssignments(planDestinations, numberOfDays),
       startTime,
       ...(stay ? { stay } : {}),
       ...(departureLocation
@@ -666,17 +647,19 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   function deleteReviewedDestination(destinationId: string) {
     if (!reviewResult) return;
     const remainingIds = reviewResult.selectedDestinationIds.filter((id) => id !== destinationId);
-    const remainingDestinations = PLANNER_DESTINATIONS.filter((destination) => remainingIds.includes(destination.id));
+    const reviewedDestinations = new Map(
+      reviewResult.days.flatMap((day) => [
+        ...day.items
+          .filter((item) => item.kind === "destination")
+          .map((item) => [item.destination.id, item.destination] as const),
+        ...day.unscheduled.map((destination) => [destination.id, destination] as const),
+      ]),
+    );
+    const remainingDestinations = remainingIds
+      .map((id) => reviewedDestinations.get(id) ?? getPlannerDestinationById(id))
+      .filter((destination): destination is PlannerDestination => Boolean(destination));
     if (remainingDestinations.length < 2) return;
 
-    const removedAutomaticMarket = destinationId === "baguio-city-market"
-      && reviewResult.stay?.finalDayPreference === "pasalubong";
-    const nextStay = reviewResult.stay
-      ? {
-          ...reviewResult.stay,
-          ...(removedAutomaticMarket ? { finalDayPreference: "easy-stop" as const } : {}),
-        }
-      : undefined;
     const next = generateItinerary({
       start: reviewResult.start,
       destinations: remainingDestinations,
@@ -690,7 +673,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       fareSettings: reviewResult.fareSettings,
       jeepneyClass: "unsure",
       startMinutes: reviewResult.startMinutes,
-      ...(nextStay ? { stay: nextStay } : {}),
+      ...(reviewResult.stay ? { stay: reviewResult.stay } : {}),
       ...(reviewResult.departure ? { departure: reviewResult.departure } : {}),
       dayAssignments: getItineraryDayAssignments(reviewResult),
       deferredDestinationIds: reviewResult.deferredDestinationIds?.filter((id) => id !== destinationId),
@@ -699,7 +682,6 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     });
 
     setSelectedIds((current) => current.filter((id) => id !== destinationId));
-    if (removedAutomaticMarket) setFinalDayPreference("easy-stop");
     setReviewResult(next);
     setSaved(false);
   }
@@ -808,54 +790,15 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                   <p className="field-hint">Use the checkout time provided by your hotel or host.</p>
                 </section>
               </div>
-              <fieldset className="final-day-picker">
-                <legend>How should your final day feel?</legend>
-                <div>
-                  {([
-                    ["relax", "☕", "Slow morning", "Enjoy the stay and keep checkout calm."],
-                    ["pasalubong", "🧺", "Pasalubong muna", "Adds Baguio City Market after checkout."],
-                    ["easy-stop", "📍", "One easy stop", "Choose one nearby selected place."],
-                    ["sightseeing", "🗺️", "Sulitin ang Baguio", "Keep sightseeing if the clock allows."],
-                  ] as const).map(([value, icon, label, description]) => <button type="button" key={value} className={finalDayPreference === value ? "active" : ""} aria-pressed={finalDayPreference === value} onClick={() => setFinalDayPreference(value)}><span>{icon}</span><strong>{label}</strong><small>{description}</small></button>)}
-                </div>
-              </fieldset>
               <div className="departure-fields">
                 <label className="planner-field"><span>Final departure point <small>optional</small></span><select value={departureLocationId} onChange={(event) => setDepartureLocationId(event.target.value)}><option value="">Not decided yet</option>{PLANNER_START_LOCATIONS.map((location) => <option value={location.id} key={location.id}>{location.name}</option>)}</select></label>
                 <label className="planner-field"><span>Bus / departure time <small>optional</small></span><input type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} disabled={!departureLocationId} /></label>
               </div>
-              <section className="luggage-plan-section" aria-labelledby="arrival-luggage-title">
-                <header><span><BaggageClaim size={18} /></span><div><strong id="arrival-luggage-title">Where will your bags be before check-in?</strong><small>This changes the route. Only choose storage you have confirmed.</small></div></header>
-                <div className="luggage-plan-grid">
-                  {([
-                    ["property-drop", "Accommodation", "Early bag drop is confirmed. We will go there first."],
-                    ["terminal-storage", "Arrival terminal", selectedStart.terminal ? `Storage at ${selectedStart.name} is confirmed.` : "Choose a terminal starting point to use this."],
-                    ["carry", "Keep my bags", "Sightseeing will start only after check-in."],
-                    ["unresolved", "Not sure yet", "The itinerary stays blocked until this is resolved."],
-                  ] as const).map(([value, label, description]) => {
-                    const disabled = value === "terminal-storage" && !selectedStart.terminal;
-                    return <button type="button" key={value} disabled={disabled} aria-pressed={arrivalLuggagePlan === value} className={arrivalLuggagePlan === value ? "active" : ""} onClick={() => setArrivalLuggagePlan(value)}><strong>{label}</strong><small>{description}</small>{arrivalLuggagePlan === value ? <Check size={14} /> : null}</button>;
-                  })}
-                </div>
-              </section>
-              <section className="luggage-plan-section" aria-labelledby="checkout-luggage-title">
-                <header><span><BaggageClaim size={18} /></span><div><strong id="checkout-luggage-title">Where will your bags be after checkout?</strong><small>Storage plans include the return trip to collect every bag.</small></div></header>
-                <div className="luggage-plan-grid">
-                  {([
-                    ["property-storage", "Accommodation", "Storage is confirmed; return here before leaving Baguio."],
-                    ["departure-storage", "Departure terminal", departureLocationId ? "Terminal storage is confirmed; go there first and return before boarding." : "Choose a departure point to use this."],
-                    ["carry", "Keep my bags", "No sightseeing will be scheduled after checkout."],
-                    ["unresolved", "Not sure yet", "The itinerary stays blocked until this is resolved."],
-                  ] as const).map(([value, label, description]) => {
-                    const disabled = value === "departure-storage" && !departureLocationId;
-                    return <button type="button" key={value} disabled={disabled} aria-pressed={checkoutLuggagePlan === value} className={checkoutLuggagePlan === value ? "active" : ""} onClick={() => setCheckoutLuggagePlan(value)}><strong>{label}</strong><small>{description}</small>{checkoutLuggagePlan === value ? <Check size={14} /> : null}</button>;
-                  })}
-                </div>
-              </section>
               {stayMapsUrl ? <p className={`stay-map-status ${stayMapState === "verified" ? "valid" : stayMapState === "checking" ? "checking" : "invalid"}`} aria-live="polite">{stayMapState === "checking" ? <><LoaderCircle className="spin" size={14} /> Checking the exact Google Maps place…</> : stayMapState === "verified" && currentVerifiedStay ? <><Check size={14} /> {currentVerifiedStay.name} — exact pin confirmed.</> : <>{stayMapError || "Paste the exact place or Share link from Google Maps."}</>}</p> : <p className="stay-map-help"><MapPin size={14} /> Find the property in Google Maps, tap Share, then paste its link here.</p>}
             </div> : null}
           </section>
 
-          {baggageOptions.length ? <aside className="arrival-tip-rich"><header><span><BaggageClaim size={20} /></span><div><h2>Arriving before hotel check-in?</h2><p>You may be able to leave your bags before starting the route. Services and rates can change, so verify at the counter and keep valuables with you.</p></div></header><div>{baggageOptions.map((option) => <article key={option.name}><strong>{option.name}</strong><p>{option.detail}</p><a href={googleSearchUrl(option.query)} target="_blank" rel="noreferrer">View in Google Maps ↗</a></article>)}</div></aside> : null}
+          {baggageOptions.length ? <aside className="arrival-tip-rich"><header><span><BaggageClaim size={20} /></span><div><h2>Store heavy bags before sightseeing</h2><p>Arriving before check-in? Ask your hotel or a terminal counter to hold your bags first. Confirm availability, fees, closing time, and the claim-stub process; keep valuables with you.</p></div></header><div>{baggageOptions.map((option) => <article key={option.name}><strong>{option.name}</strong><p>{option.detail}</p><a href={googleSearchUrl(option.query)} target="_blank" rel="noreferrer">View in Google Maps ↗</a></article>)}</div></aside> : null}
         </section>
 
         <section className="planner-form-section" id="destinations" data-planner-step="2">

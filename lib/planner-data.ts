@@ -255,6 +255,11 @@ export const PLANNER_BAGGAGE_OPTIONS = {
       "query": "Victory Liner Baguio Terminal"
     },
     {
+      "name": "Genesis Transport terminal lounge / counter",
+      "detail": "Genesis officially lists its Baguio terminal on Gov. Pack Road. Ask staff whether passenger baggage safekeeping is available that day; confirm eligibility, fees, closing time, and the claim-stub procedure.",
+      "query": "Genesis Transport Baguio Terminal Gov Pack Road"
+    },
+    {
       "name": "SM City Baguio Tourist Lounge",
       "detail": "A reported alternative near the city center. Availability, level, size limits, and rates can change, so confirm with the mall concierge.",
       "query": "SM City Baguio Tourist Lounge"
@@ -267,6 +272,11 @@ export const PLANNER_BAGGAGE_OPTIONS = {
       "query": "Victory Liner Governor Pack Road Baguio City"
     },
     {
+      "name": "Genesis Transport terminal lounge / counter",
+      "detail": "Genesis officially lists its Baguio terminal on Gov. Pack Road. Ask staff whether passenger baggage safekeeping is available that day; confirm eligibility, fees, closing time, and the claim-stub procedure.",
+      "query": "Genesis Transport Baguio Terminal Gov Pack Road"
+    },
+    {
       "name": "SM City Baguio Tourist Lounge",
       "detail": "A nearby reported alternative. Availability, level, size limits, and rates can change, so confirm with the mall concierge.",
       "query": "SM City Baguio Tourist Lounge"
@@ -274,8 +284,8 @@ export const PLANNER_BAGGAGE_OPTIONS = {
   ],
   "gov-pack": [
     {
-      "name": "Genesis / JoyBus terminal counter",
-      "detail": "Travelers have reported short-term baggage acceptance near Gov. Pack. Confirm the current policy and claim-ticket procedure at the counter.",
+      "name": "Genesis Transport terminal lounge / counter",
+      "detail": "Genesis officially lists its Baguio terminal on Gov. Pack Road. Ask staff whether passenger baggage safekeeping is available that day; confirm eligibility, fees, closing time, and the claim-stub procedure.",
       "query": "Genesis Transport Baguio Terminal Gov Pack Road"
     },
     {
@@ -286,8 +296,8 @@ export const PLANNER_BAGGAGE_OPTIONS = {
   ],
   "genesis-baguio": [
     {
-      "name": "Genesis terminal counter",
-      "detail": "Ask the terminal counter whether short-term luggage storage is currently available. Fees and operating rules are not guaranteed.",
+      "name": "Genesis Transport terminal lounge / counter",
+      "detail": "Genesis officially lists this Baguio terminal on Gov. Pack Road. Ask staff whether passenger baggage safekeeping is available that day; confirm eligibility, fees, closing time, and the claim-stub procedure.",
       "query": "Genesis Transport Baguio Terminal Gov Pack Road"
     },
     {
@@ -298,8 +308,8 @@ export const PLANNER_BAGGAGE_OPTIONS = {
   ],
   "joybus-baguio": [
     {
-      "name": "JoyBus / Genesis terminal counter",
-      "detail": "Ask the counter about current baggage-hold rules before leaving the terminal. Keep valuables with you.",
+      "name": "Genesis Transport terminal lounge / counter",
+      "detail": "Genesis officially lists this Baguio terminal on Gov. Pack Road. Ask staff whether passenger baggage safekeeping is available that day; confirm eligibility, fees, closing time, and the claim-stub procedure.",
       "query": "JoyBus Baguio Terminal Gov Pack Road"
     },
     {
