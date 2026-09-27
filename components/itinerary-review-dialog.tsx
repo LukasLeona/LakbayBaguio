@@ -6,6 +6,7 @@ import {
   BedDouble,
   CalendarCheck,
   Check,
+  ChevronDown,
   Clock3,
   Coffee,
   GripVertical,
@@ -121,6 +122,7 @@ export function ItineraryReviewDialog({
 }: ItineraryReviewDialogProps) {
   const [moving, setMoving] = useState<MovingPlace | null>(null);
   const [moveFeedback, setMoveFeedback] = useState<MoveFeedback | null>(null);
+  const [expandedExcludedId, setExpandedExcludedId] = useState<string | null>(null);
   const [acknowledgedFullDays, setAcknowledgedFullDays] = useState<Set<number>>(() => new Set());
   const holdTimer = useRef<number | null>(null);
   const holdOrigin = useRef<{ x: number; y: number } | null>(null);
@@ -163,6 +165,7 @@ export function ItineraryReviewDialog({
 
   useEffect(() => {
     setAcknowledgedFullDays(new Set());
+    setExpandedExcludedId(null);
   }, [itinerary.id]);
 
   function clearHoldTimer() {
@@ -263,8 +266,10 @@ export function ItineraryReviewDialog({
       targetDayIndex,
     });
     if (evaluation.allowed) {
+      setExpandedExcludedId((current) => current === destinationId ? null : current);
       setMoving(null);
     } else {
+      setExpandedExcludedId(destinationId);
       window.requestAnimationFrame(() => {
         document.getElementById(`review-excluded-${destinationId}`)?.scrollIntoView({
           behavior: "smooth",
@@ -491,11 +496,12 @@ export function ItineraryReviewDialog({
 
         {uniqueExcluded.length ? (
           <section className="review-excluded">
-            <header><AlertTriangle size={17} /><div><strong>Your remaining selected places</strong><p>Each place shows which days fit and the exact route, time, or opening-hour reason—no extra tap needed.</p></div></header>
+            <header><AlertTriangle size={17} /><div><strong>Your remaining selected places</strong><p>Tap a place to see which days fit and the exact route, time, or opening-hour reason.</p></div></header>
             <div>{uniqueExcluded.map((place) => {
               const sourceDay = itinerary.days.find((day) => day.unscheduled.some((item) => item.id === place.id))?.index ?? null;
+              const expanded = expandedExcludedId === place.id;
               return <article
-                className={`${moving?.id === place.id ? "is-moving" : moving ? "move-dimmed" : ""} ${moveFeedback?.tone === "error" && moveFeedback.destinationId === place.id ? "has-move-error" : ""}`}
+                className={`${expanded ? "is-expanded" : ""} ${moving?.id === place.id ? "is-moving" : moving ? "move-dimmed" : ""} ${moveFeedback?.tone === "error" && moveFeedback.destinationId === place.id ? "has-move-error" : ""}`}
                 key={place.id}
                 id={`review-excluded-${place.id}`}
                 draggable
@@ -508,12 +514,22 @@ export function ItineraryReviewDialog({
                 onPointerUp={() => { clearHoldTimer(); stopEdgeAutoScroll(); }}
                 onPointerCancel={() => { clearHoldTimer(); stopEdgeAutoScroll(); }}
               >
-                <span className="review-excluded-copy"><strong>{place.name}</strong><small>{place.area} · {place.open}–{place.close}</small>{suggestedIds.has(place.id) ? <em className="review-suggested-label">Buddy suggested</em> : null}</span>
+                <button
+                  type="button"
+                  className="review-excluded-toggle"
+                  aria-expanded={expanded}
+                  aria-controls={`review-excluded-fit-${place.id}`}
+                  onClick={() => setExpandedExcludedId((current) => current === place.id ? null : place.id)}
+                  onPointerDown={(event) => event.stopPropagation()}
+                >
+                  <span className="review-excluded-copy"><strong>{place.name}</strong><small>{place.area} · {place.open}–{place.close}</small>{suggestedIds.has(place.id) ? <em className="review-suggested-label">Buddy suggested</em> : null}<em className="review-excluded-hint">{expanded ? "Hide day-by-day reasons" : "Tap to see why it wasn’t scheduled"}</em></span>
+                  <ChevronDown aria-hidden="true" />
+                </button>
                 <div className="review-excluded-actions" data-move-control="true">
                   <button type="button" className="review-grab-button" onClick={() => beginMove(place.id, place.name, sourceDay)} onPointerDown={(event) => event.stopPropagation()} aria-label={`Add ${place.name} to a day`} title="Add back to a day"><GripVertical /></button>
-                  <button type="button" className="review-remove-button" onClick={() => onDelete(place.id)} onPointerDown={(event) => event.stopPropagation()}><Trash2 size={14} /> Delete choice</button>
+                  <button type="button" className="review-remove-button" onClick={() => { if (expanded) setExpandedExcludedId(null); onDelete(place.id); }} onPointerDown={(event) => event.stopPropagation()}><Trash2 size={14} /> Delete choice</button>
                 </div>
-                <ul className="review-excluded-fit" aria-label={`Day-by-day fit for ${place.name}`}>
+                {expanded ? <ul id={`review-excluded-fit-${place.id}`} className="review-excluded-fit" aria-label={`Day-by-day fit for ${place.name}`}>
                   {(excludedMoveOptions.get(place.id) ?? []).map((option, dayIndex) => {
                     const highlighted = moveFeedback?.tone === "error"
                       && moveFeedback.destinationId === place.id
@@ -523,7 +539,7 @@ export function ItineraryReviewDialog({
                       <span className="review-fit-copy"><strong>{option.allowed ? "Can be added" : "Doesn’t fit this day"}</strong><small>{option.reason}</small></span>
                     </li>;
                   })}
-                </ul>
+                </ul> : null}
               </article>;
             })}</div>
           </section>

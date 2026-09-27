@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Car,
   Check,
+  ChevronRight,
   Clock3,
   Coffee,
   Copy,
@@ -26,9 +27,10 @@ import {
   ShieldCheck,
   Utensils,
   WalletCards,
+  X,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ItineraryShareDialog } from "@/components/itinerary-share-dialog";
 import { resolveFarePolicy } from "@/lib/fare-policy";
 import { getPlannerDestinationById, getPlannerStartLocationById } from "@/lib/planner-data";
@@ -138,6 +140,24 @@ function CommuteStageIcon({ stage }: { stage: PlannedCommuteStage }) {
   return <Footprints size={14} aria-hidden="true" />;
 }
 
+function JeepneyCommuteGuide({ stop, className = "" }: { stop: PlannedStop; className?: string }) {
+  if (!stop.transport.stages?.length) return null;
+
+  return (
+    <section className={`jeepney-commute ${className}`.trim()} aria-label={`Complete jeepney commute to ${stop.destination.name}`}>
+      <header>
+        <div>
+          <strong>Complete commute</strong>
+          <small>{stop.transport.boardings ?? 1} {(stop.transport.boardings ?? 1) === 1 ? "boarding" : "boardings"} · fare counted per boarding</small>
+        </div>
+        {stop.transport.routeReference ? <span className={stop.transport.routeReference.verification === "official-directory" ? "official" : "confirm"}>{stop.transport.routeReference.verification === "official-directory" ? "CITY ROUTE REFERENCE" : "CONFIRM ON SITE"}</span> : null}
+      </header>
+      <ol>{stop.transport.stages.map((stage) => <li key={`${stage.kind}-${stage.label}`}><span><CommuteStageIcon stage={stage} /></span><div><strong>{stage.label}</strong><small>{formatDuration(stage.minutes)}</small><p>{stage.detail}</p>{stage.mapUrl ? <a href={stage.mapUrl} target="_blank" rel="noreferrer">{stage.mapLabel || "Open map"} <ExternalLink size={11} /></a> : null}</div></li>)}</ol>
+      {stop.transport.routeReference ? <footer><strong>{stop.transport.routeReference.name}</strong>{stop.transport.routeReference.serviceHours ? <span>{stop.transport.routeReference.serviceHours}</span> : null}<a href={stop.transport.routeReference.sourceUrl} target="_blank" rel="noreferrer">Baguio City route directory <ExternalLink size={11} /></a></footer> : null}
+    </section>
+  );
+}
+
 function canonicalRouteLocation(location: PlannerLocation): PlannerLocation {
   return location.id
     ? getPlannerStartLocationById(location.id) ?? getPlannerDestinationById(location.id) ?? location
@@ -179,6 +199,9 @@ export function ItineraryResults({
 }: ItineraryResultsProps) {
   const [copied, setCopied] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [commuteGuideStop, setCommuteGuideStop] = useState<PlannedStop | null>(null);
+  const commuteGuideTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const commuteGuideCloseRef = useRef<HTMLButtonElement | null>(null);
   const farePolicy = itinerary.farePolicy ?? resolveFarePolicy(itinerary.date);
   const totalFareMinimum = itinerary.totals.fareMinimum ?? itinerary.totals.fare;
   const totalFareMaximum = itinerary.totals.fareMaximum ?? itinerary.totals.fare;
@@ -219,6 +242,28 @@ export function ItineraryResults({
         allJourneyStops[Math.floor((allJourneyStops.length - 1) / 2)],
         allJourneyStops[allJourneyStops.length - 1],
       ];
+
+  useEffect(() => {
+    if (!commuteGuideStop) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCommuteGuideStop(null);
+    };
+    const mobileQuery = window.matchMedia("(max-width: 760px)");
+    const closeOutsideMobile = (event: MediaQueryListEvent) => {
+      if (!event.matches) setCommuteGuideStop(null);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    mobileQuery.addEventListener("change", closeOutsideMobile);
+    commuteGuideCloseRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+      mobileQuery.removeEventListener("change", closeOutsideMobile);
+      window.requestAnimationFrame(() => commuteGuideTriggerRef.current?.focus());
+    };
+  }, [commuteGuideStop]);
 
   async function copyPlan() {
     const value = itineraryToText(currentItinerary);
@@ -388,11 +433,14 @@ export function ItineraryResults({
                       {stop.transport.bufferMinutes > 0 ? <p className="travel-buffer-note"><ShieldCheck size={14} /> {stop.transport.mode === "jeepney" ? `${formatDuration(stop.transport.baseMinutes)} covers walking, queues, ride${(stop.transport.boardings ?? 1) > 1 ? "s, transfer" : ""}, and final access` : `${formatDuration(stop.transport.baseMinutes)} typical travel`} + {formatDuration(stop.transport.bufferMinutes)} traffic/loading allowance.</p> : null}
                       {stop.queueMinutes > 0 ? <p className="queue-note"><Clock3 size={14} /> {formatDuration(stop.queueMinutes)} is reserved for entrance, ticketing, or a short queue before the visit.</p> : null}
                       {stop.waitMinutes > 0 ? <p className="wait-note"><Clock3 size={14} /> {stop.kind === "destination" ? `Includes a ${formatDuration(stop.waitMinutes)} wait for opening.` : `${formatDuration(stop.waitMinutes)} is protected before this fixed-time agenda item.`}</p> : null}
-                      {stop.transport.mode === "jeepney" && stop.transport.stages?.length ? <section className="jeepney-commute" aria-label={`Complete jeepney commute to ${stop.destination.name}`}>
-                        <header><div><strong>Complete commute</strong><small>{stop.transport.boardings ?? 1} {(stop.transport.boardings ?? 1) === 1 ? "boarding" : "boardings"} · fare counted per boarding</small></div>{stop.transport.routeReference ? <span className={stop.transport.routeReference.verification === "official-directory" ? "official" : "confirm"}>{stop.transport.routeReference.verification === "official-directory" ? "CITY ROUTE REFERENCE" : "CONFIRM ON SITE"}</span> : null}</header>
-                        <ol>{stop.transport.stages.map((stage) => <li key={`${stage.kind}-${stage.label}`}><span><CommuteStageIcon stage={stage} /></span><div><strong>{stage.label}</strong><small>{formatDuration(stage.minutes)}</small><p>{stage.detail}</p>{stage.mapUrl ? <a href={stage.mapUrl} target="_blank" rel="noreferrer">{stage.mapLabel || "Open map"} <ExternalLink size={11} /></a> : null}</div></li>)}</ol>
-                        {stop.transport.routeReference ? <footer><strong>{stop.transport.routeReference.name}</strong>{stop.transport.routeReference.serviceHours ? <span>{stop.transport.routeReference.serviceHours}</span> : null}<a href={stop.transport.routeReference.sourceUrl} target="_blank" rel="noreferrer">Baguio City route directory <ExternalLink size={11} /></a></footer> : null}
-                      </section> : <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>}
+                      {stop.transport.mode === "jeepney" && stop.transport.stages?.length ? <>
+                        <JeepneyCommuteGuide stop={stop} className="desktop-commute-guide" />
+                        <button type="button" className="mobile-commute-guide-button" onClick={(event) => { commuteGuideTriggerRef.current = event.currentTarget; setCommuteGuideStop(stop); }} aria-haspopup="dialog" aria-label={`Open commute guide to ${stop.destination.name}`}>
+                          <span><BusFront aria-hidden="true" /></span>
+                          <span><strong>Commute guide</strong><small>{stop.transport.stages.length} steps · {stop.transport.boardings ?? 1} {(stop.transport.boardings ?? 1) === 1 ? "boarding" : "boardings"}</small></span>
+                          <ChevronRight aria-hidden="true" />
+                        </button>
+                      </> : <ol>{stop.transport.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>}
                       {stop.transport.mode === "jeepney" ? <p className="jeepney-road-warning"><AlertTriangle size={14} /> {stop.transport.routeReference?.disclaimer || JEEPNEY_ROAD_PATH_DISCLAIMER}</p> : null}
                       {stop.destination.navigation ? <p className="verified-pin-note"><ShieldCheck size={14} /> {stop.destination.navigation.entranceLabel} · pin reviewed {formatTripDate(stop.destination.navigation.verifiedAt)}</p> : null}
                       <div className="route-link-row">
@@ -505,6 +553,15 @@ export function ItineraryResults({
         ))}
         <footer>{itinerary.disclaimer}</footer>
       </section>
+      {commuteGuideStop ? <div className="commute-guide-backdrop" role="presentation" onClick={() => setCommuteGuideStop(null)}>
+        <section className="commute-guide-sheet" role="dialog" aria-modal="true" aria-labelledby="commute-guide-title" onClick={(event) => event.stopPropagation()}>
+          <header className="commute-guide-sheet-header">
+            <div><small>COMMUTE GUIDE</small><h2 id="commute-guide-title">To {commuteGuideStop.destination.name}</h2><p>Follow each stage in order and confirm the loading point on site.</p></div>
+            <button ref={commuteGuideCloseRef} type="button" onClick={() => setCommuteGuideStop(null)} aria-label="Close commute guide"><X /></button>
+          </header>
+          <JeepneyCommuteGuide stop={commuteGuideStop} className="commute-guide-sheet-content" />
+        </section>
+      </div> : null}
       {variant === "owned" ? <ItineraryShareDialog itinerary={currentItinerary} open={shareOpen} onClose={() => setShareOpen(false)} /> : null}
     </section>
   );
