@@ -1920,9 +1920,12 @@ export function buildDayItinerary(
   let lastRecoveryAt = cursor;
   let comfortSequence = 0;
   const dayEnd = options.startMinutes + options.availableMinutes;
-  const sightseeingEnd = options.checkInStay && nightStops.length
+  const packedArrivalRoute = daytime.some((destination) =>
+    destination.tags.includes("classic-east-loop") || destination.tags.includes("arrival-city-loop"),
+  );
+  const sightseeingEnd = options.checkInStay && nightStops.length && packedArrivalRoute
     ? Math.max(dayEnd + 90, 20 * 60 + 30)
-    : dayEnd + 90;
+    : dayEnd;
   const stayDestination = options.checkInStay
     ? stayToDestination(options.checkInStay)
     : null;

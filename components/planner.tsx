@@ -45,6 +45,8 @@ import { LTFRB_FARE_POLICY, resolveFarePolicy } from "@/lib/fare-policy";
 import {
   completeEastBaguioCoreLoop,
   defaultPlannerDayAssignments,
+  isEastBaguioCoreLoopDestination,
+  shouldUsePackedArrivalRoute,
 } from "@/lib/planner-recommendations";
 import {
   deferItineraryDestination,
@@ -534,15 +536,37 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       }
     }
     const market = getPlannerDestinationById("baguio-city-market");
+    const finalDayStart = stay
+      ? parseTimeToMinutes(stay.checkOutTime)
+      : parseTimeToMinutes(startTime);
+    const finalDepartureMinutes = departureTime
+      ? parseTimeToMinutes(departureTime)
+      : null;
+    const marketFitsBeforeDeparture = finalDepartureMinutes === null
+      || finalDayStart === null
+      || finalDepartureMinutes - finalDayStart >= 3 * 60;
     const addFinalDayMarket = numberOfDays > 1
       && market
+      && marketFitsBeforeDeparture
       && !selectedDestinations.some((destination) => destination.id === market.id)
       ? market
       : null;
     const requestedDestinations = addFinalDayMarket
       ? [...selectedDestinations, addFinalDayMarket]
       : selectedDestinations;
-    const eastLoop = completeEastBaguioCoreLoop(requestedDestinations, PLANNER_DESTINATIONS);
+    const packedArrivalRoute = shouldUsePackedArrivalRoute(selectedDestinations, {
+      numberOfDays,
+      hasArrivalDayStay: Boolean(stay && stay.checkInDay === 0),
+    });
+    const selectedEastStops = selectedDestinations.filter(isEastBaguioCoreLoopDestination).length;
+    const eastLoop = completeEastBaguioCoreLoop(
+      requestedDestinations,
+      PLANNER_DESTINATIONS,
+      {
+        completeLoop: packedArrivalRoute || selectedEastStops >= 3,
+        compactForPackedDay: packedArrivalRoute,
+      },
+    );
     const planDestinations = eastLoop.destinations;
     const suggestedDestinationIds = [
       ...eastLoop.suggestedIds,
@@ -563,7 +587,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       preference,
       pace: DEFAULT_PLANNER_SETTINGS.pace,
       suggestedDestinationIds,
-      dayAssignments: defaultPlannerDayAssignments(planDestinations, numberOfDays),
+      dayAssignments: defaultPlannerDayAssignments(planDestinations, numberOfDays, packedArrivalRoute),
       startTime,
       ...(stay ? { stay } : {}),
       ...(departureLocation

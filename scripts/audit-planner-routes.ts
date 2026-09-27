@@ -6,6 +6,7 @@ import {
   completeEastBaguioCoreLoop,
   defaultPlannerDayAssignments,
   EAST_BAGUIO_CORE_LOOP_IDS,
+  shouldUsePackedArrivalRoute,
 } from "../lib/planner-recommendations";
 import { routeEstimateKey } from "../lib/route-estimates";
 import {
@@ -59,54 +60,59 @@ assert.match(itineraryToText(octoberItinerary), /Effective September 28, 2026/);
 
 const botanicalGarden = PLANNER_DESTINATIONS.find(({ id }) => id === "botanical-garden");
 assert.ok(botanicalGarden);
-const eastBaguioLoop = completeEastBaguioCoreLoop([botanicalGarden], PLANNER_DESTINATIONS);
+const lightEastSelection = completeEastBaguioCoreLoop(
+  [botanicalGarden],
+  PLANNER_DESTINATIONS,
+  { completeLoop: false, compactForPackedDay: false },
+);
+assert.deepEqual(lightEastSelection.destinations.map(({ id }) => id), ["botanical-garden"]);
+assert.equal(lightEastSelection.destinations[0].duration, botanicalGarden.duration);
+assert.deepEqual(lightEastSelection.suggestedIds, []);
+
+const eastBaguioLoop = completeEastBaguioCoreLoop(
+  [botanicalGarden],
+  PLANNER_DESTINATIONS,
+  { completeLoop: true, compactForPackedDay: false },
+);
 assert.deepEqual(
   eastBaguioLoop.destinations.map(({ id }) => id).sort(),
   [...EAST_BAGUIO_CORE_LOOP_IDS].sort(),
-  "Selecting one East Baguio anchor should propose the complete core loop",
+  "An explicit complete-loop recommendation should include every East Baguio anchor",
 );
 assert.equal(eastBaguioLoop.suggestedIds.length, 4);
-const eastBaguioItinerary = generateItinerary({
-  start: origin,
-  destinations: eastBaguioLoop.destinations,
-  suggestedDestinationIds: eastBaguioLoop.suggestedIds,
-  date: "2026-10-16",
-  numberOfDays: 2,
-  availableMinutes: 8 * 60,
-  travelers: 1,
-  modes: ["jeepney", "walk"],
-  preference: "balanced",
-  pace: "comfortable",
-});
-const eastLoopDayIndices = new Set(
-  eastBaguioItinerary.days.flatMap((day) =>
-    day.items
-      .filter((item) => EAST_BAGUIO_CORE_LOOP_IDS.includes(item.destination.id as typeof EAST_BAGUIO_CORE_LOOP_IDS[number]))
-      .map(() => day.index),
-  ),
-);
 assert.equal(
-  eastBaguioItinerary.days.reduce(
-    (count, day) => count + day.items.filter((item) => EAST_BAGUIO_CORE_LOOP_IDS.includes(item.destination.id as typeof EAST_BAGUIO_CORE_LOOP_IDS[number])).length,
-    0,
-  ),
-  EAST_BAGUIO_CORE_LOOP_IDS.length,
-  "Every proposed East Baguio core stop should fit the same-day loop",
+  eastBaguioLoop.destinations.find(({ id }) => id === "botanical-garden")?.duration,
+  botanicalGarden.duration,
+  "A balanced East loop must retain the catalog visit duration",
 );
-assert.equal(eastLoopDayIndices.size, 1, "The East Baguio core loop should remain on one efficient day");
-assert.deepEqual(eastBaguioItinerary.suggestedDestinationIds, eastBaguioLoop.suggestedIds);
-
 const classicArrivalIds = [
   "botanical-garden",
+  "wright-park",
+  "the-mansion",
+  "mines-view-park",
+  "good-shepherd",
   "burnham-park",
   "baguio-cathedral",
   "session-road",
   "baguio-night-market",
-  "baguio-city-market",
 ];
+const classicArrivalChoices = PLANNER_DESTINATIONS.filter(({ id }) => classicArrivalIds.includes(id));
+const packedArrivalRoute = shouldUsePackedArrivalRoute(classicArrivalChoices, {
+  numberOfDays: 3,
+  hasArrivalDayStay: true,
+});
+assert.equal(packedArrivalRoute, true, "Many explicit East and City Center choices should retain the packed template");
+assert.equal(
+  shouldUsePackedArrivalRoute([botanicalGarden], { numberOfDays: 3, hasArrivalDayStay: true }),
+  false,
+  "One East Baguio choice must not trigger a packed day",
+);
+const cityMarket = PLANNER_DESTINATIONS.find(({ id }) => id === "baguio-city-market");
+assert.ok(cityMarket);
 const classicArrivalSelection = completeEastBaguioCoreLoop(
-  PLANNER_DESTINATIONS.filter(({ id }) => classicArrivalIds.includes(id)),
+  [...classicArrivalChoices, cityMarket],
   PLANNER_DESTINATIONS,
+  { completeLoop: true, compactForPackedDay: true },
 );
 const testStay: PlannerStay = {
   id: "stay-hotel",
@@ -129,7 +135,7 @@ const classicArrivalItinerary = generateItinerary({
   start: origin,
   destinations: classicArrivalSelection.destinations,
   suggestedDestinationIds: classicArrivalSelection.suggestedIds,
-  dayAssignments: defaultPlannerDayAssignments(classicArrivalSelection.destinations, 3),
+  dayAssignments: defaultPlannerDayAssignments(classicArrivalSelection.destinations, 3, packedArrivalRoute),
   date: "2026-10-16",
   numberOfDays: 3,
   availableMinutes: 6 * 60,

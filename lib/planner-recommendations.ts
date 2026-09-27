@@ -31,6 +31,16 @@ const ARRIVAL_DAY_CITY_VISIT_MINUTES: Readonly<Record<string, number>> = {
   "session-road": 30,
 };
 
+type EastBaguioLoopOptions = {
+  completeLoop: boolean;
+  compactForPackedDay: boolean;
+};
+
+type PackedArrivalRouteOptions = {
+  numberOfDays: number;
+  hasArrivalDayStay: boolean;
+};
+
 export function isEastBaguioCoreLoopDestination(destination: Pick<PlannerDestination, "id">) {
   return EAST_BAGUIO_CORE_LOOP_ID_SET.has(destination.id);
 }
@@ -42,8 +52,9 @@ export function isEastBaguioCoreLoopDestination(destination: Pick<PlannerDestina
 export function completeEastBaguioCoreLoop(
   selected: readonly PlannerDestination[],
   catalog: readonly PlannerDestination[],
+  options: EastBaguioLoopOptions,
 ) {
-  if (!selected.some(isEastBaguioCoreLoopDestination)) {
+  if (!options.completeLoop || !selected.some(isEastBaguioCoreLoopDestination)) {
     return { destinations: [...selected], suggestedIds: [] as string[] };
   }
 
@@ -52,6 +63,7 @@ export function completeEastBaguioCoreLoop(
     (destination) => isEastBaguioCoreLoopDestination(destination) && !selectedIds.has(destination.id),
   );
   const destinations = [...selected, ...suggestions].map((destination) => {
+    if (!options.compactForPackedDay) return destination;
     const recommendedDuration = EAST_BAGUIO_CORE_VISIT_MINUTES[destination.id];
     if (recommendedDuration) {
       return {
@@ -75,14 +87,30 @@ export function completeEastBaguioCoreLoop(
   };
 }
 
-/** Pins the classic East loop and selected central evening stops to arrival day. */
+/** A packed arrival is opt-in by demand: many explicit choices across both corridors. */
+export function shouldUsePackedArrivalRoute(
+  selected: readonly PlannerDestination[],
+  options: PackedArrivalRouteOptions,
+) {
+  if (!options.hasArrivalDayStay || options.numberOfDays < 2 || selected.length < 8) return false;
+  const selectedIds = new Set(selected.map(({ id }) => id));
+  const eastCount = selected.filter(isEastBaguioCoreLoopDestination).length;
+  const cityCount = selected.filter(({ id }) => ARRIVAL_DAY_CITY_IDS.has(id)).length;
+  return eastCount >= 3
+    && cityCount >= 3
+    && selectedIds.has("baguio-night-market");
+}
+
+/** Pins the packed template only when demand calls for it; the market remains a final-day default. */
 export function defaultPlannerDayAssignments(
   destinations: readonly PlannerDestination[],
   numberOfDays: number,
+  packedArrivalRoute: boolean,
 ) {
   const assignments: Record<string, number> = {};
   destinations.forEach((destination) => {
-    if (isEastBaguioCoreLoopDestination(destination) || ARRIVAL_DAY_CITY_IDS.has(destination.id)) {
+    if (packedArrivalRoute
+      && (isEastBaguioCoreLoopDestination(destination) || ARRIVAL_DAY_CITY_IDS.has(destination.id))) {
       assignments[destination.id] = 0;
     }
     if (destination.id === "baguio-city-market" && numberOfDays > 1) {
