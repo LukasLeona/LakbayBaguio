@@ -48,7 +48,8 @@ const octoberItinerary = generateItinerary({
 assert.equal(octoberItinerary.farePolicy.id, "puj-2026-09-28");
 assert.equal(octoberItinerary.jeepneyClass, "unsure");
 assert.ok(octoberItinerary.totals.fareMinimum < octoberItinerary.totals.fareMaximum);
-assert.match(itineraryToText(octoberItinerary), /Traditional PUJ|traditional-to-modern range/);
+assert.match(itineraryToText(octoberItinerary), /safe budget uses the modern-jeepney ceiling/);
+assert.match(itineraryToText(octoberItinerary), /Up to/);
 assert.match(itineraryToText(octoberItinerary), /Effective September 28, 2026/);
 
 assert.notEqual(

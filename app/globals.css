@@ -703,18 +703,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .transport-modes > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .transport-modes button { min-height: 38px; display: flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: white; cursor: pointer; font-size: .64rem; font-weight: 700; }
 .transport-modes button.active { border-color: #8ca99d; background: #dce6d7; }
-.jeepney-class-picker { margin: 14px 0 0; padding: 13px; border: 1px solid #d4e0d7; border-radius: 16px; background: #f7faf4; }
-.jeepney-class-picker legend { padding: 0 5px; color: var(--pine-950); }
-.jeepney-class-picker legend strong, .jeepney-class-picker legend span { display: block; }
-.jeepney-class-picker legend strong { font-size: .68rem; }
-.jeepney-class-picker legend span { margin-top: 3px; color: var(--muted); font-size: .52rem; font-weight: 500; }
-.jeepney-class-picker > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.jeepney-class-picker button { position: relative; min-height: 55px; display: grid; align-content: center; gap: 4px; padding: 9px 28px 9px 11px; border: 1px solid #d6e1d9; border-radius: 13px; color: var(--pine-950); background: white; text-align: left; cursor: pointer; }
-.jeepney-class-picker button.active { border-color: var(--pine-700); background: #e8f0e5; box-shadow: inset 0 0 0 1px var(--pine-700); }
-.jeepney-class-picker button > span { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: .59rem; font-weight: 850; }
-.jeepney-class-picker button > span small { padding: 2px 5px; border-radius: 999px; color: var(--pine-950); background: var(--lime); font-size: .39rem; text-transform: uppercase; }
-.jeepney-class-picker button > strong { color: #537469; font-size: .55rem; }
-.jeepney-class-picker button > svg { position: absolute; top: 9px; right: 9px; }
 .fare-policy-card { overflow: hidden; margin-top: 18px; border: 1px solid #cddbd3; border-radius: 18px; background: linear-gradient(135deg, #f8fbf3, #f0f6ed); box-shadow: 0 10px 25px rgba(42, 88, 73, .06); }
 .fare-policy-card > summary { display: grid; grid-template-columns: auto minmax(0,1fr) auto auto; align-items: center; gap: 12px; padding: 13px 17px; cursor: pointer; list-style: none; }
 .fare-policy-card > summary::-webkit-details-marker { display: none; }
@@ -1076,11 +1064,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .trip-detail-grid { gap: 12px 8px; }
   .planner-field > span { font-size: .6rem; }
   .planner-field input, .planner-field select { padding-inline: 9px; font-size: .65rem; }
-  .jeepney-class-picker { padding: 10px; }
-  .jeepney-class-picker > div { gap: 5px; }
-  .jeepney-class-picker button { min-height: 62px; padding: 8px 20px 8px 8px; }
-  .jeepney-class-picker button > span { font-size: .5rem; }
-  .jeepney-class-picker button > span small { width: 100%; }
   .destination-tools { grid-template-columns: 1fr; }
   .auto-pick-select, .auto-pick-button { grid-column: 1; }
   .preference-grid-rich { gap: 7px; }

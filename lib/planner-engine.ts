@@ -2923,17 +2923,11 @@ export function buildDayRouteUrls(
 
 export function itineraryToText(itinerary: PlannedItinerary): string {
   const farePolicy = itinerary.farePolicy ?? resolveFarePolicy(itinerary.date);
-  const jeepneyClass = itinerary.jeepneyClass ?? "unsure";
   const fareMinimum = itinerary.totals.fareMinimum ?? itinerary.totals.fare;
   const fareMaximum = itinerary.totals.fareMaximum ?? itinerary.totals.fare;
   const totalFareText = fareMinimum === fareMaximum
     ? formatCurrency(fareMaximum)
-    : `${formatCurrency(fareMinimum)}–${formatCurrency(fareMaximum)}`;
-  const jeepneyClassText = jeepneyClass === "traditional"
-    ? "Traditional PUJ"
-    : jeepneyClass === "modern"
-      ? "Modern PUJ"
-      : "Vehicle type not specified (traditional-to-modern range)";
+    : `Up to ${formatCurrency(fareMaximum)} safe budget (traditional estimate ${formatCurrency(fareMinimum)})`;
   const lines = [
     "LAKBAY BAGUIO ITINERARY",
     `Starting point: ${itinerary.start.name}`,
@@ -2944,7 +2938,7 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
     `Scheduled stops: ${itinerary.totals.scheduledStops}`,
     `Estimated travel: ${formatDuration(itinerary.totals.travelMinutes)}`,
     `Estimated transport: ${totalFareText}`,
-    `Jeepney fare basis: ${jeepneyClassText}; ${farePolicy.effectiveLabel}; source reviewed ${farePolicy.reviewedLabel}`,
+    `Jeepney fare basis: the safe budget uses the modern-jeepney ceiling automatically; a traditional jeepney may cost less. ${farePolicy.effectiveLabel}; source reviewed ${farePolicy.reviewedLabel}`,
     `Fare source: ${farePolicy.sourceUrl}`,
     `Fare reminder: ${farePolicy.verificationNote}`,
     ...(itinerary.stay
@@ -3015,7 +3009,7 @@ export function itineraryToText(itinerary: PlannedItinerary): string {
         const totalMaximum = item.transport.totalFareMaximum ?? item.transport.totalFare;
         const fare =
           item.transport.mode === "jeepney"
-            ? `${perPersonMinimum === perPersonMaximum ? formatCurrency(perPersonMaximum) : `${formatCurrency(perPersonMinimum)}–${formatCurrency(perPersonMaximum)}`} each for ${item.transport.boardings ?? 1} ${(item.transport.boardings ?? 1) === 1 ? "ride" : "rides"}; ${totalMinimum === totalMaximum ? formatCurrency(totalMaximum) : `${formatCurrency(totalMinimum)}–${formatCurrency(totalMaximum)}`} total; ${jeepneyClassText}; ${farePolicy.effectiveLabel}`
+            ? `${perPersonMinimum === perPersonMaximum ? formatCurrency(perPersonMaximum) : `up to ${formatCurrency(perPersonMaximum)} (traditional estimate ${formatCurrency(perPersonMinimum)})`} each for ${item.transport.boardings ?? 1} ${(item.transport.boardings ?? 1) === 1 ? "ride" : "rides"}; ${totalMinimum === totalMaximum ? formatCurrency(totalMaximum) : `up to ${formatCurrency(totalMaximum)} safe total (traditional estimate ${formatCurrency(totalMinimum)})`}; ${farePolicy.effectiveLabel}`
             : `${formatCurrency(item.transport.vehicleFare)} per vehicle`;
         lines.push(`   Estimated fare: ${fare}.`);
       }
