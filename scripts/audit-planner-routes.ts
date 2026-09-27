@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { PLANNER_DESTINATIONS, PLANNER_START_LOCATIONS } from "../lib/planner-data";
+import { summarizeRouteTerrain } from "../lib/geoapify-routing";
+import { routeEstimateKey } from "../lib/route-estimates";
 import {
   buildDayRouteUrls,
   chooseTransport,
@@ -16,6 +18,16 @@ import type { StartLocation } from "../lib/planner-types";
 const startLocations = PLANNER_START_LOCATIONS as readonly StartLocation[];
 const origin = startLocations[0];
 const coordinatePattern = /^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/;
+
+assert.notEqual(
+  routeEstimateKey({ lat: 16.411, lng: 120.591 }, { lat: 16.421, lng: 120.625 }, "walk"),
+  routeEstimateKey({ lat: 16.421, lng: 120.625 }, { lat: 16.411, lng: 120.591 }, "walk"),
+  "Route estimates must preserve direction because uphill and downhill times differ",
+);
+const steepTerrain = summarizeRouteTerrain([[0, 1_480], [250, 1_492], [550, 1_525]], 550);
+assert.equal(steepTerrain?.level, "steep");
+assert.equal(steepTerrain?.elevationGainMeters, 45);
+assert.match(steepTerrain?.warning ?? "", /Steep uphill/);
 
 const victoryBranches = startLocations.filter(
   ({ terminalIdentity }) => terminalIdentity?.operator === "Victory Liner",

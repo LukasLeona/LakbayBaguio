@@ -142,7 +142,7 @@ The committed [<code>.env.example</code>](.env.example) contains blank placehold
 | <code>NEXT_PUBLIC_TURNSTILE_SITE_KEY</code> | Browser-visible | Turnstile widget configuration |
 | <code>TURNSTILE_SECRET_KEY</code> | **Server secret** | Server-side Turnstile verification |
 | <code>NEXT_PUBLIC_MAP_STYLE_URL</code> | Browser-visible | Optional MapLibre-compatible map style |
-| <code>GEOAPIFY_API_KEY</code> | **Server secret** | Free Baguio accommodation suggestions through Geoapify |
+| <code>GEOAPIFY_API_KEY</code> | **Server secret** | Baguio accommodation suggestions plus routed walking/driving distance, time, and walking elevation |
 | <code>EMAILJS_SERVICE_ID</code> | Server configuration | Contact notification service |
 | <code>EMAILJS_TEMPLATE_ID</code> | Server configuration | Contact notification template |
 | <code>EMAILJS_PUBLIC_KEY</code> | Public identifier | EmailJS account identifier |
