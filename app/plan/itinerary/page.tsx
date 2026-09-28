@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Planner } from "@/components/planner";
+import { noIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Your itinerary" };
+export const metadata = noIndexMetadata("Your itinerary");
 
 export default function ItineraryPage() {
   return (

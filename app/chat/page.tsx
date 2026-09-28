@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
 import { ChatHub, type ChatHubTab } from "@/components/chat-hub";
+import { noIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Chat",
-  description: "Find nearby Baguio travelers and continue your anonymous conversations in one place.",
-};
+export const metadata = noIndexMetadata(
+  "Chat",
+  "Find nearby Baguio travelers and continue your anonymous conversations in one place.",
+);
 
 type ChatPageProps = {
   searchParams: Promise<{ tab?: string; conversation?: string }>;

@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
 import { SharedItineraryView } from "@/components/shared-itinerary-view";
+import { noIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Shared itinerary",
-  description: "Open a read-only Baguio itinerary shared through Baguio Buddy.",
-};
+export const metadata = noIndexMetadata(
+  "Shared itinerary",
+  "Open a read-only Baguio itinerary shared through Baguio Buddy.",
+);
 
 export default async function SharedItineraryPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;

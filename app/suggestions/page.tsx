@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
 import { SuggestionBoard } from "@/components/suggestion-board";
+import { noIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Suggestions",
-  description: "Share an anonymous idea for Baguio Buddy or upvote improvements from other travelers.",
-};
+export const metadata = noIndexMetadata(
+  "Suggestions",
+  "Share an anonymous idea for Baguio Buddy or upvote improvements from other travelers.",
+);
 
 export default function SuggestionsPage() {
   return (
