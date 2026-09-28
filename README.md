@@ -7,11 +7,11 @@
 </p>
 
 <p align="center">
-  <a href="https://lakbay-baguio.vercel.app/">View the live experience</a>
+  <a href="https://baguiobuddy.com/">View the live experience</a>
   ·
-  <a href="https://lakbay-baguio.vercel.app/explore">Explore Baguio</a>
+  <a href="https://baguiobuddy.com/explore">Explore Baguio</a>
   ·
-  <a href="https://lakbay-baguio.vercel.app/plan">Build an itinerary</a>
+  <a href="https://baguiobuddy.com/plan">Build an itinerary</a>
 </p>
 
 ## Meet Baguio Buddy
@@ -75,7 +75,7 @@ The business inquiry journey:
 - sends a notification through a dedicated EmailJS template; and
 - makes no promise of automatic or paid placement.
 
-Business owners can start at the [feature inquiry page](https://lakbay-baguio.vercel.app/partner).
+Business owners can start at the [feature inquiry page](https://baguiobuddy.com/partner).
 
 ## Experience principles
 
@@ -221,8 +221,8 @@ The original static <code>index.html</code>, <code>assets/</code>, and <code>v2/
 
 ## Feedback and collaboration
 
-- Share product improvements through the live [Suggestions board](https://lakbay-baguio.vercel.app/suggestions), where the community can upvote ideas.
-- Use the [business inquiry page](https://lakbay-baguio.vercel.app/partner) for restaurant, stay, tour, or local-shop feature requests.
+- Share product improvements through the live [Suggestions board](https://baguiobuddy.com/suggestions), where the community can upvote ideas.
+- Use the [business inquiry page](https://baguiobuddy.com/partner) for restaurant, stay, tour, or local-shop feature requests.
 - Use **Help / Contact** inside the application for private questions. Do not publish credentials, user records, precise locations, or unredacted security reports in a public issue.
 
 Thoughtful issues and pull requests are welcome for reproducible bugs, accessibility improvements, documentation, and clearly scoped product enhancements. Proposed changes should preserve the privacy boundaries described above.
