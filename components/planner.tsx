@@ -751,7 +751,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
         <form className="planner-form" onSubmit={buildPlan} noValidate>
         <section className="planner-form-section" id="trip-details" data-planner-step="1">
-          <header className="planner-step-heading"><span>01</span><div><h1>Begin your trip</h1><p>Tell us where, when, and how long your Baguio trip will be.</p></div></header>
+          <header className="planner-step-heading"><span>01</span><div><h2>Begin your trip</h2><p>Tell us where, when, and how long your Baguio trip will be.</p></div></header>
 
           {requestedPlannerPlace ? <div className="planner-request-notice"><Check size={16} /><span><strong>{requestedPlannerPlace.name}</strong> was added from Explore. Choose at least one more destination below.</span></div> : requestedExplorePlace ? <div className="planner-request-notice warning"><span>ℹ</span><span><strong>{requestedExplorePlace.name}</strong> is listed in Explore but does not yet have verified hours and route guidance, so it was not silently added to your generated route.</span></div> : null}
 

@@ -69,6 +69,10 @@ export function PlaceDetailsModal({ place, onClose }: { place: Place; onClose: (
             )}
           </div>
 
+          <Link className="place-guide-link" href={`/places/${place.id}`} onClick={onClose}>
+            Read the full {place.name} visitor guide <ArrowUpRight size={15} />
+          </Link>
+
           {hotel ? <small className="booking-note">Opens {place.externalLabel || "the booking provider"}. Availability and rates are handled by the provider, so check the final listing details before paying.</small> : restaurant ? <small className="booking-note">Menu highlights are a planning preview. Offerings and prices can change, so check with the restaurant before visiting.</small> : null}
           {place.photoCredit ? <a className="photo-credit" href={place.photoCredit.url} target="_blank" rel="noreferrer">Atmosphere preview · {place.photoCredit.label} <ArrowUpRight size={12} /></a> : null}
         </div>
@@ -93,7 +97,7 @@ export function PlaceCard({ place, compact = false }: { place: Place; compact?: 
         </div>
         <div className="place-body">
           <div className="place-location"><MapPin size={14} /> {place.area}</div>
-          <h3>{place.name}</h3>
+          <h3><Link href={`/places/${place.id}`}>{place.name}</Link></h3>
           <p>{place.description}</p>
           <div className="tag-row">
             {place.tags.slice(0, 3).map((tag) => <span key={tag}>{tag}</span>)}

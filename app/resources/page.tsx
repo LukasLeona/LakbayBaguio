@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -14,11 +13,20 @@ import {
 import { LTFRB_FARE_POLICY, resolveFarePolicy } from "@/lib/fare-policy";
 import { PLANNER_BAGGAGE_OPTIONS } from "@/lib/planner-data";
 import { JEEPNEY_ROAD_PATH_DISCLAIMER } from "@/lib/planner-engine";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Travel resources",
-  description: "Fare references, commute guidance, map notes, and baggage options used by Baguio Buddy.",
-};
+export const metadata = pageMetadata({
+  title: "Baguio Commute Guide, Jeepney Fares & Luggage Storage",
+  description: "Review Baguio jeepney and taxi fare references, commute limits, luggage storage options, map notes, and exact-pin guidance for a smoother DIY trip.",
+  path: "/resources",
+  keywords: [
+    "Baguio jeepney fare",
+    "Baguio taxi fare",
+    "Baguio luggage storage",
+    "Baguio bus terminal baggage counter",
+    "Baguio commute resources",
+  ],
+});
 
 const routeDirectoryUrl = "https://alternateroutes.baguio.gov.ph/jeepneyroutes/";
 const baggageResources = PLANNER_BAGGAGE_OPTIONS["victory-liner"];
@@ -40,8 +48,8 @@ export default function ResourcesPage() {
         <header className="resources-hero">
           <div>
             <span className="eyebrow light"><ShieldCheck size={15} /> Traveler reference desk</span>
-            <h1>Useful details, without crowding your itinerary.</h1>
-            <p>Fare references, commute limits, map notes, and luggage options are kept here so your daily route can stay focused on the trip itself.</p>
+            <h1>Baguio commute, fare, and luggage guide.</h1>
+            <p>Review jeepney and taxi fare references, commute limits, map notes, and possible luggage counters before building your daily route.</p>
           </div>
           <aside>
             <span>Last fare review</span>

@@ -19,6 +19,19 @@ import { HomePendingItinerary } from "@/components/home-pending-itinerary";
 import { Kabsat } from "@/components/kabsat";
 import { PlaceCard } from "@/components/place-card";
 import { featuredRestaurants, hotels, parks } from "@/lib/places";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Baguio Itinerary Planner & Tourist Spot Guide",
+  description: "Build a practical Baguio itinerary with commute directions, estimated fares, travel times, tourist spots, food stops, and hotel-aware routing.",
+  path: "/",
+  keywords: [
+    "Baguio travel planner",
+    "DIY Baguio trip planner",
+    "Baguio itinerary generator",
+    "Baguio itinerary for first timers",
+  ],
+});
 
 const moodCards = [
   { title: "Pine & quiet", copy: "Forest paths and slow mornings", image: "/assets/img/destinations/camp-john-hay.jpg", icon: Trees, href: "/explore?type=park" },
@@ -32,6 +45,33 @@ const quickActions = [
   { label: "Meet travelers", detail: "Privacy-first radar", icon: MapPin, href: "/chat?tab=nearby" },
 ];
 
+const planningGuides = [
+  {
+    title: "Baguio itinerary: 3 days, 2 nights",
+    copy: "A realistic first-timer route with East Baguio, the city center, meals, hotel timing, and a flexible checkout day.",
+    href: "/guides/baguio-itinerary-3-days-2-nights",
+    icon: CalendarDays,
+  },
+  {
+    title: "Tourist spots grouped by route",
+    copy: "See which Baguio attractions belong together so you can spend less time backtracking through traffic.",
+    href: "/tourist-spots",
+    icon: Compass,
+  },
+  {
+    title: "How to commute without a car",
+    copy: "Understand jeepney loading points, transfers, taxi alternatives, walking approaches, and local verification steps.",
+    href: "/guides/baguio-commute-guide",
+    icon: Footprints,
+  },
+  {
+    title: "Baguio trip budget guide",
+    copy: "Plan transport, food, attractions, and a sensible contingency budget for a DIY 3D2N visit.",
+    href: "/guides/baguio-trip-budget",
+    icon: Route,
+  },
+];
+
 export default function HomePage() {
   return (
     <main id="main-content" className="home-revamp">
@@ -42,7 +82,7 @@ export default function HomePage() {
               <span className="traveler-avatar-mini">BB</span>
               <div><small>Welcome to the highlands</small><strong>Ready to lakbay?</strong></div>
             </div>
-            <div className="weather-chip"><CloudSun size={21} /><span><small>Baguio weather</small><strong>15°C · Cool</strong></span></div>
+            <div className="weather-chip"><CloudSun size={21} /><span><small>Baguio climate</small><strong>Cool mountain weather</strong></span></div>
           </div>
 
           <div className="home-story-card">
@@ -50,8 +90,8 @@ export default function HomePage() {
             <div className="home-story-shade" />
             <div className="home-story-copy">
               <span className="eyebrow light"><MapPin size={14} /> Baguio, Philippines</span>
-              <h1>Make room for <em>mountain moments.</em></h1>
-              <p>Choose the places you love. Baguio Buddy arranges the route, directions, estimated fare, and time around your trip.</p>
+              <h1>Plan a practical <em>Baguio itinerary.</em></h1>
+              <p>Choose the places you love. Baguio Buddy groups nearby tourist spots and plans around your time, hotel, commute, meals, and luggage.</p>
               <div className="story-activity-row" aria-label="Popular Baguio experiences">
                 <span><Footprints size={14} /> Walk</span>
                 <span><Utensils size={14} /> Eat</span>
@@ -97,6 +137,24 @@ export default function HomePage() {
                 <span className="feature-number">0{index + 1}</span>
                 <span className="feature-copy"><small>{place.area}</small><strong>{place.name}</strong><em>{place.duration} min · {place.price}</em></span>
                 <span className="feature-arrow"><ArrowRight size={17} /></span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section home-seo-guides">
+        <div className="shell">
+          <div className="section-heading split compact-heading">
+            <div><span className="eyebrow"><Route size={14} /> Practical Baguio travel guides</span><h2>Start with the plan you are actually searching for.</h2><p>Use a ready route as your starting point, then customize it around your dates, hotel, pace, and must-see places.</p></div>
+            <Link href="/plan" className="text-link">Build my own itinerary <ArrowRight size={16} /></Link>
+          </div>
+          <div className="seo-guide-card-grid">
+            {planningGuides.map(({ title, copy, href, icon: Icon }) => (
+              <Link className="seo-guide-card" href={href} key={href}>
+                <span><Icon size={21} /></span>
+                <div><h3>{title}</h3><p>{copy}</p></div>
+                <ArrowRight size={18} />
               </Link>
             ))}
           </div>
