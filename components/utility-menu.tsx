@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  BookOpenCheck,
   CheckCircle2,
   ChevronRight,
   CircleHelp,
@@ -170,6 +171,7 @@ export function UtilityMenu() {
                   <p>Privacy, practical answers, and a direct line to the person building Baguio Buddy.</p>
                 </div>
                 <nav aria-label="Information links">
+                  <Link href="/resources"><span><BookOpenCheck /><i><strong>Travel resources</strong><small>Fares, jeepney guidance, maps, and luggage options</small></i></span><ChevronRight /></Link>
                   <Link href="/suggestions"><span><Lightbulb /><i><strong>Suggestions</strong><small>Share an idea or upvote what travelers want</small></i></span><ChevronRight /></Link>
                   <button type="button" onClick={() => showView("privacy")}><span><ShieldCheck /><i><strong>Privacy policy</strong><small>How Wall, location, chats, and inquiries are handled</small></i></span><ChevronRight /></button>
                   <button type="button" onClick={() => showView("help")}><span><CircleHelp /><i><strong>Help & FAQs</strong><small>Quick answers for planning, Wall, and Chat</small></i></span><ChevronRight /></button>

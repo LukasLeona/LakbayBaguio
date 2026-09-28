@@ -348,13 +348,8 @@ export function ItineraryResults({
           <article aria-label={`${itinerary.numberOfDays} travel ${itinerary.numberOfDays === 1 ? "day" : "days"}`}><div><i><CalendarDays /></i><strong>{itinerary.numberOfDays}</strong></div><span>Travel days</span></article>
           <article aria-label={`${itinerary.totals.scheduledStops} scheduled stops`}><div><i><MapPin /></i><strong>{itinerary.totals.scheduledStops}</strong></div><span>Scheduled stops</span></article>
           <article aria-label={`${formatDuration(itinerary.totals.travelMinutes)} estimated travel time`}><div><i><Clock3 /></i><strong>{formatDuration(itinerary.totals.travelMinutes)}</strong></div><span>Travel time</span></article>
-          <article aria-label={`${totalFare} estimated transport fare`}><div><i><WalletCards /></i><strong>{totalFare}</strong></div><span>Transport</span></article>
+          <article aria-label={`${totalFare} estimated transport fare`}><div><i><WalletCards /></i><strong>{totalFare}</strong></div><span>Transport</span><Link className="metric-resource-link" href="/resources#fares">Fare details <ChevronRight /></Link></article>
         </div>
-        {itinerary.modes.includes("jeepney") ? <section className="itinerary-fare-policy" aria-label="Jeepney fare basis">
-          <span><BusFront /></span>
-          <div><strong>Safe jeepney budget · modern-fare ceiling</strong><small>{farePolicy.effectiveLabel} · source reviewed {farePolicy.reviewedLabel}</small><p>We budget up to the modern rate automatically. A traditional jeepney may cost less. {farePolicy.verificationNote}</p></div>
-          <a href={farePolicy.sourceUrl} target="_blank" rel="noreferrer">Fare source <ExternalLink size={11} /></a>
-        </section> : null}
       </section>
 
       <section className="itinerary-day-selector" aria-label="Choose itinerary day">
