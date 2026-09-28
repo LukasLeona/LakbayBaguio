@@ -2977,3 +2977,86 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .wall-photo-button { justify-content: center; }
   .wall-sort button span { display: none; }
 }
+
+/* Keep every mobile overlay centered instead of presenting it as a bottom sheet. */
+@media screen and (max-width: 760px) {
+  .commute-guide-backdrop,
+  .itinerary-review-backdrop,
+  .wall-compose-backdrop,
+  .place-modal-backdrop,
+  .location-gate-backdrop,
+  .chat-delete-backdrop,
+  .utility-backdrop,
+  .share-dialog-backdrop,
+  .wall-dialog-backdrop {
+    align-items: center;
+    justify-content: center;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .commute-guide-sheet {
+    width: min(430px, 100%);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 24px;
+    box-shadow: 0 24px 60px rgba(3,29,21,.32);
+  }
+
+  .itinerary-review-dialog {
+    width: min(1050px, 100%);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: 17px 12px 0;
+    border-radius: 25px;
+  }
+  .itinerary-review-actions {
+    position: sticky;
+    z-index: 2;
+    left: auto;
+    right: auto;
+    bottom: -1px;
+    margin: 18px -12px 0;
+    padding: 11px 12px 13px;
+    border-radius: 0 0 25px 25px;
+  }
+  .review-move-tray {
+    top: 50%;
+    bottom: auto;
+    left: 50%;
+    width: min(520px, calc(100vw - 32px));
+    transform: translate(-50%, -50%);
+  }
+
+  .wall-compose-card.wall-compose-modal {
+    width: min(520px, 100%);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 28px;
+  }
+
+  .place-modal {
+    width: min(620px, 100%);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 28px;
+  }
+
+  .location-gate-modal,
+  .chat-delete-modal,
+  .wall-dialog {
+    width: min(460px, 100%);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+
+  .utility-sheet {
+    width: min(430px, 100%);
+    height: min(720px, calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  .utility-menu-home {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .share-dialog {
+    width: min(760px, 100%);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+}
