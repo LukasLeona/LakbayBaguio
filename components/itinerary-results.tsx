@@ -348,7 +348,7 @@ export function ItineraryResults({
           <article aria-label={`${itinerary.numberOfDays} travel ${itinerary.numberOfDays === 1 ? "day" : "days"}`}><div><i><CalendarDays /></i><strong>{itinerary.numberOfDays}</strong></div><span>Travel days</span></article>
           <article aria-label={`${itinerary.totals.scheduledStops} scheduled stops`}><div><i><MapPin /></i><strong>{itinerary.totals.scheduledStops}</strong></div><span>Scheduled stops</span></article>
           <article aria-label={`${formatDuration(itinerary.totals.travelMinutes)} estimated travel time`}><div><i><Clock3 /></i><strong>{formatDuration(itinerary.totals.travelMinutes)}</strong></div><span>Travel time</span></article>
-          <article aria-label={`${totalFare} estimated transport fare`}><div><i><WalletCards /></i><strong>{totalFare}</strong></div><span>Transport</span><Link className="metric-resource-link" href="/resources#fares">Fare details <ChevronRight /></Link></article>
+          <article aria-label={`${totalFare} estimated transport fare`}><div><i><WalletCards /></i><strong>{totalFare}</strong></div><span>Transport</span></article>
         </div>
       </section>
 

@@ -1469,6 +1469,58 @@ export function evaluateItineraryMove(
   };
 }
 
+/**
+ * Dry-runs a new nearby suggestion through the same safeguards used by the
+ * review-screen move flow. The candidate is first added as a deferred place,
+ * then evaluated for the requested day so fixed stops, opening hours,
+ * corridor distance, meals, and displaced attractions are all respected.
+ */
+export function evaluateItinerarySuggestion(
+  itinerary: PlannedItinerary,
+  destination: PlannerDestination,
+  targetDayIndex: number,
+): ItineraryMoveEvaluation {
+  if (itinerary.selectedDestinationIds.includes(destination.id)) {
+    return { allowed: false, reason: `${destination.name} is already part of this itinerary.` };
+  }
+  if (!Number.isInteger(targetDayIndex) || targetDayIndex < 0 || targetDayIndex >= itinerary.days.length) {
+    return { allowed: false, reason: "Choose a day within this trip." };
+  }
+
+  const assignments = {
+    ...getItineraryDayAssignments(itinerary),
+    [destination.id]: targetDayIndex,
+  };
+  const augmented = generateItinerary({
+    start: itinerary.start,
+    destinations: [...itineraryDestinations(itinerary), destination],
+    date: itinerary.date,
+    numberOfDays: itinerary.numberOfDays,
+    availableMinutes: itinerary.availableMinutes,
+    travelers: itinerary.travelers,
+    modes: itinerary.modes,
+    preference: itinerary.preference,
+    pace: itinerary.pace,
+    fareSettings: itinerary.fareSettings,
+    jeepneyClass: itinerary.jeepneyClass,
+    startMinutes: itinerary.startMinutes,
+    ...(itinerary.stay ? { stay: itinerary.stay } : {}),
+    ...(itinerary.departure ? { departure: itinerary.departure } : {}),
+    dayAssignments: assignments,
+    deferredDestinationIds: [...new Set([
+      ...(itinerary.deferredDestinationIds ?? []),
+      destination.id,
+    ])],
+    suggestedDestinationIds: [...new Set([
+      ...(itinerary.suggestedDestinationIds ?? []),
+      destination.id,
+    ])],
+    routeEstimates: itinerary.routeEstimates,
+  });
+
+  return evaluateItineraryMove(augmented, destination.id, targetDayIndex);
+}
+
 /** Keeps a removed preview stop selected and available to restore later. */
 export function deferItineraryDestination(
   itinerary: PlannedItinerary,

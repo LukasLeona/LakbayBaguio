@@ -14,7 +14,9 @@ import {
   MapPin,
   MoveRight,
   Pencil,
+  Plus,
   Route,
+  Sparkles,
   Trash2,
   Utensils,
   X,
@@ -32,6 +34,7 @@ import {
   type PlannedItinerary,
   type PlannedStop,
 } from "@/lib/planner-engine";
+import { PLANNER_DESTINATIONS } from "@/lib/planner-data";
 
 type ItineraryReviewDialogProps = {
   itinerary: PlannedItinerary;
@@ -42,6 +45,8 @@ type ItineraryReviewDialogProps = {
   onDelete: (destinationId: string) => void;
   onEvaluateMove: (destinationId: string, targetDayIndex: number) => ItineraryMoveEvaluation;
   onMove: (destinationId: string, targetDayIndex: number) => ItineraryMoveEvaluation;
+  onEvaluateSuggestion: (destinationId: string, targetDayIndex: number) => ItineraryMoveEvaluation;
+  onAddSuggestion: (destinationId: string, targetDayIndex: number) => ItineraryMoveEvaluation;
 };
 
 type MovingPlace = {
@@ -110,6 +115,20 @@ function stopIcon(stop: PlannedStop) {
   return <MapPin size={14} />;
 }
 
+function nearbyDistanceKm(
+  first: Pick<(typeof PLANNER_DESTINATIONS)[number], "lat" | "lng">,
+  second: Pick<(typeof PLANNER_DESTINATIONS)[number], "lat" | "lng">,
+) {
+  const radians = (value: number) => value * Math.PI / 180;
+  const latitude = radians(second.lat - first.lat);
+  const longitude = radians(second.lng - first.lng);
+  const firstLatitude = radians(first.lat);
+  const secondLatitude = radians(second.lat);
+  const haversine = Math.sin(latitude / 2) ** 2
+    + Math.cos(firstLatitude) * Math.cos(secondLatitude) * Math.sin(longitude / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
 export function ItineraryReviewDialog({
   itinerary,
   confirming,
@@ -119,6 +138,8 @@ export function ItineraryReviewDialog({
   onDelete,
   onEvaluateMove,
   onMove,
+  onEvaluateSuggestion,
+  onAddSuggestion,
 }: ItineraryReviewDialogProps) {
   const [moving, setMoving] = useState<MovingPlace | null>(null);
   const [moveFeedback, setMoveFeedback] = useState<MoveFeedback | null>(null);
@@ -162,6 +183,42 @@ export function ItineraryReviewDialog({
     ])),
     [itinerary.days, onEvaluateMove, uniqueExcluded],
   );
+  const nearbySuggestions = useMemo(() => {
+    const selected = new Set(itinerary.selectedDestinationIds);
+    return itinerary.days.map((day) => {
+      const places = day.items
+        .filter((item) => item.kind === "destination")
+        .map((item) => item.destination);
+      if (!places.length || places.length >= 4) return [];
+      const areas = new Set(places.map((place) => place.area));
+      const hasSideTrip = places.some((place) => place.area === "Atok Side Trip");
+
+      return PLANNER_DESTINATIONS
+        .filter((candidate) => {
+          if (selected.has(candidate.id) || candidate.timeSlot === "night") return false;
+          if (hasSideTrip !== (candidate.area === "Atok Side Trip")) return false;
+          return true;
+        })
+        .map((candidate) => ({
+          destination: candidate,
+          distance: Math.min(...places.map((place) => nearbyDistanceKm(place, candidate))),
+          sameArea: areas.has(candidate.area),
+        }))
+        .filter((candidate) => candidate.sameArea || candidate.distance <= 2.5)
+        .sort((first, second) => {
+          if (first.sameArea !== second.sameArea) return first.sameArea ? -1 : 1;
+          if (first.distance !== second.distance) return first.distance - second.distance;
+          return first.destination.duration - second.destination.duration;
+        })
+        .slice(0, 10)
+        .map((candidate) => ({
+          ...candidate,
+          evaluation: onEvaluateSuggestion(candidate.destination.id, day.index),
+        }))
+        .filter((candidate) => candidate.evaluation.allowed)
+        .slice(0, 3);
+    });
+  }, [itinerary, onEvaluateSuggestion]);
 
   useEffect(() => {
     setAcknowledgedFullDays(new Set());
@@ -213,6 +270,18 @@ export function ItineraryReviewDialog({
     clearHoldTimer();
     setMoving({ id, name, sourceDay });
     setMoveFeedback(null);
+  }
+
+  function addNearbySuggestion(destinationId: string, destinationName: string, dayIndex: number) {
+    const evaluation = onAddSuggestion(destinationId, dayIndex);
+    setMoveFeedback({
+      tone: evaluation.allowed ? "success" : "error",
+      text: evaluation.allowed
+        ? `${destinationName} was added to Day ${dayIndex + 1}. Times, route order, distance, and fare were recalculated.`
+        : evaluation.reason,
+      destinationId,
+      targetDayIndex: dayIndex,
+    });
   }
 
   function scheduleLongPress(
@@ -488,6 +557,14 @@ export function ItineraryReviewDialog({
                     </li>
                   ))}
                 </ol>}
+                {nearbySuggestions[day.index]?.length ? <section className="review-nearby-suggestions" aria-label={`Nearby places that fit Day ${day.index + 1}`}>
+                  <header><Sparkles /><div><strong>Make Day {day.index + 1} more sulit</strong><p>You still have room. Add a nearby stop without returning to Edit choices.</p></div></header>
+                  <div>{nearbySuggestions[day.index].map(({ destination, distance }) => <article key={destination.id}>
+                    <span className="review-suggestion-icon">{destination.icon}</span>
+                    <div><strong>{destination.name}</strong><small>{destination.area} · {distance < .1 ? "next to this route" : `${distance.toFixed(1)} km from a stop`} · {destination.duration} min</small></div>
+                    <button type="button" onClick={() => addNearbySuggestion(destination.id, destination.name, day.index)}><Plus /> Add</button>
+                  </article>)}</div>
+                </section> : null}
                 <footer><span>{formatDuration(day.totalTravelMinutes)} travel</span><span>{day.totalDistance.toFixed(1)} km estimated</span></footer>
               </article>
             );

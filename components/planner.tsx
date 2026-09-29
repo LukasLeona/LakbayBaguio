@@ -51,6 +51,7 @@ import {
 import {
   deferItineraryDestination,
   evaluateItineraryMove,
+  evaluateItinerarySuggestion,
   generateItinerary,
   getItineraryDayAssignments,
   getItineraryWalkingDetailPairs,
@@ -235,6 +236,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [activeDay, setActiveDay] = useState(0);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<"checkoutTime" | "destinations" | "modes", string>>>({});
   const [toast, setToast] = useState("");
   const [locating, setLocating] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -442,8 +444,17 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function focusPlannerField(id: string) {
+    window.requestAnimationFrame(() => {
+      const field = document.getElementById(id);
+      field?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (field instanceof HTMLElement) field.focus({ preventScroll: true });
+    });
+  }
+
   function toggleDestination(id: string) {
     setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+    setFieldErrors((current) => ({ ...current, destinations: undefined }));
     setError("");
     setSaved(false);
   }
@@ -478,6 +489,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
   function toggleMode(mode: TransportMode) {
     setModes((current) => current.includes(mode) ? current.filter((item) => item !== mode) : [...current, mode]);
+    setFieldErrors((current) => ({ ...current, modes: undefined }));
     setError("");
   }
 
@@ -506,8 +518,10 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     let stay: PlannerRequest["stay"];
     if (includeStay) {
       if (parseTimeToMinutes(checkOutTime) === null) {
-        setError("Enter the checkout time provided by your hotel or host.");
-        scrollToStep("trip-details");
+        const message = "Enter the checkout time provided by your hotel or host.";
+        setFieldErrors((current) => ({ ...current, checkoutTime: message }));
+        setError("");
+        focusPlannerField("checkout-time-input");
         return;
       }
       try {
@@ -598,12 +612,22 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     const issues = validatePlannerRequest(request);
     if (issues.length) {
       setGenerating(false);
-      setError(issues[0].message);
-      if (issues[0].field.startsWith("destination")) scrollToStep("destinations");
-      else if (issues[0].field === "modes") scrollToStep("preferences");
-      else scrollToStep("trip-details");
+      const issue = issues[0];
+      if (issue.field.startsWith("destination")) {
+        setFieldErrors((current) => ({ ...current, destinations: issue.message }));
+        setError("");
+        focusPlannerField("selected-destinations-panel");
+      } else if (issue.field === "modes") {
+        setFieldErrors((current) => ({ ...current, modes: issue.message }));
+        setError("");
+        focusPlannerField("transport-modes-panel");
+      } else {
+        setError(issue.message);
+        scrollToStep("trip-details");
+      }
       return;
     }
+    setFieldErrors({});
     setError("");
     setGenerating(true);
     const generationStartedAt = Date.now();
@@ -727,6 +751,23 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     return evaluation;
   }
 
+  function evaluateReviewedSuggestion(destinationId: string, targetDayIndex: number): ItineraryMoveEvaluation {
+    if (!reviewResult) return { allowed: false, reason: "The itinerary preview is no longer open." };
+    const destination = getPlannerDestinationById(destinationId);
+    if (!destination) return { allowed: false, reason: "This place is no longer available in the planner." };
+    return evaluateItinerarySuggestion(reviewResult, destination, targetDayIndex);
+  }
+
+  function addReviewedSuggestion(destinationId: string, targetDayIndex: number): ItineraryMoveEvaluation {
+    const evaluation = evaluateReviewedSuggestion(destinationId, targetDayIndex);
+    if (evaluation.allowed && evaluation.itinerary) {
+      setReviewResult(evaluation.itinerary);
+      setSelectedIds((current) => current.includes(destinationId) ? current : [...current, destinationId]);
+      setSaved(false);
+    }
+    return evaluation;
+  }
+
   function savePlan() {
     if (!result) return;
     try {
@@ -810,7 +851,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                   <header><strong>Checkout</strong><small>Your final-day route starts around this time.</small></header>
                   <div>
                     <label className="planner-field"><span>Day</span><input type="text" value={`Day ${numberOfDays}`} readOnly aria-label={`Checkout on Day ${numberOfDays}`} /></label>
-                    <label className="planner-field"><span>Time</span><input type="time" required value={checkOutTime} onChange={(event) => setCheckOutTime(event.target.value)} /></label>
+                    <label className={`planner-field ${fieldErrors.checkoutTime ? "has-error" : ""}`}><span>Time</span><input id="checkout-time-input" type="time" required value={checkOutTime} aria-invalid={Boolean(fieldErrors.checkoutTime)} aria-describedby={fieldErrors.checkoutTime ? "checkout-time-error" : undefined} onChange={(event) => { setCheckOutTime(event.target.value); setFieldErrors((current) => ({ ...current, checkoutTime: undefined })); }} />{fieldErrors.checkoutTime ? <small id="checkout-time-error" className="planner-inline-error" role="alert"><AlertTriangle size={12} /> {fieldErrors.checkoutTime}</small> : null}</label>
                   </div>
                   <p className="field-hint">Use the checkout time provided by your hotel or host.</p>
                 </section>
@@ -829,7 +870,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
         <section className="planner-form-section" id="destinations" data-planner-step="2">
           <header className="planner-step-heading destination-heading"><span>02</span><div><h2>Choose your destinations</h2><p>Pick the places you actually want. Baguio Buddy will arrange only those selections into a practical route.</p></div><div className="selected-count"><strong>{selectedIds.length}</strong><small>selected</small></div></header>
 
-          <div className="selected-destination-drawer"><header><div><strong>Your selected places</strong><small>{selectedIds.length >= 2 ? `${selectedIds.length} places ready to arrange.` : "Choose at least two destinations."}</small></div><button type="button" onClick={() => { setSelectedIds([]); setSaved(false); }}>Clear all</button></header><div className="selected-chip-row">{selectedDestinations.length ? selectedDestinations.map((destination) => <button type="button" key={destination.id} onClick={() => toggleDestination(destination.id)} aria-label={`Remove ${destination.name}`}>{destination.name}<X size={12} /></button>) : <span>No destinations selected yet.</span>}</div></div>
+          <div id="selected-destinations-panel" tabIndex={-1} className={`selected-destination-drawer ${fieldErrors.destinations ? "has-error" : ""}`}><header><div><strong>Your selected places</strong><small>{selectedIds.length >= 2 ? `${selectedIds.length} places ready to arrange.` : "Choose at least two destinations."}</small></div><button type="button" onClick={() => { setSelectedIds([]); setSaved(false); }}>Clear all</button></header><div className="selected-chip-row">{selectedDestinations.length ? selectedDestinations.map((destination) => <button type="button" key={destination.id} onClick={() => toggleDestination(destination.id)} aria-label={`Remove ${destination.name}`}>{destination.name}<X size={12} /></button>) : <span>No destinations selected yet.</span>}</div>{fieldErrors.destinations ? <p className="planner-inline-error" role="alert"><AlertTriangle size={12} /> {fieldErrors.destinations}</p> : null}</div>
 
           <div className="destination-tools"><label className="planner-search"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a place, activity, or area…" /></label><label className="auto-pick-select"><span>Auto-pick theme</span><select value={autoPickTheme} onChange={(event) => setAutoPickTheme(event.target.value as AutoPickTheme)}>{AUTO_PICK_THEMES.map((theme) => <option key={theme.value} value={theme.value}>{theme.label}</option>)}</select></label><button type="button" className="auto-pick-button" onClick={autoChoose}><Sparkles size={16} /> Let Buddy choose</button></div>
 
@@ -844,7 +885,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
           <div className="preference-grid-rich">{PREFERENCES.map((item) => <button type="button" key={item.value} aria-pressed={preference === item.value} className={preference === item.value ? "active" : ""} onClick={() => { setPreference(item.value); setSaved(false); }}><span>{item.icon}</span><strong>{item.label}</strong><small>{item.description}</small>{preference === item.value ? <i><Check size={13} /></i> : null}</button>)}</div>
 
-          <fieldset className="transport-modes"><legend>Allowed transportation</legend><div>{MODES.map((mode) => <button type="button" key={mode.value} aria-pressed={modes.includes(mode.value)} className={modes.includes(mode.value) ? "active" : ""} onClick={() => toggleMode(mode.value)}><span>{mode.icon}</span>{mode.label}{modes.includes(mode.value) ? <Check size={13} /> : null}</button>)}</div></fieldset>
+          <fieldset id="transport-modes-panel" tabIndex={-1} className={`transport-modes ${fieldErrors.modes ? "has-error" : ""}`}><legend>Allowed transportation</legend><div>{MODES.map((mode) => <button type="button" key={mode.value} aria-pressed={modes.includes(mode.value)} className={modes.includes(mode.value) ? "active" : ""} onClick={() => toggleMode(mode.value)}><span>{mode.icon}</span>{mode.label}{modes.includes(mode.value) ? <Check size={13} /> : null}</button>)}</div>{fieldErrors.modes ? <p className="planner-inline-error" role="alert"><AlertTriangle size={12} /> {fieldErrors.modes}</p> : null}</fieldset>
 
           <details className="fare-policy-card">
             <summary>
@@ -891,7 +932,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
       {initialView === "itinerary" && restored && result ? <ItineraryResults itinerary={result} activeDay={activeDay} saved={saved} onActiveDayChange={setActiveDay} onEdit={() => router.push("/plan")} onSave={savePlan} /> : null}
       {initialView === "itinerary" && !restored ? <div className="loading-card itinerary-loading">Opening your itinerary…</div> : null}
-      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} confirming={confirming} onConfirm={confirmReviewedPlan} onEdit={editReviewedPlan} onDefer={removeReviewedDestination} onDelete={deleteReviewedDestination} onEvaluateMove={evaluateReviewedMove} onMove={moveReviewedDestination} /> : null}
+      {reviewResult ? <ItineraryReviewDialog itinerary={reviewResult} confirming={confirming} onConfirm={confirmReviewedPlan} onEdit={editReviewedPlan} onDefer={removeReviewedDestination} onDelete={deleteReviewedDestination} onEvaluateMove={evaluateReviewedMove} onMove={moveReviewedDestination} onEvaluateSuggestion={evaluateReviewedSuggestion} onAddSuggestion={addReviewedSuggestion} /> : null}
       {toast ? <div className="planner-toast" role="status">{toast}</div> : null}
     </div>
   );

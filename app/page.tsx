@@ -2,14 +2,17 @@ import Link from "next/link";
 import {
   ArrowRight,
   BedDouble,
+  BookOpenCheck,
   CalendarDays,
   Camera,
+  CircleHelp,
   CloudSun,
   Coffee,
   Compass,
   Footprints,
   MapPin,
   Route,
+  ShieldCheck,
   Sparkles,
   Store,
   Trees,
@@ -217,6 +220,21 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <footer className="home-site-footer">
+        <div className="shell home-footer-grid">
+          <div className="home-footer-brand">
+            <img src="/assets/img/favicon.svg" alt="" width="45" height="45" />
+            <div><small>YOUR BAGUIO BUDDY</small><strong>Plan clearly. Travel more confidently.</strong><p>Practical routes, nearby places, and traveler guidance for a smoother Baguio visit.</p></div>
+          </div>
+          <nav aria-label="Traveler information">
+            <Link href="/resources"><BookOpenCheck /><span><strong>Travel resources</strong><small>Fares, maps, commute, and luggage</small></span></Link>
+            <Link href="/privacy"><ShieldCheck /><span><strong>Privacy policy</strong><small>How your information is handled</small></span></Link>
+            <Link href="/help"><CircleHelp /><span><strong>Help & FAQs</strong><small>Quick answers about Baguio Buddy</small></span></Link>
+          </nav>
+          <div className="home-footer-bottom"><span>© 2026 Baguio Buddy</span><span>Built with care in the Philippines.</span></div>
+        </div>
+      </footer>
 
       <Kabsat />
     </main>
