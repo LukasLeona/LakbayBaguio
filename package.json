@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "generate:icons": "node scripts/generate-brand-icons.mjs",
     "lint": "tsc --noEmit",
     "audit:routes": "tsx scripts/audit-planner-routes.ts"
   },
