@@ -27,6 +27,47 @@ export type PreparedWallPhoto = {
   extension: "webp" | "jpg";
 };
 
+export type WallBodyPart = {
+  kind: "text" | "link";
+  text: string;
+  href?: string;
+};
+
+const WALL_LINK_PATTERN = /((?:https?:\/\/|www\.)[^\s<>"']+|(?:[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.)+(?:app|co|com|dev|info|io|me|net|org|ph|travel)(?:\/[^\s<>"']*)?)/gi;
+const WALL_LINK_TRAILING_PUNCTUATION = /[),.!?:;]+$/;
+
+export function wallBodyParts(body: string): WallBodyPart[] {
+  const parts: WallBodyPart[] = [];
+  let cursor = 0;
+
+  for (const match of body.matchAll(WALL_LINK_PATTERN)) {
+    const start = match.index ?? 0;
+    const matchedText = match[0];
+    if (start > cursor) parts.push({ kind: "text", text: body.slice(cursor, start) });
+
+    const trailing = matchedText.match(WALL_LINK_TRAILING_PUNCTUATION)?.[0] ?? "";
+    const linkText = trailing ? matchedText.slice(0, -trailing.length) : matchedText;
+    const candidate = /^https?:\/\//i.test(linkText) ? linkText : `https://${linkText}`;
+
+    try {
+      const url = new URL(candidate);
+      if (url.protocol === "http:" || url.protocol === "https:") {
+        parts.push({ kind: "link", text: linkText, href: url.toString() });
+      } else {
+        parts.push({ kind: "text", text: linkText });
+      }
+    } catch {
+      parts.push({ kind: "text", text: linkText });
+    }
+
+    if (trailing) parts.push({ kind: "text", text: trailing });
+    cursor = start + matchedText.length;
+  }
+
+  if (cursor < body.length) parts.push({ kind: "text", text: body.slice(cursor) });
+  return parts.length ? parts : [{ kind: "text", text: body }];
+}
+
 export const previewWallPosts: WallPost[] = [
   {
     id: "preview-wall-1",

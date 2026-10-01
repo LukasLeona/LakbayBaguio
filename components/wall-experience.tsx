@@ -17,7 +17,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ensureAnonymousIdentity, getSupabaseBrowserClient, isCommunityConfigured } from "@/lib/supabase/client";
 import {
   prepareWallPhoto,
@@ -26,6 +26,7 @@ import {
   uploadWallPhoto,
   WALL_MAX_PHOTOS,
   WALL_POST_LIMIT,
+  wallBodyParts,
   wallErrorMessage,
   wallPhotoPublicUrl,
   wallRelativeTime,
@@ -58,6 +59,20 @@ function WallPhotoGallery({ urls, onOpen }: { urls: string[]; onOpen: (index: nu
         </button>
       </figure>)}
     </div>
+  );
+}
+
+function WallPostBody({ body }: { body: string }) {
+  return (
+    <p className="wall-post-body">
+      {wallBodyParts(body).map((part, index) => (
+        <Fragment key={`${part.kind}-${index}`}>
+          {part.kind === "link" && part.href ? (
+            <a href={part.href} target="_blank" rel="noopener noreferrer nofollow ugc" title="Open link in a new tab">{part.text}</a>
+          ) : part.text}
+        </Fragment>
+      ))}
+    </p>
   );
 }
 
@@ -351,7 +366,7 @@ export function WallExperience() {
                         {menuPost === post.id ? <div>{post.is_owner ? <button type="button" onClick={() => { setPendingDelete(post); setMenuPost(null); }}><Trash2 /> Delete my post</button> : <button type="button" onClick={() => setReporting(post)}><Flag /> Report privately</button>}</div> : null}
                       </div>
                     </header>
-                    {post.body ? <p>{post.body}</p> : null}
+                    {post.body ? <WallPostBody body={post.body} /> : null}
                     {photoUrls.length ? <WallPhotoGallery urls={photoUrls} onOpen={(index) => setViewingPhoto({ urls: photoUrls, index })} /> : null}
                     <footer>
                       <button type="button" className={post.has_reacted ? "loved" : ""} disabled={pendingReaction === post.id} onClick={() => void toggleReaction(post)} aria-label={`${post.has_reacted ? "Remove heart from" : "Heart"} this post`}>
