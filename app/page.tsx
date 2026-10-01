@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  BadgeInfo,
   BedDouble,
   BookOpenCheck,
   CalendarDays,
@@ -228,6 +229,7 @@ export default function HomePage() {
             <div><small>YOUR BAGUIO BUDDY</small><strong>Plan clearly. Travel more confidently.</strong><p>Practical routes, nearby places, and traveler guidance for a smoother Baguio visit.</p></div>
           </div>
           <nav aria-label="Traveler information">
+            <Link href="/about"><BadgeInfo /><span><strong>About Baguio Buddy</strong><small>Who we are and how guides are reviewed</small></span></Link>
             <Link href="/resources"><BookOpenCheck /><span><strong>Travel resources</strong><small>Fares, maps, commute, and luggage</small></span></Link>
             <Link href="/privacy"><ShieldCheck /><span><strong>Privacy policy</strong><small>How your information is handled</small></span></Link>
             <Link href="/help"><CircleHelp /><span><strong>Help & FAQs</strong><small>Quick answers about Baguio Buddy</small></span></Link>

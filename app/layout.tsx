@@ -89,6 +89,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         width: 512,
         height: 512,
       },
+      founder: { "@type": "Person", name: "Luke Mark Leona" },
+      publishingPrinciples: `${SITE_URL}/about`,
       description: "A Baguio trip-planning website for practical, commute-aware, hotel-aware itineraries.",
       areaServed: { "@type": "City", name: "Baguio City" },
     },

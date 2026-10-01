@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/guides/baguio-commute-guide`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/guides/baguio-trip-budget`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.85 },
     { url: `${SITE_URL}/resources`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.75 },
+    { url: `${SITE_URL}/about`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.7 },
   ];
 
   const placePages: MetadataRoute.Sitemap = places.map((place) => ({
