@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ensureAnonymousIdentity, getSupabaseBrowserClient, isCommunityConfigured } from "@/lib/supabase/client";
+import { officialSuggestionReply } from "@/lib/suggestion-replies";
 import { TurnstileWidget, turnstileEnabled } from "./turnstile-widget";
 
 type SuggestionCategory = "feature" | "improvement" | "content" | "accessibility" | "bug";
@@ -271,14 +272,26 @@ export function SuggestionBoard() {
               {suggestions.map((suggestion) => {
                 const option = categoryOptions.find((item) => item.value === suggestion.category) ?? categoryOptions[0];
                 const Icon = option.icon;
+                const officialReply = officialSuggestionReply(suggestion.id);
+                const displayStatus = officialReply?.status ?? suggestion.status;
                 return (
                   <article className="suggestion-card" key={suggestion.id}>
                     <div className="suggestion-card-top">
                       <span className={`suggestion-category category-${suggestion.category}`}><Icon />{option.label}</span>
-                      <span className={`suggestion-status status-${suggestion.status}`}>{statusLabels[suggestion.status]}</span>
+                      <span className={`suggestion-status status-${displayStatus}`}>{statusLabels[displayStatus]}</span>
                     </div>
                     <h3>{suggestion.title}</h3>
                     <p>{suggestion.body}</p>
+                    {officialReply ? (
+                      <aside className="suggestion-official-reply" aria-label={`Reply from ${officialReply.author}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/assets/img/kabsat-avatar.svg" alt="" width="43" height="43" />
+                        <div>
+                          <header><strong>{officialReply.author}</strong><span>Official reply · {friendlyDate(officialReply.repliedAt)}</span></header>
+                          <p>{officialReply.body}</p>
+                        </div>
+                      </aside>
+                    ) : null}
                     <footer>
                       <span><ShieldCheck /> Anonymous traveler · {friendlyDate(suggestion.created_at)}</span>
                       <button type="button" className={suggestion.has_voted ? "voted" : ""} disabled={pendingVote === suggestion.id} onClick={() => void toggleVote(suggestion.id)} aria-label={`${suggestion.has_voted ? "Remove upvote from" : "Upvote"} ${suggestion.title}`}>
