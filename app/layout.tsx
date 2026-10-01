@@ -23,7 +23,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Baguio Itinerary Planner & Tourist Spot Guide | Baguio Buddy",
+    default: "Baguio Itinerary Generator & Tourist Spot Guide | Baguio Buddy",
     template: "%s | Baguio Buddy",
   },
   description: "Build a practical Baguio itinerary with clustered tourist spots, realistic travel times, hotel timing, commute guidance, route links, and estimated fares.",
@@ -38,13 +38,13 @@ export const metadata: Metadata = {
     locale: "en_PH",
     url: "/",
     siteName: SITE_NAME,
-    title: "Baguio Itinerary Planner & Tourist Spot Guide | Baguio Buddy",
+    title: "Baguio Itinerary Generator & Tourist Spot Guide | Baguio Buddy",
     description: "Plan a smoother DIY Baguio trip with area-clustered tourist spots, commute guidance, hotel timing, realistic travel estimates, and editable day-by-day routes.",
     images: [{ url: DEFAULT_SOCIAL_IMAGE, alt: "Burnham Park in Baguio City" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Baguio Itinerary Planner & Tourist Spot Guide | Baguio Buddy",
+    title: "Baguio Itinerary Generator & Tourist Spot Guide | Baguio Buddy",
     description: "Build a practical Baguio itinerary around your dates, stay, selected tourist spots, and commute preferences.",
     images: [DEFAULT_SOCIAL_IMAGE],
   },

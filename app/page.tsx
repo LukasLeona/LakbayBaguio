@@ -25,7 +25,7 @@ import { featuredRestaurants, hotels, parks } from "@/lib/places";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "Baguio Itinerary Planner & Tourist Spot Guide",
+  title: "Baguio Itinerary Generator & Tourist Spot Guide",
   description: "Build a practical Baguio itinerary with commute directions, estimated fares, travel times, tourist spots, food stops, and hotel-aware routing.",
   path: "/",
   keywords: [
@@ -93,7 +93,7 @@ export default function HomePage() {
             <div className="home-story-shade" />
             <div className="home-story-copy">
               <span className="eyebrow light"><MapPin size={14} /> Baguio, Philippines</span>
-              <h1>Plan a practical <em>Baguio itinerary.</em></h1>
+              <h1>Generate a practical <em>Baguio itinerary.</em></h1>
               <p>Choose the places you love. Baguio Buddy groups nearby tourist spots and plans around your time, hotel, commute, meals, and luggage.</p>
               <div className="story-activity-row" aria-label="Popular Baguio experiences">
                 <span><Footprints size={14} /> Walk</span>
