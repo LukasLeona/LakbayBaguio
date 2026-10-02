@@ -12,6 +12,7 @@ import {
   MapPinned,
   Route,
   SearchCheck,
+  Sparkles,
 } from "lucide-react";
 import { pageMetadata, serializeJsonLd, SITE_URL } from "@/lib/seo";
 
@@ -76,6 +77,13 @@ const guides = [
     href: "/guides/manila-to-baguio-bus-guide",
     label: "Bus schedules and terminals",
     icon: BusFront,
+  },
+  {
+    title: "Baguio guide for first-time visitors",
+    description: "Prepare for cool and changing weather, hills, attraction checks, food stops, the Night Market, and an enjoyable first day.",
+    href: "/guides/baguio-first-timer-guide",
+    label: "Weather, packing, and things to do",
+    icon: Sparkles,
   },
 ] as const;
 
