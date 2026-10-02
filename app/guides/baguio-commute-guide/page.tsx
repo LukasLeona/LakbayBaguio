@@ -144,7 +144,7 @@ export default function BaguioCommuteGuidePage() {
 
       <section className="section seo-guide-hero">
         <div className="shell seo-guide-hero-inner">
-          <nav className="seo-guide-breadcrumbs" aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true">/</span><span>Commute guide</span></nav>
+          <nav className="seo-guide-breadcrumbs" aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true">/</span><Link href="/guides">Guides</Link><span aria-hidden="true">/</span><span>Commute guide</span></nav>
           <span className="eyebrow"><Navigation size={15} /> First-time commuter</span>
           <h1>Baguio commute guide: how to travel by jeepney, taxi, and foot</h1>
           <p className="seo-guide-lead">

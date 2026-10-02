@@ -160,7 +160,7 @@ export default function BaguioTripBudgetPage() {
 
       <section className="section seo-guide-hero">
         <div className="shell seo-guide-hero-inner">
-          <nav className="seo-guide-breadcrumbs" aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true">/</span><span>Trip budget</span></nav>
+          <nav className="seo-guide-breadcrumbs" aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true">/</span><Link href="/guides">Guides</Link><span aria-hidden="true">/</span><span>Trip budget</span></nav>
           <span className="eyebrow"><WalletCards size={15} /> Cost planning</span>
           <h1>Baguio trip budget: a realistic 3 days and 2 nights cost guide</h1>
           <p className="seo-guide-lead">

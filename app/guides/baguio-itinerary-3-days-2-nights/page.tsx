@@ -157,7 +157,7 @@ export default function BaguioThreeDayItineraryPage() {
       <section className="seo-guide-hero section">
         <div className="shell seo-guide-hero-inner">
           <nav className="seo-guide-breadcrumbs" aria-label="Breadcrumb">
-            <Link href="/">Home</Link><span aria-hidden="true">/</span><span>3D2N itinerary</span>
+            <Link href="/">Home</Link><span aria-hidden="true">/</span><Link href="/guides">Guides</Link><span aria-hidden="true">/</span><span>3D2N itinerary</span>
           </nav>
           <span className="eyebrow"><CalendarDays size={15} /> First-timer route</span>
           <h1>Baguio itinerary for 3 days and 2 nights: a practical DIY commute plan</h1>
@@ -267,7 +267,7 @@ export default function BaguioThreeDayItineraryPage() {
           <div className="seo-guide-related-grid">
             <Link href="/guides/baguio-commute-guide"><BusFront /><span><strong>Baguio commute guide</strong><small>Understand jeepney, taxi, and walking legs.</small></span><ArrowRight /></Link>
             <Link href="/guides/baguio-trip-budget"><Utensils /><span><strong>Baguio trip budget</strong><small>Estimate food, transport, stays, and extras.</small></span><ArrowRight /></Link>
-            <Link href="/explore"><MapPinned /><span><strong>Explore Baguio places</strong><small>Browse parks, restaurants, and stays.</small></span><ArrowRight /></Link>
+            <Link href="/guides/where-to-stay-in-baguio"><BedDouble /><span><strong>Choose where to stay</strong><small>Match the hotel area to your route and luggage plan.</small></span><ArrowRight /></Link>
           </div>
         </div>
       </section>

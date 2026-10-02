@@ -10,9 +10,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/plan`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.95 },
     { url: `${SITE_URL}/tourist-spots`, lastModified: reviewedAt, changeFrequency: "weekly", priority: 0.9 },
     { url: `${SITE_URL}/explore`, lastModified: reviewedAt, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/guides`, lastModified: reviewedAt, changeFrequency: "weekly", priority: 0.9 },
     { url: `${SITE_URL}/guides/baguio-itinerary-3-days-2-nights`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.95 },
     { url: `${SITE_URL}/guides/baguio-commute-guide`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/guides/baguio-trip-budget`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.85 },
+    { url: `${SITE_URL}/guides/where-to-stay-in-baguio`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.85 },
+    { url: `${SITE_URL}/guides/manila-to-baguio-bus-guide`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.85 },
+    { url: `${SITE_URL}/guides/baguio-first-timer-guide`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/resources`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.75 },
     { url: `${SITE_URL}/about`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.7 },
   ];

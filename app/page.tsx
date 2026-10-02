@@ -4,6 +4,7 @@ import {
   BadgeInfo,
   BedDouble,
   BookOpenCheck,
+  BusFront,
   CalendarDays,
   Camera,
   CircleHelp,
@@ -73,6 +74,24 @@ const planningGuides = [
     copy: "Plan transport, food, attractions, and a sensible contingency budget for a DIY 3D2N visit.",
     href: "/guides/baguio-trip-budget",
     icon: Route,
+  },
+  {
+    title: "Where to stay in Baguio",
+    copy: "Choose a hotel or transient area around walkability, tourist spots, the bus terminal, luggage, check-in, and checkout.",
+    href: "/guides/where-to-stay-in-baguio",
+    icon: BedDouble,
+  },
+  {
+    title: "Manila to Baguio bus guide",
+    copy: "Check Victory Liner, Genesis, and JoyBus using current schedules, the exact terminal branch, and a practical arrival plan.",
+    href: "/guides/manila-to-baguio-bus-guide",
+    icon: BusFront,
+  },
+  {
+    title: "First-time Baguio travel guide",
+    copy: "Prepare for changing weather, hills, entrance-fee checks, food stops, the Night Market, and what to pack.",
+    href: "/guides/baguio-first-timer-guide",
+    icon: CloudSun,
   },
 ];
 
@@ -151,7 +170,7 @@ export default function HomePage() {
         <div className="shell">
           <div className="section-heading split compact-heading">
             <div><span className="eyebrow"><Route size={14} /> Practical Baguio travel guides</span><h2>Start with the plan you are actually searching for.</h2><p>Use a ready route as your starting point, then customize it around your dates, hotel, pace, and must-see places.</p></div>
-            <Link href="/plan" className="text-link">Build my own itinerary <ArrowRight size={16} /></Link>
+            <Link href="/guides" className="text-link">View all Baguio guides <ArrowRight size={16} /></Link>
           </div>
           <div className="seo-guide-card-grid">
             {planningGuides.map(({ title, copy, href, icon: Icon }) => (
@@ -230,7 +249,8 @@ export default function HomePage() {
           </div>
           <nav aria-label="Traveler information">
             <Link href="/about"><BadgeInfo /><span><strong>About Baguio Buddy</strong><small>Who we are and how guides are reviewed</small></span></Link>
-            <Link href="/resources"><BookOpenCheck /><span><strong>Travel resources</strong><small>Fares, maps, commute, and luggage</small></span></Link>
+            <Link href="/guides"><BookOpenCheck /><span><strong>Baguio travel guides</strong><small>Itineraries, tourist spots, buses, stays, and tips</small></span></Link>
+            <Link href="/resources"><Compass /><span><strong>Travel resources</strong><small>Fares, maps, commute, and luggage</small></span></Link>
             <Link href="/privacy"><ShieldCheck /><span><strong>Privacy policy</strong><small>How your information is handled</small></span></Link>
             <Link href="/help"><CircleHelp /><span><strong>Help & FAQs</strong><small>Quick answers about Baguio Buddy</small></span></Link>
           </nav>

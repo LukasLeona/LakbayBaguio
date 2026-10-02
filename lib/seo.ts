@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const SITE_NAME = "Baguio Buddy";
 export const SITE_URL = "https://baguiobuddy.com";
 export const DEFAULT_SOCIAL_IMAGE = "/assets/img/destinations/burnham-park.jpg";
-export const LAST_CONTENT_REVIEW = "2026-09-29";
+export const LAST_CONTENT_REVIEW = "2026-10-02";
 
 export const CORE_KEYWORDS = [
   "Baguio itinerary",
@@ -16,6 +16,17 @@ export const CORE_KEYWORDS = [
   "Baguio commute guide",
   "Baguio DIY itinerary",
   "Baguio trip budget",
+  "Baguio travel guide",
+  "Baguio itinerary generator",
+  "Baguio itinerary for first timers",
+  "things to do in Baguio",
+  "best time to visit Baguio",
+  "where to stay in Baguio",
+  "hotel near Burnham Park",
+  "Manila to Baguio bus",
+  "Victory Liner Manila to Baguio",
+  "Genesis bus schedule to Baguio",
+  "Baguio Night Market schedule",
 ];
 
 type PageMetadataOptions = {
