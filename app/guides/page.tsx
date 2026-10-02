@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   Clock3,
   Compass,
+  Hotel,
   MapPinned,
   Route,
   SearchCheck,
@@ -61,6 +62,13 @@ const guides = [
     href: "/guides/baguio-trip-budget",
     label: "Budget and expenses",
     icon: CircleDollarSign,
+  },
+  {
+    title: "Where to stay in Baguio",
+    description: "Choose a hotel, transient, or Airbnb area based on walkability, your tourist spots, bus terminal, luggage, and checkout plan.",
+    href: "/guides/where-to-stay-in-baguio",
+    label: "Hotels and accommodation",
+    icon: Hotel,
   },
 ] as const;
 
