@@ -70,6 +70,13 @@ const guides = [
     label: "Hotels and accommodation",
     icon: Hotel,
   },
+  {
+    title: "Manila to Baguio bus guide",
+    description: "Compare booking and terminal checks for Victory Liner, Genesis, and JoyBus without relying on an outdated copied schedule.",
+    href: "/guides/manila-to-baguio-bus-guide",
+    label: "Bus schedules and terminals",
+    icon: BusFront,
+  },
 ] as const;
 
 const planningQuestions = [
