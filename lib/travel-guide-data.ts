@@ -52,6 +52,13 @@ export const guideSources = {
     checked: GUIDE_REVIEW_LABEL,
     supports: "Jeepney minimum fares effective September 28, 2026",
   },
+  jeepneyRoutes: {
+    label: "Baguio jeepney route directory",
+    publisher: "City Government of Baguio",
+    url: "https://alternateroutes.baguio.gov.ph/jeepneyroutes/",
+    checked: GUIDE_REVIEW_LABEL,
+    supports: "Official route names and route-directory references for local verification",
+  },
   taxi: {
     label: "Regular taxi fare rates",
     publisher: "Land Transportation Franchising and Regulatory Board",

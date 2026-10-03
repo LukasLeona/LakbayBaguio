@@ -15,10 +15,14 @@ import {
   Route,
   Signpost,
 } from "lucide-react";
+import { GuideDisclosure, GuideFactGrid, GuideSourceList } from "@/components/guide-data";
+import { resolveFarePolicy } from "@/lib/fare-policy";
+import { GUIDE_REVIEW_LABEL, guideSources } from "@/lib/travel-guide-data";
 
 const canonicalUrl = "https://baguiobuddy.com/guides/baguio-commute-guide";
-const updatedDate = "2026-09-29";
+const updatedDate = "2026-10-03";
 const officialJeepneyDirectory = "https://alternateroutes.baguio.gov.ph/jeepneyroutes/";
+const currentFarePolicy = resolveFarePolicy(updatedDate);
 
 export const metadata: Metadata = {
   title: "Baguio Commute Guide: Jeepney, Taxi and Walking Tips",
@@ -151,11 +155,34 @@ export default function BaguioCommuteGuidePage() {
             You can explore Baguio without a private car, but a usable commute plan needs more than a map line.
             It should explain where to walk, what to confirm before boarding, where to alight, and how much uncertainty to allow.
           </p>
-          <div className="seo-guide-meta"><span><Clock3 size={16} /> Updated September 29, 2026</span><span><BusFront size={16} /> For DIY and first-time visitors</span></div>
+          <div className="seo-guide-meta"><span><Clock3 size={16} /> Updated {GUIDE_REVIEW_LABEL}</span><span><BusFront size={16} /> For DIY and first-time visitors</span></div>
           <div className="seo-guide-actions">
             <Link href="/plan" className="button lime">Build a commute-aware itinerary <ArrowRight size={18} /></Link>
             <Link href="/resources" className="button dark">Check fares and resources</Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section guide-trip-snapshot" aria-labelledby="commute-cost-title">
+        <div className="shell">
+          <div className="section-heading">
+            <span className="eyebrow"><BusFront size={15} /> Fare reality check</span>
+            <h2 id="commute-cost-title">What a first-time commuter should budget for each ride</h2>
+            <p>
+              Use the modern-jeepney minimum as a conservative default when you cannot identify the vehicle class before boarding.
+              Keep small bills, read the posted matrix, and treat taxi calculations as an allowance—not a quoted meter total.
+            </p>
+          </div>
+          <GuideFactGrid facts={[
+            { label: "Traditional jeepney", value: `From ₱${currentFarePolicy.jeepney.traditional.minimum}`, detail: `First ${currentFarePolicy.jeepney.traditional.baseKilometers} km; then ₱${currentFarePolicy.jeepney.traditional.perKilometer}/km`, icon: <BusFront size={19} /> },
+            { label: "Modern jeepney", value: `From ₱${currentFarePolicy.jeepney.modern.minimum}`, detail: `First ${currentFarePolicy.jeepney.modern.baseKilometers} km; then ₱${currentFarePolicy.jeepney.modern.perKilometer}/km`, icon: <BusFront size={19} /> },
+            { label: "Regular taxi", value: "₱50 flag-down", detail: "Plus published distance and time components; use the meter", icon: <CarFront size={19} /> },
+            { label: "Commute buffer", value: "20–40 min", detail: "Add access walk, queue, loading, traffic, and final walk", icon: <Clock3 size={19} /> },
+          ]} />
+          <GuideDisclosure>
+            Fares shown use the policy effective on this guide&apos;s review date. Discounts and later adjustments can change what you pay.
+            A Google driving route never confirms that a jeepney follows that path.
+          </GuideDisclosure>
         </div>
       </section>
 
@@ -256,6 +283,12 @@ export default function BaguioCommuteGuidePage() {
           <div className="seo-guide-faq-list">
             {faqs.map((faq) => <article key={faq.question}><h3>{faq.question}</h3><p>{faq.answer}</p></article>)}
           </div>
+        </div>
+      </section>
+
+      <section className="section" aria-label="Commute sources">
+        <div className="shell">
+          <GuideSourceList reviewed={GUIDE_REVIEW_LABEL} sources={[guideSources.jeepneyRoutes, guideSources.fare, guideSources.taxi, guideSources.victory]} />
         </div>
       </section>
 
