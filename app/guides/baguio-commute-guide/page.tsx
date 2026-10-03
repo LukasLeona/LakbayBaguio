@@ -27,7 +27,7 @@ const currentFarePolicy = resolveFarePolicy(updatedDate);
 export const metadata: Metadata = {
   title: "Baguio Commute Guide: Jeepney, Taxi and Walking Tips",
   description:
-    "Learn how to commute in Baguio without a car. Understand jeepney loading points, taxi use, walking routes, fare planning, terminal checks, and hill-friendly timing.",
+    "Learn how to commute in Baguio without a car using jeepneys, taxis, and walking, with current fares, route checks, terminal tips, and realistic timing.",
   alternates: { canonical: canonicalUrl },
   authors: [{ name: "Baguio Buddy", url: "https://baguiobuddy.com" }],
   openGraph: {
@@ -112,6 +112,9 @@ const jsonLd = {
       description: "A practical guide to commuting around Baguio City without a private car.",
       datePublished: updatedDate,
       dateModified: updatedDate,
+      inLanguage: "en-PH",
+      isAccessibleForFree: true,
+      citation: [guideSources.jeepneyRoutes.url, guideSources.fare.url, guideSources.taxi.url, guideSources.victory.url],
       author: { "@type": "Organization", name: "Baguio Buddy", url: "https://baguiobuddy.com" },
       publisher: { "@type": "Organization", name: "Baguio Buddy", url: "https://baguiobuddy.com" },
       mainEntityOfPage: canonicalUrl,
@@ -126,6 +129,14 @@ const jsonLd = {
         position: index + 1,
         name: step.title,
         description: step.text,
+      })),
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
       })),
     },
     {

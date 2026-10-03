@@ -134,6 +134,9 @@ const jsonLd = {
         "A practical three-day Baguio itinerary for first-time travelers using public transport.",
       datePublished: updatedDate,
       dateModified: updatedDate,
+      inLanguage: "en-PH",
+      isAccessibleForFree: true,
+      citation: [guideSources.visita.url, guideSources.genesis.url, guideSources.victory.url, guideSources.vos.url, guideSources.goodTaste.url],
       author: { "@type": "Organization", name: "Baguio Buddy", url: "https://baguiobuddy.com" },
       publisher: { "@type": "Organization", name: "Baguio Buddy", url: "https://baguiobuddy.com" },
       mainEntityOfPage: canonicalUrl,
@@ -148,6 +151,14 @@ const jsonLd = {
         position: index + 1,
         name: `${day.name}: ${day.area}`,
         description: day.summary,
+      })),
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
       })),
     },
     {

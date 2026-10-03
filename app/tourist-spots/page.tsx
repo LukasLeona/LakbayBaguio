@@ -143,6 +143,9 @@ const jsonLd = {
       description: "An area-by-area guide to popular Baguio tourist spots with practical timing and commute notes.",
       datePublished: updatedDate,
       dateModified: updatedDate,
+      inLanguage: "en-PH",
+      isAccessibleForFree: true,
+      citation: [guideSources.visita.url, guideSources.botanical.url, guideSources.minesView.url],
       author: { "@type": "Organization", name: "Baguio Buddy", url: "https://baguiobuddy.com" },
       publisher: { "@type": "Organization", name: "Baguio Buddy", url: "https://baguiobuddy.com" },
       mainEntityOfPage: canonicalUrl,
@@ -158,6 +161,14 @@ const jsonLd = {
         name: spot.name,
         description: spot.detail,
         ...(spot.slug ? { url: `https://baguiobuddy.com/places/${spot.slug}` } : {}),
+      })),
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
       })),
     },
     {

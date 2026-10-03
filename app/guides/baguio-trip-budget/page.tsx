@@ -36,7 +36,7 @@ const updatedDate = "2026-10-03";
 export const metadata: Metadata = {
   title: "Baguio Trip Budget: 3D2N Cost Guide and Sample Breakdown",
   description:
-    "Estimate a Baguio trip budget for 3 days and 2 nights. Compare backpacker and comfortable ranges for accommodation, food, local transport, attractions, and pasalubong.",
+    "Estimate a Baguio trip budget for 3 days and 2 nights with a real sample for accommodation, food, buses, local transport, attractions, and shopping.",
   alternates: { canonical: canonicalUrl },
   authors: [{ name: "Baguio Buddy", url: "https://baguiobuddy.com" }],
   openGraph: {
@@ -136,6 +136,9 @@ const jsonLd = {
       description: "A sample Baguio budget covering accommodation, food, local transport, attractions, shopping, and contingency money.",
       datePublished: updatedDate,
       dateModified: updatedDate,
+      inLanguage: "en-PH",
+      isAccessibleForFree: true,
+      citation: [guideSources.genesis.url, guideSources.vos.url, guideSources.goodTaste.url, guideSources.fare.url, guideSources.taxi.url],
       author: { "@type": "Organization", name: "Baguio Buddy", url: "https://baguiobuddy.com" },
       publisher: { "@type": "Organization", name: "Baguio Buddy", url: "https://baguiobuddy.com" },
       mainEntityOfPage: canonicalUrl,
@@ -150,6 +153,14 @@ const jsonLd = {
         position: index + 1,
         name: item.category,
         description: `${item.saver} saver range; ${item.comfortable} comfortable range. ${item.note}`,
+      })),
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
       })),
     },
     {

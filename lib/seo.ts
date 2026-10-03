@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const SITE_NAME = "Baguio Buddy";
 export const SITE_URL = "https://baguiobuddy.com";
 export const DEFAULT_SOCIAL_IMAGE = "/assets/img/destinations/burnham-park.jpg";
-export const LAST_CONTENT_REVIEW = "2026-10-02";
+export const LAST_CONTENT_REVIEW = "2026-10-03";
 
 export const CORE_KEYWORDS = [
   "Baguio itinerary",
