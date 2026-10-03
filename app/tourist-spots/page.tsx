@@ -12,9 +12,21 @@ import {
   Route,
   Trees,
 } from "lucide-react";
+import { GuideDisclosure, GuideSourceList } from "@/components/guide-data";
+import { GUIDE_REVIEW_LABEL, guideSources } from "@/lib/travel-guide-data";
 
 const canonicalUrl = "https://baguiobuddy.com/tourist-spots";
-const updatedDate = "2026-09-29";
+const updatedDate = "2026-10-03";
+
+const planningFees = [
+  { place: "Botanical Garden", area: "East Baguio", time: "60–90 min", allowance: "₱100 adult", extra: "Reduced rates may require valid ID; verify at the entrance" },
+  { place: "The Mansion", area: "East Baguio", time: "20–40 min", allowance: "₱0 exterior", extra: "Public gate/viewing stop only; access rules can change" },
+  { place: "Wright Park", area: "East Baguio", time: "45–75 min", allowance: "₱0 public area", extra: "Horseback rides, photos, and rentals are separate" },
+  { place: "Mines View Park", area: "East Baguio", time: "45–60 min", allowance: "₱10 buffer", extra: "Use as a small-fee allowance and confirm live collection" },
+  { place: "Burnham Park", area: "City center", time: "60–120 min", allowance: "₱0 general entry", extra: "Bike, boat, food, and other activities are separate" },
+  { place: "Camp John Hay", area: "South Baguio", time: "2–4 hr", allowance: "₱75+", extra: "Depends on the exact attraction; the estate itself is not one ticket" },
+  { place: "Mirador Heritage and Eco Park", area: "West Baguio", time: "90–150 min", allowance: "₱100 buffer", extra: "Planning allowance only; confirm the current gate rate" },
+] as const;
 
 export const metadata: Metadata = {
   title: "Tourist Spots in Baguio: First-Timer Area Guide",
@@ -175,11 +187,41 @@ export default function TouristSpotsPage() {
             The best Baguio tourist-spot plan is not simply the longest list. Group nearby places, choose one larger destination at a time,
             and reserve space for meals, traffic, queues, rain, and uphill walking.
           </p>
-          <div className="seo-hub-meta"><span><Clock3 size={16} /> Updated September 29, 2026</span><span><MapPin size={16} /> Baguio City and one La Trinidad side trip</span></div>
+          <div className="seo-hub-meta"><span><Clock3 size={16} /> Updated {GUIDE_REVIEW_LABEL}</span><span><MapPin size={16} /> Baguio City and one La Trinidad side trip</span></div>
           <div className="seo-hub-actions">
             <Link href="/explore" className="button dark">Browse places and photos <ArrowRight size={18} /></Link>
             <Link href="/plan" className="button lime">Add places to an itinerary <Route size={18} /></Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section guide-trip-snapshot" aria-labelledby="spot-cost-title">
+        <div className="shell">
+          <div className="section-heading">
+            <span className="eyebrow"><Camera size={15} /> Time and fee planner</span>
+            <h2 id="spot-cost-title">How long to stay and what admission to set aside</h2>
+            <p>Use these amounts to build a cash buffer, not as prepaid prices. “Free” means no general-entry amount is assumed; activities, food, parking, and purchases can still cost extra.</p>
+          </div>
+          <div className="guide-table-wrap">
+            <table className="guide-data-table">
+              <caption>Planning time and fee allowances for popular Baguio tourist spots</caption>
+              <thead><tr><th scope="col">Place</th><th scope="col">Area</th><th scope="col">Visit time</th><th scope="col">Fee allowance</th><th scope="col">What to check</th></tr></thead>
+              <tbody>
+                {planningFees.map((item) => (
+                  <tr key={item.place}>
+                    <th scope="row" data-label="Place">{item.place}</th>
+                    <td data-label="Area">{item.area}</td>
+                    <td data-label="Visit time">{item.time}</td>
+                    <td data-label="Fee allowance">{item.allowance}</td>
+                    <td data-label="Check live">{item.extra}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <GuideDisclosure>
+            Rates and access rules can change after publication. Check Baguio VISITA and the attraction&apos;s current official channel shortly before the visit; carry valid ID if you expect a discounted rate.
+          </GuideDisclosure>
         </div>
       </section>
 
@@ -270,6 +312,12 @@ export default function TouristSpotsPage() {
           <div className="seo-hub-faq-list">
             {faqs.map((faq) => <article key={faq.question}><h3>{faq.question}</h3><p>{faq.answer}</p></article>)}
           </div>
+        </div>
+      </section>
+
+      <section className="section" aria-label="Tourist spot sources">
+        <div className="shell">
+          <GuideSourceList reviewed={GUIDE_REVIEW_LABEL} sources={[guideSources.visita, guideSources.botanical, guideSources.minesView]} />
         </div>
       </section>
 

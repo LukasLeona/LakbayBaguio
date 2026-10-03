@@ -45,6 +45,20 @@ export const guideSources = {
     checked: GUIDE_REVIEW_LABEL,
     supports: "Published menu examples, restaurant address, and live-queue link",
   },
+  botanical: {
+    label: "Botanical Garden visitor information",
+    publisher: "Baguio City Guide",
+    url: "https://baguiocityguide.com/tourist-spots/botanical-garden/",
+    checked: GUIDE_REVIEW_LABEL,
+    supports: "Recently published opening-time and entrance-fee reference",
+  },
+  minesView: {
+    label: "Mines View Park visitor guide",
+    publisher: "Baguio City Guide",
+    url: "https://baguiocityguide.com/tourist-spots/mines-view-park/",
+    checked: GUIDE_REVIEW_LABEL,
+    supports: "Visitor timing and entrance-fee reference for pre-trip checking",
+  },
   fare: {
     label: "2026 public-utility jeepney fare adjustment",
     publisher: "GMA News / DOTr and LTFRB announcement",
