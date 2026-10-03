@@ -11,15 +11,27 @@ import {
   Info,
   MapPin,
   PiggyBank,
+  ReceiptText,
   Route,
   ShoppingBag,
   Ticket,
   Utensils,
   WalletCards,
 } from "lucide-react";
+import { GuideCostTable, GuideDisclosure, GuideFactGrid, GuideSourceList } from "@/components/guide-data";
+import {
+  formatPeso,
+  GUIDE_REVIEW_LABEL,
+  guideSources,
+  sampleBasePerPerson,
+  sampleBaseTotal,
+  sampleReadyPerPerson,
+  sampleReadyTotal,
+  sampleTripCosts,
+} from "@/lib/travel-guide-data";
 
 const canonicalUrl = "https://baguiobuddy.com/guides/baguio-trip-budget";
-const updatedDate = "2026-09-29";
+const updatedDate = "2026-10-03";
 
 export const metadata: Metadata = {
   title: "Baguio Trip Budget: 3D2N Cost Guide and Sample Breakdown",
@@ -167,11 +179,37 @@ export default function BaguioTripBudgetPage() {
             A useful Baguio budget separates the fixed costs from the choices you can control. Start with your room and intercity fare,
             then plan food, local transport, attraction fees, pasalubong, and a buffer for rain or schedule changes.
           </p>
-          <div className="seo-guide-meta"><span><Clock3 size={16} /> Updated September 29, 2026</span><span><Calculator size={16} /> Planning ranges in Philippine pesos</span></div>
+          <div className="seo-guide-meta"><span><Clock3 size={16} /> Updated {GUIDE_REVIEW_LABEL}</span><span><Calculator size={16} /> Planning ranges in Philippine pesos</span></div>
           <div className="seo-guide-actions">
             <Link href="/plan" className="button lime">Create a trip and estimate fares <ArrowRight size={18} /></Link>
             <Link href="/resources#fares" className="button dark">Review fare references</Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section guide-trip-snapshot" aria-labelledby="worked-budget-title">
+        <div className="shell">
+          <div className="section-heading">
+            <span className="eyebrow"><ReceiptText size={15} /> Worked 3D2N example</span>
+            <h2 id="worked-budget-title">What two DIY travelers could actually set aside</h2>
+            <p>
+              For a non-holiday weekday trip, the worked plan totals {formatPeso(sampleBaseTotal)} for two
+              ({formatPeso(sampleBasePerPerson)} each) before optional shopping and emergency money. A prepared cash target is
+              {` ${formatPeso(sampleReadyTotal)} for two, or ${formatPeso(sampleReadyPerPerson)} each`}.
+            </p>
+          </div>
+          <GuideFactGrid facts={[
+            { label: "Bus for 2", value: "₱2,780", detail: "Sample ₱695 fare each way, per traveler", icon: <BusFront size={19} /> },
+            { label: "Shared room", value: "₱2,000", detail: "Two example weekday nights at ₱1,000/night", icon: <BedDouble size={19} /> },
+            { label: "Food for 2", value: "₱4,260", detail: "Meals, drinks, and modest snack allowances", icon: <Utensils size={19} /> },
+            { label: "Transport + fees", value: "₱1,470", detail: "Local travel and selected admission allowances", icon: <Ticket size={19} /> },
+          ]} />
+          <GuideDisclosure>
+            These are dated planning assumptions, not advertised package prices. We show both the amount and its basis so you can
+            replace any row with your own hotel quote, bus class, restaurant plan, or attraction list.
+          </GuideDisclosure>
+          <div className="section-heading guide-subheading"><span className="eyebrow">Exact sample calculation</span><h2>Every peso in the example</h2></div>
+          <GuideCostTable costs={sampleTripCosts} caption="Worked three-day Baguio budget for two adults" />
         </div>
       </section>
 
@@ -272,6 +310,15 @@ export default function BaguioTripBudgetPage() {
           <div className="seo-guide-faq-list">
             {faqs.map((faq) => <article key={faq.question}><h3>{faq.question}</h3><p>{faq.answer}</p></article>)}
           </div>
+        </div>
+      </section>
+
+      <section className="section" aria-label="Budget sources">
+        <div className="shell">
+          <GuideSourceList
+            reviewed={GUIDE_REVIEW_LABEL}
+            sources={[guideSources.genesis, guideSources.vos, guideSources.goodTaste, guideSources.fare, guideSources.taxi, guideSources.visita]}
+          />
         </div>
       </section>
 
