@@ -13,10 +13,12 @@ import {
   ShieldAlert,
   TicketCheck,
 } from "lucide-react";
+import { GuideDisclosure, GuideFactGrid, GuideSourceList } from "@/components/guide-data";
 import { pageMetadata, serializeJsonLd, SITE_URL } from "@/lib/seo";
+import { GUIDE_REVIEW_LABEL, guideSources } from "@/lib/travel-guide-data";
 
 const canonicalPath = "/guides/manila-to-baguio-bus-guide";
-const publishedDate = "2026-10-02";
+const publishedDate = "2026-10-03";
 const victoryTerminalGuide = "https://staging.victoryliner.com/TerminalGuide.aspx";
 const genesisSchedules = "https://genesisjoybus.com/schedules/";
 
@@ -168,13 +170,37 @@ export default function ManilaToBaguioBusGuidePage() {
             when schedules change: the exact terminal, boarding time, baggage plan, Baguio arrival, and return branch.
           </p>
           <div className="seo-guide-meta">
-            <span><Clock3 size={16} /> Reviewed October 2, 2026</span>
+            <span><Clock3 size={16} /> Reviewed {GUIDE_REVIEW_LABEL}</span>
             <span><TicketCheck size={16} /> Verify live schedules before paying</span>
           </div>
           <div className="seo-guide-actions">
             <Link className="button lime" href="/plan">Plan my Baguio arrival <ArrowRight size={18} /></Link>
             <Link className="button dark" href="/guides/baguio-itinerary-3-days-2-nights">Read the 3D2N itinerary <Route size={18} /></Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section guide-trip-snapshot" aria-labelledby="bus-price-title">
+        <div className="shell">
+          <div className="section-heading">
+            <span className="eyebrow"><TicketCheck size={15} /> Current planning snapshot</span>
+            <h2 id="bus-price-title">Published Cubao–Baguio fares start around ₱695</h2>
+            <p>
+              Genesis/JoyBus currently publishes a ₱695–₱880 range across Deluxe, Executive, and Premiere services,
+              an estimated 5–6 hour journey, and 15 daily trips on its Cubao–Baguio route page. Treat this as a
+              planning snapshot; the ticket checkout for your date and class is the price that matters.
+            </p>
+          </div>
+          <GuideFactGrid facts={[
+            { label: "Published fare range", value: "₱695–₱880", detail: "One way on the referenced Cubao–Baguio schedule", icon: <TicketCheck size={19} /> },
+            { label: "Published duration", value: "5–6 hours", detail: "Allow more for traffic, weather, stops, and peak periods", icon: <Clock3 size={19} /> },
+            { label: "Sample round trip", value: "₱1,390/person", detail: "Two ₱695 tickets; replace with the actual booked fare", icon: <BusFront size={19} /> },
+            { label: "Boarding buffer", value: "45–60+ min", detail: "Follow the operator's latest instruction on your ticket", icon: <Navigation size={19} /> },
+          ]} />
+          <GuideDisclosure>
+            Baguio Buddy does not sell bus tickets. We do not recommend choosing solely by the lowest fare: compare the
+            exact Metro Manila origin, Baguio terminal, departure time, bus class, baggage policy, and refund or rebooking rules.
+          </GuideDisclosure>
         </div>
       </section>
 
@@ -239,6 +265,10 @@ export default function ManilaToBaguioBusGuidePage() {
             {faqs.map((faq) => <article key={faq.question}><h3>{faq.question}</h3><p>{faq.answer}</p></article>)}
           </div>
         </div>
+      </section>
+
+      <section className="section" aria-label="Bus guide sources">
+        <div className="shell"><GuideSourceList reviewed={GUIDE_REVIEW_LABEL} sources={[guideSources.genesis, guideSources.victory]} /></div>
       </section>
 
       <section className="section seo-guide-related" aria-labelledby="bus-next-title">
