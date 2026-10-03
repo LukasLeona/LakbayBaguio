@@ -19,10 +19,12 @@ import {
   Umbrella,
   Utensils,
 } from "lucide-react";
+import { GuideDisclosure, GuideFactGrid, GuideSourceList } from "@/components/guide-data";
 import { pageMetadata, serializeJsonLd, SITE_URL } from "@/lib/seo";
+import { GUIDE_REVIEW_LABEL, guideSources } from "@/lib/travel-guide-data";
 
 const canonicalPath = "/guides/baguio-first-timer-guide";
-const publishedDate = "2026-10-02";
+const publishedDate = "2026-10-03";
 const baguioVisitaUrl = "https://visita.baguio.gov.ph/";
 const pagasaUrl = "https://www.pagasa.dost.gov.ph/weather";
 
@@ -216,13 +218,61 @@ export default function BaguioFirstTimerGuidePage() {
             This first-timer guide helps you decide what to do, what to pack, and what must be checked live before leaving.
           </p>
           <div className="seo-guide-meta">
-            <span><Clock3 size={16} /> Reviewed October 2, 2026</span>
+            <span><Clock3 size={16} /> Reviewed {GUIDE_REVIEW_LABEL}</span>
             <span><Footprints size={16} /> Designed for DIY commuters</span>
           </div>
           <div className="seo-guide-actions">
             <Link className="button lime" href="/plan">Create my Baguio itinerary <ArrowRight size={18} /></Link>
             <Link className="button dark" href="/tourist-spots">Compare tourist spots <MapPinned size={18} /></Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section guide-trip-snapshot" aria-labelledby="weather-reality-title">
+        <div className="shell">
+          <div className="section-heading">
+            <span className="eyebrow"><CloudRain size={15} /> Weather reality</span>
+            <h2 id="weather-reality-title">Baguio is cooler—but your month changes the experience</h2>
+            <p>
+              PAGASA&apos;s 1991–2020 normals show why one packing list does not fit every trip. January normally averages about
+              23.1°C by day and 13°C at night with three rainy days, while August normally records about 25 rainy days and much heavier rainfall.
+            </p>
+          </div>
+          <GuideFactGrid facts={[
+            { label: "January normal", value: "23.1° / 13°C", detail: "Normal maximum/minimum; about 3 rainy days", icon: <Trees size={19} /> },
+            { label: "April normal", value: "25.5° / 15.9°C", detail: "Warmer afternoons; about 8 rainy days", icon: <Footprints size={19} /> },
+            { label: "August normal", value: "22.3° / 16.2°C", detail: "About 25 rainy days; rain gear and flexible views matter", icon: <CloudRain size={19} /> },
+            { label: "October normal", value: "23.6° / 15.6°C", detail: "About 13 rainy days; check the live forecast", icon: <Umbrella size={19} /> },
+          ]} />
+          <GuideDisclosure>
+            Climate normals describe long-term averages, not your travel-day forecast. Check PAGASA again near departure and each morning;
+            fog, thunderstorms, and tropical cyclones can change visibility, walking safety, and transport.
+          </GuideDisclosure>
+        </div>
+      </section>
+
+      <section className="section" aria-labelledby="food-example-title">
+        <div className="shell seo-guide-two-column">
+          <div>
+            <span className="eyebrow"><Utensils size={15} /> A useful food plan</span>
+            <h2 id="food-example-title">Budget meals before choosing restaurants by queue</h2>
+            <p>
+              Our 3D2N worked itinerary sets aside ₱2,130 per person for food and snacks. For one traceable example,
+              Good Taste publishes half buttered chicken at ₱260; adding rice and drinks can fit a ₱500 shared-lunch allowance for two,
+              depending on the counter prices and what you order.
+            </p>
+            <ul className="seo-guide-checklist">
+              <li><CheckCircle2 size={17} /><span>Breakfast: ₱150–₱180 per person in the sample</span></li>
+              <li><CheckCircle2 size={17} /><span>Lunch or dinner: ₱250–₱300 per person in the sample</span></li>
+              <li><CheckCircle2 size={17} /><span>Merienda and warm drinks: ₱120–₱150 per person</span></li>
+              <li><CheckCircle2 size={17} /><span>Keep one alternative nearby when a famous restaurant has a long queue</span></li>
+            </ul>
+          </div>
+          <aside className="seo-guide-terminal-card">
+            <Coffee size={25} />
+            <h3>Food is also recovery time</h3>
+            <p>Use lunch to sit, warm up, recharge a phone, and decide whether the optional afternoon stop still feels enjoyable.</p>
+          </aside>
         </div>
       </section>
 
@@ -307,6 +357,10 @@ export default function BaguioFirstTimerGuidePage() {
             {faqs.map((faq) => <article key={faq.question}><h3>{faq.question}</h3><p>{faq.answer}</p></article>)}
           </div>
         </div>
+      </section>
+
+      <section className="section" aria-label="First-timer guide sources">
+        <div className="shell"><GuideSourceList reviewed={GUIDE_REVIEW_LABEL} sources={[guideSources.pagasaNormals, guideSources.visita, guideSources.goodTaste]} /></div>
       </section>
 
       <section className="section seo-guide-related" aria-labelledby="first-timer-next-title">

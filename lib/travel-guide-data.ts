@@ -59,6 +59,13 @@ export const guideSources = {
     checked: GUIDE_REVIEW_LABEL,
     supports: "Visitor timing and entrance-fee reference for pre-trip checking",
   },
+  pagasaNormals: {
+    label: "Baguio climatological normals (1991–2020)",
+    publisher: "PAGASA",
+    url: "https://pubfiles.pagasa.dost.gov.ph/pagasaweb/files/cad/CLIMATOLOGICAL%20NORMALS%20%281991-2020%29/BAGUIO.pdf",
+    checked: GUIDE_REVIEW_LABEL,
+    supports: "Monthly normal temperature, rainfall, rainy-day, humidity, and wind data",
+  },
   fare: {
     label: "2026 public-utility jeepney fare adjustment",
     publisher: "GMA News / DOTr and LTFRB announcement",
