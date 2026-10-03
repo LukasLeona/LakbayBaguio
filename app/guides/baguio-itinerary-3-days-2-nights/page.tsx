@@ -6,7 +6,6 @@ import {
   BedDouble,
   BusFront,
   CalendarDays,
-  CheckCircle2,
   Clock3,
   MapPinned,
   Route,
@@ -14,16 +13,18 @@ import {
   Utensils,
   WalletCards,
 } from "lucide-react";
-import { GuideCostTable, GuideDisclosure, GuideFactGrid } from "@/components/guide-data";
+import { GuideCostTable, GuideDisclosure, GuideFactGrid, GuideSourceList, GuideTimeline } from "@/components/guide-data";
 import {
   formatPeso,
   GUIDE_REVIEW_LABEL,
+  guideSources,
   sampleBasePerPerson,
   sampleBaseTotal,
   sampleReadyPerPerson,
   sampleReadyTotal,
   sampleTripAssumptions,
   sampleTripCosts,
+  sampleThreeDayPlan,
 } from "@/lib/travel-guide-data";
 
 const canonicalUrl = "https://baguiobuddy.com/guides/baguio-itinerary-3-days-2-nights";
@@ -242,35 +243,13 @@ export default function BaguioThreeDayItineraryPage() {
         <div className="shell">
           <div className="section-heading">
             <span className="eyebrow">Day-by-day route</span>
-            <h2 id="daily-route-title">A balanced Baguio itinerary with realistic transitions</h2>
-            <p>Start earlier on busy weekends. Reverse a cluster when live traffic or opening conditions make another order more practical.</p>
+            <h2 id="daily-route-title">A timed Baguio itinerary with meals, rest, and expenses</h2>
+            <p>
+              Times are planning targets for an early-arrival trip, not reservations. Start later when your actual bus arrives later,
+              preserve the hotel rest, and remove the final optional stop before compressing meals or terminal time.
+            </p>
           </div>
-
-          <div className="seo-guide-day-list">
-            {days.map((day, dayIndex) => (
-              <article className="seo-guide-day-card" key={day.name}>
-                <header>
-                  <span>0{dayIndex + 1}</span>
-                  <div><small>{day.name}</small><h3>{day.area}</h3><p>{day.summary}</p></div>
-                </header>
-                <ol>
-                  {day.stops.map((stop) => <li key={stop}><CheckCircle2 size={17} /><span>{stop}</span></li>)}
-                </ol>
-                {dayIndex === 0 ? (
-                  <div className="seo-guide-day-note">
-                    <BedDouble size={18} />
-                    <p><strong>Protect the middle of the day.</strong> Return for your luggage, check in, eat, and rest before the city-center evening.</p>
-                  </div>
-                ) : null}
-                {dayIndex === 1 ? (
-                  <div className="seo-guide-day-note">
-                    <Utensils size={18} />
-                    <p><strong>Keep one stop optional.</strong> If weather or traffic runs long, choose either Mirador or Diplomat instead of rushing both.</p>
-                  </div>
-                ) : null}
-              </article>
-            ))}
-          </div>
+          <GuideTimeline days={sampleThreeDayPlan} />
         </div>
       </section>
 
@@ -292,6 +271,23 @@ export default function BaguioThreeDayItineraryPage() {
             <p>Opening days, admission fees, weather, Night Market operations, road closures, and bus-terminal details may change. Confirm the live information for your dates.</p>
             <Link href="/resources">Open traveler resources <ArrowRight size={16} /></Link>
           </aside>
+        </div>
+      </section>
+
+      <section className="section" aria-label="Guide sources">
+        <div className="shell">
+          <GuideSourceList
+            reviewed={GUIDE_REVIEW_LABEL}
+            sources={[
+              guideSources.visita,
+              guideSources.genesis,
+              guideSources.victory,
+              guideSources.vos,
+              guideSources.goodTaste,
+              guideSources.fare,
+              guideSources.taxi,
+            ]}
+          />
         </div>
       </section>
 
