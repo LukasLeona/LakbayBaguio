@@ -15,10 +15,12 @@ import {
   ShieldCheck,
   Trees,
 } from "lucide-react";
+import { GuideDisclosure, GuideFactGrid, GuideSourceList } from "@/components/guide-data";
 import { pageMetadata, serializeJsonLd, SITE_URL } from "@/lib/seo";
+import { formatPeso, GUIDE_REVIEW_LABEL, guideSources, sampleTripAssumptions } from "@/lib/travel-guide-data";
 
 const canonicalPath = "/guides/where-to-stay-in-baguio";
-const publishedDate = "2026-10-02";
+const publishedDate = "2026-10-03";
 const officialStayDirectory = "https://visita.baguio.gov.ph/";
 
 export const metadata: Metadata = pageMetadata({
@@ -170,13 +172,38 @@ export default function WhereToStayInBaguioPage() {
             your bus terminal, the city&apos;s hills, and what happens to your luggage before check-in and after checkout.
           </p>
           <div className="seo-guide-meta">
-            <span><Clock3 size={16} /> Reviewed October 2, 2026</span>
+            <span><Clock3 size={16} /> Reviewed {GUIDE_REVIEW_LABEL}</span>
             <span><Footprints size={16} /> Written for DIY travelers without a car</span>
           </div>
           <div className="seo-guide-actions">
             <Link className="button lime" href="/explore?type=hotel">Browse Baguio stays <ArrowRight size={18} /></Link>
             <Link className="button dark" href="/plan">Plan around my hotel <Route size={18} /></Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section guide-trip-snapshot" aria-labelledby="stay-example-title">
+        <div className="shell">
+          <div className="section-heading">
+            <span className="eyebrow"><Hotel size={15} /> Real booking example</span>
+            <h2 id="stay-example-title">A sample two-night Baguio stay at {formatPeso(sampleTripAssumptions.stayRate)} per night</h2>
+            <p>
+              To make the budget concrete, our 3D2N example uses {sampleTripAssumptions.room} for two adults on weekdays.
+              The published example is {formatPeso(sampleTripAssumptions.stayRate)} per room per night, or
+              {` ${formatPeso(sampleTripAssumptions.stayRate * sampleTripAssumptions.stayNights)} for two nights`} before any changed quote or add-on.
+            </p>
+          </div>
+          <GuideFactGrid facts={[
+            { label: "Example room", value: sampleTripAssumptions.room, detail: "A transparent reference—not a universal Baguio rate", icon: <BedDouble size={19} /> },
+            { label: "Two-night total", value: formatPeso(sampleTripAssumptions.stayRate * sampleTripAssumptions.stayNights), detail: "₱1,000 each when two travelers split the room", icon: <Hotel size={19} /> },
+            { label: "How to book", value: "Direct inquiry", detail: "Use the property website or its linked Messenger contact", icon: <ShieldCheck size={19} /> },
+            { label: "Location check", value: "92-P Valenzuela St.", detail: "Open the exact entrance and inspect the walk before paying", icon: <MapPin size={19} /> },
+          ]} />
+          <GuideDisclosure>
+            Baguio Buddy has no sponsorship or booking relationship with this property. It is included only as a traceable worked example.
+            Availability, occupancy rules, weekday/weekend definitions, deposits, and final quotes can change. Verify registration through
+            Baguio VISITA and obtain written confirmation directly from the property.
+          </GuideDisclosure>
         </div>
       </section>
 
@@ -234,6 +261,10 @@ export default function WhereToStayInBaguioPage() {
             {faqs.map((faq) => <article key={faq.question}><h3>{faq.question}</h3><p>{faq.answer}</p></article>)}
           </div>
         </div>
+      </section>
+
+      <section className="section" aria-label="Accommodation sources">
+        <div className="shell"><GuideSourceList reviewed={GUIDE_REVIEW_LABEL} sources={[guideSources.visita, guideSources.vos]} /></div>
       </section>
 
       <section className="section seo-guide-related" aria-labelledby="stay-next-title">
