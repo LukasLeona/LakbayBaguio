@@ -10,11 +10,24 @@ import {
   Clock3,
   MapPinned,
   Route,
+  Ticket,
   Utensils,
+  WalletCards,
 } from "lucide-react";
+import { GuideCostTable, GuideDisclosure, GuideFactGrid } from "@/components/guide-data";
+import {
+  formatPeso,
+  GUIDE_REVIEW_LABEL,
+  sampleBasePerPerson,
+  sampleBaseTotal,
+  sampleReadyPerPerson,
+  sampleReadyTotal,
+  sampleTripAssumptions,
+  sampleTripCosts,
+} from "@/lib/travel-guide-data";
 
 const canonicalUrl = "https://baguiobuddy.com/guides/baguio-itinerary-3-days-2-nights";
-const updatedDate = "2026-09-29";
+const updatedDate = "2026-10-03";
 
 export const metadata: Metadata = {
   title: "Baguio Itinerary 3 Days 2 Nights: DIY Commuter Guide",
@@ -167,13 +180,43 @@ export default function BaguioThreeDayItineraryPage() {
             that every stop will fit every travel date.
           </p>
           <div className="seo-guide-meta">
-            <span><Clock3 size={16} /> Updated September 29, 2026</span>
+            <span><Clock3 size={16} /> Updated {GUIDE_REVIEW_LABEL}</span>
             <span><BusFront size={16} /> Best for DIY travelers without a car</span>
           </div>
           <div className="seo-guide-actions">
             <Link className="button lime" href="/plan">Build your own Baguio itinerary <ArrowRight size={18} /></Link>
             <Link className="button dark" href="/tourist-spots">Compare tourist spots</Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section guide-trip-snapshot" aria-labelledby="sample-cost-title">
+        <div className="shell">
+          <div className="section-heading">
+            <span className="eyebrow"><WalletCards size={15} /> Sample trip cost first</span>
+            <h2 id="sample-cost-title">A 3D2N Baguio trip can cost about {formatPeso(sampleBasePerPerson)} per person</h2>
+            <p>
+              This worked example is for two adults traveling on non-holiday weekdays, sharing one room, commuting without a car,
+              and following the sample itinerary below. The base total is {formatPeso(sampleBaseTotal)} for two; a more prepared
+              total with shopping and a contingency fund is {formatPeso(sampleReadyTotal)}, or {formatPeso(sampleReadyPerPerson)} each.
+            </p>
+          </div>
+          <GuideFactGrid facts={[
+            { label: "Base trip for 2", value: formatPeso(sampleBaseTotal), detail: "Bus, shared room, food, local transport, and selected admissions", icon: <WalletCards size={19} /> },
+            { label: "Stay example", value: `${formatPeso(sampleTripAssumptions.stayRate)}/night`, detail: `${sampleTripAssumptions.room}; 2 weekday nights`, icon: <BedDouble size={19} /> },
+            { label: "Round-trip bus", value: `${formatPeso(sampleTripAssumptions.busFareEachWay * 2)}/person`, detail: `${sampleTripAssumptions.bus} planning example`, icon: <BusFront size={19} /> },
+            { label: "Admissions", value: "₱285/person", detail: "Selected paid-stop allowances; free public areas excluded", icon: <Ticket size={19} /> },
+          ]} />
+          <GuideDisclosure>
+            This is a transparent sample, not a package price or booking promise. The featured stay and restaurant are independent examples,
+            not sponsors. Rates, availability, entrance policies, menus, bus classes, and storage fees can change; replace every allowance
+            with a live quote for your dates before paying.
+          </GuideDisclosure>
+          <div className="section-heading guide-subheading">
+            <span className="eyebrow">Where the total goes</span>
+            <h2>Sample expenses for two travelers</h2>
+          </div>
+          <GuideCostTable costs={sampleTripCosts} caption="Sample Baguio 3 days and 2 nights expenses for two travelers" />
         </div>
       </section>
 

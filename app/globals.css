@@ -2445,6 +2445,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .guide-source-list small { margin-top: 3px; color: var(--lime); font-size: .54rem; }
   .guide-source-list p { margin: 7px 0 0; color: rgba(255,255,255,.56); font-size: .58rem; line-height: 1.45; }
   .guide-source-list svg { flex: 0 0 auto; color: rgba(255,255,255,.5); }
+  .guide-trip-snapshot { background: linear-gradient(180deg, rgba(232,239,228,.7), rgba(255,253,245,0)); }
+  .guide-subheading { margin-top: 42px; }
 
   .seo-hub-group-list {
     display: grid;
