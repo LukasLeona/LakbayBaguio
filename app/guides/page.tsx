@@ -13,11 +13,14 @@ import {
   Route,
   SearchCheck,
   Sparkles,
+  WalletCards,
 } from "lucide-react";
+import { GuideFactGrid } from "@/components/guide-data";
 import { pageMetadata, serializeJsonLd, SITE_URL } from "@/lib/seo";
+import { formatPeso, GUIDE_REVIEW_LABEL, sampleBasePerPerson, sampleBaseTotal, sampleReadyPerPerson } from "@/lib/travel-guide-data";
 
 const canonicalPath = "/guides";
-const reviewedDate = "2026-10-02";
+const reviewedDate = "2026-10-03";
 
 export const metadata: Metadata = pageMetadata({
   title: "Baguio Travel Guides: Itinerary, Tourist Spots, Commute & Budget",
@@ -159,7 +162,7 @@ export default function GuidesPage() {
             Every guide is written for first-time visitors who want a useful route—not only a long list of places.
           </p>
           <div className="seo-guide-meta">
-            <span><Clock3 size={16} /> Reviewed October 2, 2026</span>
+            <span><Clock3 size={16} /> Reviewed {GUIDE_REVIEW_LABEL}</span>
             <span><SearchCheck size={16} /> Helpful answers in one place</span>
           </div>
           <div className="seo-guide-actions">
@@ -169,12 +172,34 @@ export default function GuidesPage() {
         </div>
       </section>
 
+      <section className="section guide-library-start" aria-labelledby="guide-start-title">
+        <div className="shell">
+          <div className="section-heading split">
+            <div>
+              <span className="eyebrow"><WalletCards size={15} /> Start with a real trip</span>
+              <h2 id="guide-start-title">A complete 3D2N planning example, not a collection of vague tips</h2>
+              <p>
+                Our worked example follows two adults on a non-holiday weekday trip, with a booked-bus allowance,
+                a traceable room example, six main meals, local transport, and selected entrance fees.
+              </p>
+            </div>
+            <Link className="text-link" href="/guides/baguio-itinerary-3-days-2-nights">Open the complete example <ArrowRight size={16} /></Link>
+          </div>
+          <GuideFactGrid facts={[
+            { label: "Base total for 2", value: formatPeso(sampleBaseTotal), detail: `${formatPeso(sampleBasePerPerson)} each before optional shopping`, icon: <WalletCards size={19} /> },
+            { label: "Prepared target", value: `${formatPeso(sampleReadyPerPerson)}/person`, detail: "Includes a shopping cap and contingency fund", icon: <CircleDollarSign size={19} /> },
+            { label: "Trip format", value: "3 days / 2 nights", detail: "Two adults, one shared room, DIY commute", icon: <CalendarDays size={19} /> },
+            { label: "Source standard", value: "Dated + linked", detail: "Every changing price is labeled as a quote, range, or allowance", icon: <SearchCheck size={19} /> },
+          ]} />
+        </div>
+      </section>
+
       <section className="section" aria-labelledby="guide-library-title">
         <div className="shell">
           <div className="section-heading">
             <span className="eyebrow"><Route size={15} /> Choose your next answer</span>
             <h2 id="guide-library-title">Baguio guides for the questions travelers ask most</h2>
-            <p>Open the topic you need now, then use the related links at the end of each guide to continue planning.</p>
+            <p>Open the topic you need now. Each guide separates sourced facts from planning allowances and tells you what must be confirmed live.</p>
           </div>
           <div className="seo-guide-card-grid">
             {guides.map(({ title, description, href, label, icon: Icon }) => (
