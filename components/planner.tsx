@@ -409,6 +409,11 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       setStayMapError("Choose the exact property location again on the map.");
       return;
     }
+    if (verifiedStayMap?.sourceUrl === sourceUrl && verifiedStayMap.place.locationPrecision === "pin") {
+      setStayMapState("verified");
+      setStayMapError("");
+      return;
+    }
     const localName = local.name || stayName.trim();
     if (localName && local.locationPrecision === "pin") {
       setVerifiedStayMap({ sourceUrl, place: { ...local, name: localName, query: localName } });
@@ -440,7 +445,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [includeStay, stayMapsUrl, stayName]);
+  }, [includeStay, stayMapsUrl, stayName, verifiedStayMap]);
 
   useEffect(() => {
     const updateStep = () => {
@@ -519,12 +524,6 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   }
 
   function openStayLocationPicker() {
-    if (!stayName.trim()) {
-      setStayMapState("error");
-      setStayMapError("Enter the property name first, then choose its exact location on the map.");
-      focusPlannerField("stay-property-name");
-      return;
-    }
     setStayMapError("");
     setLocationPickerTarget("stay");
   }
@@ -545,10 +544,10 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       setToast("Your map pin is now the trip starting point.");
     } else if (locationPickerTarget === "stay") {
       const propertyName = stayName.trim();
-      const googleMapsUrl = canonicalGoogleMapsPlaceUrl(propertyName, coordinates.lat, coordinates.lng);
+      const googleMapsUrl = canonicalGoogleMapsPlaceUrl(propertyName || "Selected property", coordinates.lat, coordinates.lng);
       const parsed = parseGoogleMapsPlaceUrl(googleMapsUrl);
       if (parsed) {
-        const place = { ...parsed, name: propertyName, query: propertyName };
+        const place = { ...parsed, name: propertyName || null, query: propertyName || parsed.query };
         setStayMapsUrl(googleMapsUrl);
         setVerifiedStayMap({ sourceUrl: googleMapsUrl, place });
         setStayMapState("verified");
@@ -856,7 +855,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     <div className={`trip-planner ${initialView === "itinerary" ? "results-mode" : "editor-mode"}`}>
       {locationPickerTarget ? (
         <LocationPickerDialog
-          title={locationPickerTarget === "start" ? "Choose your Baguio starting point" : `Pin ${stayName.trim()}`}
+          title={locationPickerTarget === "start" ? "Choose your Baguio starting point" : stayName.trim() ? `Pin ${stayName.trim()}` : "Choose your property location"}
           description={locationPickerTarget === "start"
             ? "Move the map to the exact place where your itinerary should begin."
             : "Place the pin on the property entrance so directions, travel time, and check-in routing use the right point."}
@@ -916,9 +915,10 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                 onChooseFromMap={openStayLocationPicker}
                 onValueChange={(value) => {
                   setStayName(value);
-                  setStayMapsUrl("");
-                  setVerifiedStayMap(null);
-                  setStayMapState("idle");
+                  setVerifiedStayMap((current) => current?.sourceUrl === stayMapsUrl.trim()
+                    ? { ...current, place: { ...current.place, name: value.trim() || null, query: value.trim() || current.place.query } }
+                    : current);
+                  setStayMapState(stayMapsUrl.trim() ? "verified" : "idle");
                   setStayMapError("");
                   setSaved(false);
                 }}
@@ -951,7 +951,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                 <label className="planner-field"><span>Final departure point <small>optional</small></span><select value={departureLocationId} onChange={(event) => setDepartureLocationId(event.target.value)}><option value="">Not decided yet</option>{PLANNER_START_LOCATIONS.map((location) => <option value={location.id} key={location.id}>{location.name}</option>)}</select></label>
                 <label className="planner-field"><span>Bus / departure time <small>optional</small></span><input type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} disabled={!departureLocationId} /></label>
               </div>
-              {stayMapState === "verified" && currentVerifiedStay ? <p className="stay-map-status valid" aria-live="polite"><Check size={14} /> Exact property pin confirmed at {currentVerifiedStay.lat?.toFixed(5)}, {currentVerifiedStay.lng?.toFixed(5)}.</p> : stayMapState === "checking" ? <p className="stay-map-status checking" aria-live="polite"><LoaderCircle className="spin" size={14} /> Checking the saved property pin…</p> : stayMapError ? <p className="stay-map-status invalid" aria-live="polite"><AlertTriangle size={14} /> {stayMapError}</p> : <p className="stay-map-help"><MapPin size={14} /> Type the property name, then use the location button to choose its exact entrance.</p>}
+              {stayMapState === "verified" && currentVerifiedStay ? <p className="stay-map-status valid" aria-live="polite"><Check size={14} /> {stayName.trim() ? `Exact property pin confirmed at ${currentVerifiedStay.lat?.toFixed(5)}, ${currentVerifiedStay.lng?.toFixed(5)}.` : "Property pin saved. Add the property name to continue."}</p> : stayMapState === "checking" ? <p className="stay-map-status checking" aria-live="polite"><LoaderCircle className="spin" size={14} /> Checking the saved property pin…</p> : stayMapError ? <p className="stay-map-status invalid" aria-live="polite"><AlertTriangle size={14} /> {stayMapError}</p> : <p className="stay-map-help"><MapPin size={14} /> Choose the property pin first or enter its name first—either order works.</p>}
             </div> : null}
           </section>
 

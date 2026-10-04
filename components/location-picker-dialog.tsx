@@ -1,9 +1,10 @@
 "use client";
 
 import * as maplibregl from "maplibre-gl";
-import type { Map as MapLibreMap } from "maplibre-gl";
+import type { ErrorEvent as MapLibreErrorEvent, Map as MapLibreMap } from "maplibre-gl";
 import { Crosshair, LoaderCircle, MapPin, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { configureMapLibreWorker } from "@/lib/maplibre-config";
 
 export type LocationPickerValue = {
   lat: number;
@@ -52,6 +53,8 @@ export function LocationPickerDialog({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [coordinates, setCoordinates] = useState(initialValue);
   const [locating, setLocating] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState("");
   const [locationError, setLocationError] = useState("");
   const insideSupportedArea = isInsideSupportedArea(coordinates);
 
@@ -74,6 +77,8 @@ export function LocationPickerDialog({
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
+    configureMapLibreWorker();
+
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: process.env.NEXT_PUBLIC_MAP_STYLE_URL || OPEN_FREE_MAP_STYLE,
@@ -94,12 +99,34 @@ export function LocationPickerDialog({
       setCoordinates({ lat: center.lat, lng: center.lng });
     };
 
+    const markMapReady = () => {
+      setMapReady(true);
+      setMapError("");
+      map.resize();
+    };
+
+    const reportMapError = (event: MapLibreErrorEvent) => {
+      const message = event.error?.message ?? "";
+      if (/style|source|tile|worker|fetch/i.test(message)) {
+        setMapError("The map could not finish loading. Check your connection, then reopen the map.");
+      }
+    };
+
     map.on("move", syncCoordinates);
-    map.once("load", () => map.resize());
+    map.once("idle", markMapReady);
+    map.on("error", reportMapError);
     mapRef.current = map;
 
+    const loadTimeout = window.setTimeout(() => {
+      if (!map.loaded()) {
+        setMapError("The map is taking too long to load. Check your connection, then reopen the map.");
+      }
+    }, 12_000);
+
     return () => {
+      window.clearTimeout(loadTimeout);
       map.off("move", syncCoordinates);
+      map.off("error", reportMapError);
       map.remove();
       mapRef.current = null;
     };
@@ -161,6 +188,7 @@ export function LocationPickerDialog({
 
         <div className="location-picker-map-wrap">
           <div ref={mapContainerRef} className="location-picker-map" aria-label="Interactive map of Baguio" />
+          {!mapReady ? <div className={`location-picker-map-loading ${mapError ? "failed" : ""}`} role="status"><LoaderCircle className={mapError ? "" : "spin"} aria-hidden="true" /><span><strong>{mapError ? "Map unavailable" : "Loading the Baguio map"}</strong><small>{mapError || "Roads and places will appear in a moment."}</small></span></div> : null}
           <div className="location-picker-center-pin" aria-hidden="true">
             <MapPin />
             <span />

@@ -3,6 +3,7 @@
 import * as maplibregl from "maplibre-gl";
 import type { Map as MapLibreMap, Marker, StyleSpecification } from "maplibre-gl";
 import { useEffect, useRef } from "react";
+import { configureMapLibreWorker } from "@/lib/maplibre-config";
 
 export type MapTraveler = {
   user_id: string;
@@ -32,6 +33,7 @@ export function NearbyMap({ travelers, ownLocation }: { travelers: MapTraveler[]
 
   useEffect(() => {
     if (!container.current || mapRef.current) return;
+    configureMapLibreWorker();
     const map = new maplibregl.Map({
       container: container.current,
       style: process.env.NEXT_PUBLIC_MAP_STYLE_URL || openStreetMapStyle,

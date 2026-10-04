@@ -4984,6 +4984,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .location-picker-header > button svg { width: 18px; }
 .location-picker-map-wrap { position: relative; min-height: 390px; overflow: hidden; border-block: 1px solid #dfe5db; background: #dfe8df; }
 .location-picker-map { position: absolute; inset: 0; }
+.location-picker-map-loading { position: absolute; z-index: 3; inset: 0; display: flex; align-items: center; justify-content: center; gap: 11px; padding: 30px; color: var(--pine-900); background: rgba(247,245,239,.9); text-align: left; backdrop-filter: blur(3px); }
+.location-picker-map-loading > svg { width: 24px; flex: 0 0 auto; }
+.location-picker-map-loading > span { display: grid; gap: 4px; }
+.location-picker-map-loading strong { font-size: .66rem; }
+.location-picker-map-loading small { max-width: 320px; color: var(--muted); font-size: .53rem; line-height: 1.45; }
+.location-picker-map-loading.failed { color: #9a4438; background: rgba(255,247,244,.94); }
 .location-picker-center-pin { position: absolute; z-index: 4; top: 50%; left: 50%; display: grid; place-items: center; pointer-events: none; transform: translate(-50%, -100%); filter: drop-shadow(0 6px 7px rgba(3,29,21,.28)); }
 .location-picker-center-pin svg { width: 48px; height: 48px; padding: 5px; color: var(--pine-950); fill: var(--lime); }
 .location-picker-center-pin span { position: absolute; bottom: -7px; width: 25px; height: 8px; border-radius: 50%; background: rgba(3,29,21,.2); filter: blur(2px); }
