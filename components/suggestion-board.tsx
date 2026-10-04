@@ -15,10 +15,10 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureAnonymousIdentity, getSupabaseBrowserClient, isCommunityConfigured } from "@/lib/supabase/client";
 import { officialSuggestionReply } from "@/lib/suggestion-replies";
-import { TurnstileWidget, turnstileEnabled } from "./turnstile-widget";
+import { TurnstileWidget, turnstileEnabled, type TurnstileWidgetHandle } from "./turnstile-widget";
 
 type SuggestionCategory = "feature" | "improvement" | "content" | "accessibility" | "bug";
 type SortMode = "top" | "new";
@@ -58,6 +58,7 @@ function readableError(error: unknown) {
   const message = error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String(error.message) : "Something went wrong.";
   if (message.includes("Suggestion limit reached")) return "You’ve shared three ideas this hour. Give the board a little breather, then try again.";
   if (message.includes("Anonymous sign-in")) return "Complete the private security check first, then try again.";
+  if (message.toLowerCase().includes("captcha")) return "We couldn’t verify this action. Please try again.";
   return message;
 }
 
@@ -83,11 +84,13 @@ export function SuggestionBoard() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [pendingVote, setPendingVote] = useState<string | null>(null);
+  const [voteSecurityFor, setVoteSecurityFor] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [needsSecurity, setNeedsSecurity] = useState(false);
   const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const [titleLength, setTitleLength] = useState(0);
   const [bodyLength, setBodyLength] = useState(0);
+  const voteSecurityRef = useRef<TurnstileWidgetHandle>(null);
 
   const loadSuggestions = useCallback(async () => {
     const client = getSupabaseBrowserClient();
@@ -128,19 +131,17 @@ export function SuggestionBoard() {
     votes: suggestions.reduce((sum, suggestion) => sum + suggestion.vote_count, 0),
   }), [suggestions]);
 
-  async function ensureIdentity({ requireSecurity = true }: { requireSecurity?: boolean } = {}) {
+  async function ensureIdentity() {
     const client = getSupabaseBrowserClient();
     if (!client) throw new Error("The community database is not configured yet.");
     const { data } = await client.auth.getSession();
-    if (!data.session && requireSecurity && turnstileEnabled && !turnstileToken) {
+    if (!data.session && turnstileEnabled && !turnstileToken) {
       setNeedsSecurity(true);
       throw new Error("Anonymous sign-in is required");
     }
-    await ensureAnonymousIdentity(client, requireSecurity ? turnstileToken || undefined : undefined);
-    if (requireSecurity) {
-      setNeedsSecurity(false);
-      setTurnstileToken("");
-    }
+    await ensureAnonymousIdentity(client, turnstileToken || undefined);
+    setNeedsSecurity(false);
+    setTurnstileToken("");
     return client;
   }
 
@@ -172,11 +173,11 @@ export function SuggestionBoard() {
     }
   }
 
-  async function toggleVote(suggestionId: string) {
-    setPendingVote(suggestionId);
-    setNotice(null);
+  const completeVote = useCallback(async (suggestionId: string, captchaToken?: string) => {
     try {
-      const client = await ensureIdentity({ requireSecurity: false });
+      const client = getSupabaseBrowserClient();
+      if (!client) throw new Error("The community database is not configured yet.");
+      await ensureAnonymousIdentity(client, captchaToken);
       const { data, error } = await client.rpc("toggle_suggestion_vote", { p_suggestion_id: suggestionId });
       if (error) throw error;
       const voted = Boolean(data);
@@ -188,6 +189,42 @@ export function SuggestionBoard() {
     } catch (error) {
       setNotice({ kind: "error", text: readableError(error) });
     } finally {
+      setVoteSecurityFor(null);
+      setPendingVote(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (voteSecurityFor) voteSecurityRef.current?.execute();
+  }, [voteSecurityFor]);
+
+  const handleVoteToken = useCallback((token: string) => {
+    if (!token || !voteSecurityFor) return;
+    void completeVote(voteSecurityFor, token);
+  }, [completeVote, voteSecurityFor]);
+
+  const handleVoteSecurityError = useCallback(() => {
+    setVoteSecurityFor(null);
+    setPendingVote(null);
+    setNotice({ kind: "error", text: "We couldn’t verify your vote. Please tap Upvote and try again." });
+  }, []);
+
+  async function toggleVote(suggestionId: string) {
+    if (pendingVote) return;
+    setPendingVote(suggestionId);
+    setNotice(null);
+    try {
+      const client = getSupabaseBrowserClient();
+      if (!client) throw new Error("The community database is not configured yet.");
+      const { data, error } = await client.auth.getSession();
+      if (error) throw error;
+      if (!data.session && turnstileEnabled) {
+        setVoteSecurityFor(suggestionId);
+        return;
+      }
+      await completeVote(suggestionId);
+    } catch (error) {
+      setNotice({ kind: "error", text: readableError(error) });
       setPendingVote(null);
     }
   }
@@ -296,11 +333,25 @@ export function SuggestionBoard() {
                     ) : null}
                     <footer>
                       <span><ShieldCheck /> Anonymous traveler · {friendlyDate(suggestion.created_at)}</span>
-                      <button type="button" className={suggestion.has_voted ? "voted" : ""} disabled={pendingVote === suggestion.id} onClick={() => void toggleVote(suggestion.id)} aria-label={`${suggestion.has_voted ? "Remove upvote from" : "Upvote"} ${suggestion.title}`}>
+                      <button type="button" className={suggestion.has_voted ? "voted" : ""} disabled={pendingVote !== null} onClick={() => void toggleVote(suggestion.id)} aria-label={`${suggestion.has_voted ? "Remove upvote from" : "Upvote"} ${suggestion.title}`}>
                         {pendingVote === suggestion.id ? <LoaderCircle className="spin" /> : <ArrowUp />}
                         <strong>{suggestion.vote_count}</strong><small>{suggestion.has_voted ? "Upvoted" : "Upvote"}</small>
                       </button>
                     </footer>
+                    {voteSecurityFor === suggestion.id ? (
+                      <div className="suggestion-vote-security" role="status">
+                        <span>Verifying your vote…</span>
+                        <TurnstileWidget
+                          ref={voteSecurityRef}
+                          action="suggestion_vote"
+                          appearance="interaction-only"
+                          execution="execute"
+                          label="A quick automatic check keeps voting fair."
+                          onError={handleVoteSecurityError}
+                          onToken={handleVoteToken}
+                        />
+                      </div>
+                    ) : null}
                   </article>
                 );
               })}

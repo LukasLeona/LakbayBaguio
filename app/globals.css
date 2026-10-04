@@ -4346,6 +4346,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .suggestion-card footer button small { font-size: .56rem; font-weight: 700; }
 .suggestion-card footer button.voted { color: var(--pine-950); border-color: #c3d230; background: var(--lime); box-shadow: 0 8px 18px rgba(156,170,33,.15); }
 .suggestion-card footer button:disabled { cursor: wait; opacity: .62; }
+.suggestion-vote-security { margin-top: 12px; padding: 10px 12px; border: 1px solid rgba(23,78,61,.12); border-radius: 15px; background: #f6f8f0; }
+.suggestion-vote-security > span { display: block; color: var(--pine-800); font-size: .57rem; font-weight: 800; }
+.suggestion-vote-security .turnstile-field { margin: 6px 0 0; }
 .suggestion-loading { display: grid; gap: 13px; }
 .suggestion-loading i { height: 172px; border-radius: 26px; background: linear-gradient(90deg, rgba(255,255,255,.5), rgba(255,255,255,.95), rgba(255,255,255,.5)); background-size: 220% 100%; animation: suggestion-shimmer 1.2s linear infinite; }
 @keyframes suggestion-shimmer { to { background-position: -220% 0; } }
