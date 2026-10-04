@@ -45,6 +45,12 @@ export function NearbyExperience() {
   const [outsideBaguio, setOutsideBaguio] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [needsCaptcha, setNeedsCaptcha] = useState(false);
+  const [highlightSecurity, setHighlightSecurity] = useState(false);
+
+  const handleCaptchaToken = useCallback((token: string) => {
+    setCaptchaToken(token);
+    if (token) setHighlightSecurity(false);
+  }, []);
 
   const refreshTravelers = useCallback(async () => {
     const client = getSupabaseBrowserClient();
@@ -106,7 +112,8 @@ export function NearbyExperience() {
     }
     if (!navigator.geolocation) { setStatus("Location is not supported by this browser."); return; }
     if (needsCaptcha && !captchaToken) {
-      setStatus("Complete the quick security check before turning on radar.");
+      setHighlightSecurity(true);
+      setStatus("Complete the security check above, then tap Find people nearby again.");
       return;
     }
     setBusy(true);
@@ -125,6 +132,7 @@ export function NearbyExperience() {
         const identity = await ensureAnonymousIdentity(client, captchaToken || undefined);
         setAlias(identity.alias);
         setNeedsCaptcha(false);
+        setHighlightSecurity(false);
         const { error } = await client.rpc("upsert_presence", { p_latitude: location.lat, p_longitude: location.lng, p_discoverable: true });
         if (error) throw error;
         setOwnLocation(location);
@@ -183,8 +191,12 @@ export function NearbyExperience() {
           {!visible ? (
             <>
               <label className="duration-field"><Clock3 size={16} /><span>Stay visible for</span><select value={duration} onChange={(event) => setDuration(Number(event.target.value))}><option value={15}>15 minutes</option><option value={30}>30 minutes</option><option value={60}>1 hour</option></select></label>
-              {needsCaptcha ? <TurnstileWidget action="nearby_radar" onToken={setCaptchaToken} /> : null}
-              <button type="button" className="button primary full" onClick={goVisible} disabled={busy || (needsCaptcha && !captchaToken)}><LocateFixed size={18} /> {busy ? "Locating…" : "Find people nearby"}</button>
+              {needsCaptcha ? (
+                <div className={highlightSecurity ? "nearby-security highlighted" : "nearby-security"}>
+                  <TurnstileWidget action="nearby_radar" onToken={handleCaptchaToken} />
+                </div>
+              ) : null}
+              <button type="button" className="button primary full" onClick={goVisible} disabled={busy}><LocateFixed size={18} /> {busy ? "Locating…" : "Find people nearby"}</button>
             </>
           ) : (
             <div className="active-controls"><span><Clock3 size={15} /> Visible for {remainingLabel}</span><button type="button" onClick={() => void goOffline()}>{configured ? "Go offline" : "Hide preview"}</button></div>

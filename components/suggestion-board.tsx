@@ -128,17 +128,19 @@ export function SuggestionBoard() {
     votes: suggestions.reduce((sum, suggestion) => sum + suggestion.vote_count, 0),
   }), [suggestions]);
 
-  async function ensureIdentity() {
+  async function ensureIdentity({ requireSecurity = true }: { requireSecurity?: boolean } = {}) {
     const client = getSupabaseBrowserClient();
     if (!client) throw new Error("The community database is not configured yet.");
     const { data } = await client.auth.getSession();
-    if (!data.session && turnstileEnabled && !turnstileToken) {
+    if (!data.session && requireSecurity && turnstileEnabled && !turnstileToken) {
       setNeedsSecurity(true);
       throw new Error("Anonymous sign-in is required");
     }
-    await ensureAnonymousIdentity(client, turnstileToken || undefined);
-    setNeedsSecurity(false);
-    setTurnstileToken("");
+    await ensureAnonymousIdentity(client, requireSecurity ? turnstileToken || undefined : undefined);
+    if (requireSecurity) {
+      setNeedsSecurity(false);
+      setTurnstileToken("");
+    }
     return client;
   }
 
@@ -174,7 +176,7 @@ export function SuggestionBoard() {
     setPendingVote(suggestionId);
     setNotice(null);
     try {
-      const client = await ensureIdentity();
+      const client = await ensureIdentity({ requireSecurity: false });
       const { data, error } = await client.rpc("toggle_suggestion_vote", { p_suggestion_id: suggestionId });
       if (error) throw error;
       const voted = Boolean(data);
