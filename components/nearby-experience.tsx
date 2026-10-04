@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { Clock3, LocateFixed, LockKeyhole, MapPin, MessageCircle, Navigation, Radio, ShieldCheck, Users, WifiOff, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { NearbyMap, type MapTraveler } from "./nearby-map";
 import { TravelerAvatar } from "./traveler-avatar";
 import { ensureAnonymousIdentity, getSupabaseBrowserClient, isCommunityConfigured } from "@/lib/supabase/client";
 import { UnreadBadge } from "./chat-notifications";
-import { TurnstileWidget, turnstileEnabled } from "./turnstile-widget";
+import { TurnstileWidget, turnstileEnabled, type TurnstileWidgetHandle } from "./turnstile-widget";
 
 type Traveler = MapTraveler & { distance_band: string; last_seen: string };
+type Coordinates = { lat: number; lng: number };
 
 const previewTravelers: Traveler[] = [
   { user_id: "preview-1", alias: "MistyHiker27", avatar_seed: 1, distance_band: "Less than 500 m", last_seen: new Date().toISOString(), display_latitude: 16.414, display_longitude: 120.594 },
@@ -34,7 +35,7 @@ export function NearbyExperience() {
   const configured = isCommunityConfigured();
   const router = useRouter();
   const [travelers, setTravelers] = useState<Traveler[]>(configured ? [] : previewTravelers);
-  const [ownLocation, setOwnLocation] = useState<{ lat: number; lng: number } | null>(configured ? null : { lat: 16.4117, lng: 120.598 });
+  const [ownLocation, setOwnLocation] = useState<Coordinates | null>(configured ? null : { lat: 16.4117, lng: 120.598 });
   const [alias, setAlias] = useState(configured ? "Anonymous traveler" : "PreviewPine31");
   const [visible, setVisible] = useState(!configured);
   const [duration, setDuration] = useState(30);
@@ -45,11 +46,18 @@ export function NearbyExperience() {
   const [outsideBaguio, setOutsideBaguio] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [needsCaptcha, setNeedsCaptcha] = useState(false);
-  const [highlightSecurity, setHighlightSecurity] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<Coordinates | null>(null);
+  const radarSecurityRef = useRef<TurnstileWidgetHandle>(null);
 
   const handleCaptchaToken = useCallback((token: string) => {
     setCaptchaToken(token);
-    if (token) setHighlightSecurity(false);
+  }, []);
+
+  const handleCaptchaError = useCallback(() => {
+    setNeedsCaptcha(false);
+    setPendingLocation(null);
+    setBusy(false);
+    setStatus("The security check couldn’t load. Check your connection and try again.");
   }, []);
 
   const refreshTravelers = useCallback(async () => {
@@ -60,6 +68,29 @@ export function NearbyExperience() {
     setTravelers((data || []) as Traveler[]);
   }, []);
 
+  const activateNearby = useCallback(async (location: Coordinates, token?: string) => {
+    try {
+      const client = getSupabaseBrowserClient();
+      if (!client) throw new Error("Community database unavailable");
+      const identity = await ensureAnonymousIdentity(client, token);
+      setAlias(identity.alias);
+      const { error } = await client.rpc("upsert_presence", { p_latitude: location.lat, p_longitude: location.lng, p_discoverable: true });
+      if (error) throw error;
+      setOwnLocation(location);
+      setVisible(true);
+      setExpiresAt(Date.now() + duration * 60_000);
+      setStatus("You’re discoverable. Others only see an approximate map area.");
+      await refreshTravelers();
+    } catch {
+      setStatus("We couldn’t start Nearby. Please try again.");
+    } finally {
+      setCaptchaToken("");
+      setNeedsCaptcha(false);
+      setPendingLocation(null);
+      setBusy(false);
+    }
+  }, [duration, refreshTravelers]);
+
   useEffect(() => {
     if (!configured) return;
     let cancelled = false;
@@ -68,10 +99,7 @@ export function NearbyExperience() {
       if (!client) return;
       try {
         const { data: authData } = await client.auth.getUser();
-        if (!authData.user && turnstileEnabled) {
-          if (!cancelled) setNeedsCaptcha(true);
-          return;
-        }
+        if (!authData.user) return;
         const identity = await ensureAnonymousIdentity(client);
         if (!cancelled) setAlias(identity.alias);
       } catch {
@@ -81,6 +109,18 @@ export function NearbyExperience() {
     void initialize();
     return () => { cancelled = true; };
   }, [configured]);
+
+  useEffect(() => {
+    if (needsCaptcha && pendingLocation && !captchaToken) radarSecurityRef.current?.execute();
+  }, [captchaToken, needsCaptcha, pendingLocation]);
+
+  useEffect(() => {
+    if (!captchaToken || !pendingLocation) return;
+    const location = pendingLocation;
+    setPendingLocation(null);
+    setNeedsCaptcha(false);
+    void activateNearby(location, captchaToken);
+  }, [activateNearby, captchaToken, pendingLocation]);
 
   useEffect(() => {
     if (!configured || !visible || !ownLocation) return;
@@ -111,11 +151,6 @@ export function NearbyExperience() {
       return;
     }
     if (!navigator.geolocation) { setStatus("Location is not supported by this browser."); return; }
-    if (needsCaptcha && !captchaToken) {
-      setHighlightSecurity(true);
-      setStatus("Complete the security check above, then tap Find people nearby again.");
-      return;
-    }
     setBusy(true);
     setStatus("Getting your location…");
     navigator.geolocation.getCurrentPosition(async (position) => {
@@ -128,21 +163,20 @@ export function NearbyExperience() {
       }
       try {
         const client = getSupabaseBrowserClient();
-        if (!client) return;
-        const identity = await ensureAnonymousIdentity(client, captchaToken || undefined);
-        setAlias(identity.alias);
-        setNeedsCaptcha(false);
-        setHighlightSecurity(false);
-        const { error } = await client.rpc("upsert_presence", { p_latitude: location.lat, p_longitude: location.lng, p_discoverable: true });
+        if (!client) throw new Error("Community database unavailable");
+        const { data, error } = await client.auth.getSession();
         if (error) throw error;
-        setOwnLocation(location);
-        setVisible(true);
-        setExpiresAt(Date.now() + duration * 60_000);
-        setStatus("You’re discoverable. Others only see an approximate map area.");
-        await refreshTravelers();
+        if (!data.session && turnstileEnabled) {
+          setPendingLocation(location);
+          setNeedsCaptcha(true);
+          setStatus("You’re in Baguio. Completing a quick safety check…");
+          return;
+        }
+        await activateNearby(location);
       } catch {
-        setStatus("We couldn’t start Nearby. Check the community setup and try again.");
-      } finally { setBusy(false); }
+        setStatus("We couldn’t start Nearby. Please try again.");
+        setBusy(false);
+      }
     }, () => { setStatus("Location permission is needed to find people nearby."); setBusy(false); }, { enableHighAccuracy: false, timeout: 12_000, maximumAge: 30_000 });
   }
 
@@ -192,11 +226,19 @@ export function NearbyExperience() {
             <>
               <label className="duration-field"><Clock3 size={16} /><span>Stay visible for</span><select value={duration} onChange={(event) => setDuration(Number(event.target.value))}><option value={15}>15 minutes</option><option value={30}>30 minutes</option><option value={60}>1 hour</option></select></label>
               {needsCaptcha ? (
-                <div className={highlightSecurity ? "nearby-security highlighted" : "nearby-security"}>
-                  <TurnstileWidget action="nearby_radar" onToken={handleCaptchaToken} />
+                <div className="nearby-security">
+                  <TurnstileWidget
+                    ref={radarSecurityRef}
+                    action="nearby_radar"
+                    appearance="interaction-only"
+                    execution="execute"
+                    label="A quick automatic check protects nearby travelers."
+                    onError={handleCaptchaError}
+                    onToken={handleCaptchaToken}
+                  />
                 </div>
               ) : null}
-              <button type="button" className="button primary full" onClick={goVisible} disabled={busy}><LocateFixed size={18} /> {busy ? "Locating…" : "Find people nearby"}</button>
+              <button type="button" className="button primary full" onClick={goVisible} disabled={busy}><LocateFixed size={18} /> {busy ? needsCaptcha ? "Checking…" : "Locating…" : "Find people nearby"}</button>
             </>
           ) : (
             <div className="active-controls"><span><Clock3 size={15} /> Visible for {remainingLabel}</span><button type="button" onClick={() => void goOffline()}>{configured ? "Go offline" : "Hide preview"}</button></div>
