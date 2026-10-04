@@ -601,7 +601,7 @@ export function validatePlannerRequest(
       issues.push({
         field: "stay.googleMapsUrl",
         code: "invalid",
-        message: "Paste a valid Google Maps place or share link for your stay.",
+        message: "Choose the exact hotel or Airbnb location on the map.",
       });
     }
     if (

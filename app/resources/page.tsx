@@ -138,7 +138,7 @@ export default function ResourcesPage() {
           </header>
           <div className="map-resource-grid">
             <article><strong>Stay suggestions</strong><p>Accommodation suggestions help you find a property quickly. You can still type any hotel or Airbnb name yourself.</p></article>
-            <article><strong>Exact property location</strong><p>Paste the property’s Google Maps place or Share link so check-in, checkout, and route estimates use the correct pin.</p></article>
+            <article><strong>Exact property location</strong><p>Use the location button beside the property name, then place the pin on the entrance so check-in, checkout, and route estimates use the correct coordinates.</p></article>
             <article><strong>Live conditions</strong><p>Confirm traffic, temporary closures, opening hours, and the public entrance shortly before each trip leg.</p></article>
           </div>
         </section>

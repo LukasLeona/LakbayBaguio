@@ -11,7 +11,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  Crosshair,
   ExternalLink,
   House,
   LoaderCircle,
@@ -20,18 +19,20 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ItineraryResults } from "@/components/itinerary-results";
 import { ItineraryReviewDialog } from "@/components/itinerary-review-dialog";
 import { StayAutocomplete } from "@/components/stay-autocomplete";
 import {
+  BAGUIO_CENTER,
   createPlannerStay,
-  googleMapsStaySearchUrl,
   parseGoogleMapsPlaceUrl,
   resolveGoogleMapsPlaceUrl,
   type ParsedGoogleMapsPlace,
 } from "@/lib/google-maps-place";
+import { canonicalGoogleMapsPlaceUrl } from "@/lib/stay-places";
 import {
   DEFAULT_PLANNER_SETTINGS,
   PLANNER_CATEGORY_ORDER,
@@ -82,6 +83,11 @@ import { isPlannedItinerary } from "@/lib/shared-itinerary";
 
 const DRAFT_STORAGE_KEY = "lakbay-baguio-planner";
 
+const LocationPickerDialog = dynamic(
+  () => import("@/components/location-picker-dialog").then((module) => module.LocationPickerDialog),
+  { ssr: false },
+);
+
 function requestRouteLocations(request: PlannerRequest): RouteEstimateLocation[] {
   return [
     request.start,
@@ -121,6 +127,7 @@ const MODES: { value: TransportMode; icon: string; label: string }[] = [
 
 type PlannerDraft = {
   startLocation?: string;
+  customStart?: StartLocation;
   tripDate?: string;
   tripDays?: string | number;
   startTime?: string;
@@ -142,6 +149,19 @@ type PlannerDraft = {
     departureTime: string;
   };
 };
+
+function isStoredCustomStart(value: unknown): value is StartLocation {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<StartLocation>;
+  return (
+    (candidate.id === "map-location" || candidate.id === "current-location") &&
+    typeof candidate.name === "string" &&
+    candidate.area === "City Center" &&
+    typeof candidate.lat === "number" && Number.isFinite(candidate.lat) &&
+    typeof candidate.lng === "number" && Number.isFinite(candidate.lng) &&
+    typeof candidate.googleQuery === "string"
+  );
+}
 
 function localDateValue() {
   const now = new Date();
@@ -238,7 +258,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<"checkoutTime" | "destinations" | "modes", string>>>({});
   const [toast, setToast] = useState("");
-  const [locating, setLocating] = useState(false);
+  const [locationPickerTarget, setLocationPickerTarget] = useState<"start" | "stay" | null>(null);
   const [generating, setGenerating] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [restored, setRestored] = useState(false);
@@ -259,7 +279,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
   }, [filter, query]);
 
   const selectedStart = useMemo(() => {
-    if (startLocationId === "current-location" && customStart) return customStart;
+    if (customStart && startLocationId === customStart.id) return customStart;
     return getPlannerStartLocationById(startLocationId) ?? PLANNER_START_LOCATIONS[0];
   }, [customStart, startLocationId]);
 
@@ -286,7 +306,12 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       const rawDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (rawDraft) {
         const draft = JSON.parse(rawDraft) as PlannerDraft;
-        if (draft.startLocation && getPlannerStartLocationById(draft.startLocation)) setStartLocationId(draft.startLocation);
+        if (isStoredCustomStart(draft.customStart) && draft.startLocation === draft.customStart.id) {
+          setCustomStart(draft.customStart);
+          setStartLocationId(draft.customStart.id);
+        } else if (draft.startLocation && getPlannerStartLocationById(draft.startLocation)) {
+          setStartLocationId(draft.startLocation);
+        }
         if (typeof draft.tripDate === "string") restoredDate = draft.tripDate;
         if (draft.tripDays !== undefined) setNumberOfDays(clamp(Number(draft.tripDays) || 2, 1, 5));
         if (typeof draft.startTime === "string") setStartTime(draft.startTime);
@@ -315,7 +340,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
         if (isPlannedItinerary(pending)) {
           setResult(pending);
           setSaved(true);
-          if (pending.start.id === "current-location") setCustomStart(pending.start);
+          if (!getPlannerStartLocationById(pending.start.id)) setCustomStart(pending.start);
           setStartLocationId(pending.start.id);
           restoredDate ||= pending.date;
           setNumberOfDays(pending.numberOfDays);
@@ -360,9 +385,9 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
 
   useEffect(() => {
     if (!restored) return;
-    const draft: PlannerDraft = { startLocation: startLocationId, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, checkOutTime, departureLocationId, departureTime } };
+    const draft: PlannerDraft = { startLocation: startLocationId, customStart: customStart ?? undefined, tripDate, tripDays: numberOfDays, startTime, tripHours: availableHours, travelers, selected: selectedIds, preference, modes, autoPickTheme, stay: { enabled: includeStay, kind: stayKind, name: stayName, googleMapsUrl: stayMapsUrl, checkInDay, checkInTime, checkOutTime, departureLocationId, departureTime } };
     try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)); } catch { /* Storage is optional. */ }
-  }, [autoPickTheme, availableHours, checkInDay, checkInTime, checkOutTime, departureLocationId, departureTime, includeStay, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
+  }, [autoPickTheme, availableHours, checkInDay, checkInTime, checkOutTime, customStart, departureLocationId, departureTime, includeStay, modes, numberOfDays, preference, restored, selectedIds, startLocationId, startTime, stayKind, stayMapsUrl, stayName, travelers, tripDate]);
 
   useEffect(() => {
     setCheckInDay((current) => Math.min(current, numberOfDays - 1));
@@ -381,7 +406,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     if (!local) {
       setVerifiedStayMap(null);
       setStayMapState("error");
-      setStayMapError("Paste a valid Google Maps place or share link.");
+      setStayMapError("Choose the exact property location again on the map.");
       return;
     }
     const localName = local.name || stayName.trim();
@@ -407,7 +432,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           if (controller.signal.aborted) return;
           setVerifiedStayMap(null);
           setStayMapState("error");
-          setStayMapError(resolutionError instanceof Error ? resolutionError.message : "We could not verify that Google Maps place.");
+          setStayMapError(resolutionError instanceof Error ? resolutionError.message : "We could not verify that property location.");
         });
     }, 550);
 
@@ -493,20 +518,46 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     setError("");
   }
 
-  function useCurrentLocation() {
-    if (!navigator.geolocation) { setToast("Location access is not supported by this browser."); return; }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        const current: StartLocation = { id: "current-location", name: "My current location", lat: coords.latitude, lng: coords.longitude, area: "City Center", googleQuery: `${coords.latitude},${coords.longitude}` };
-        setCustomStart(current);
-        setStartLocationId(current.id);
-        setLocating(false);
-        setToast("Your current location is now the starting point.");
-      },
-      () => { setLocating(false); setToast("We could not access your location. Choose a starting point instead."); },
-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 300_000 },
-    );
+  function openStayLocationPicker() {
+    if (!stayName.trim()) {
+      setStayMapState("error");
+      setStayMapError("Enter the property name first, then choose its exact location on the map.");
+      focusPlannerField("stay-property-name");
+      return;
+    }
+    setStayMapError("");
+    setLocationPickerTarget("stay");
+  }
+
+  function confirmMapLocation(coordinates: { lat: number; lng: number }) {
+    if (locationPickerTarget === "start") {
+      const custom: StartLocation = {
+        id: "map-location",
+        name: "Chosen map location",
+        lat: coordinates.lat,
+        lng: coordinates.lng,
+        area: "City Center",
+        customName: true,
+        googleQuery: `${coordinates.lat},${coordinates.lng}`,
+      };
+      setCustomStart(custom);
+      setStartLocationId(custom.id);
+      setToast("Your map pin is now the trip starting point.");
+    } else if (locationPickerTarget === "stay") {
+      const propertyName = stayName.trim();
+      const googleMapsUrl = canonicalGoogleMapsPlaceUrl(propertyName, coordinates.lat, coordinates.lng);
+      const parsed = parseGoogleMapsPlaceUrl(googleMapsUrl);
+      if (parsed) {
+        const place = { ...parsed, name: propertyName, query: propertyName };
+        setStayMapsUrl(googleMapsUrl);
+        setVerifiedStayMap({ sourceUrl: googleMapsUrl, place });
+        setStayMapState("verified");
+        setStayMapError("");
+        setToast("The exact property pin was saved.");
+      }
+    }
+    setSaved(false);
+    setLocationPickerTarget(null);
   }
 
   async function buildPlan(event: FormEvent<HTMLFormElement>) {
@@ -517,6 +568,20 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
       : undefined;
     let stay: PlannerRequest["stay"];
     if (includeStay) {
+      if (!stayName.trim()) {
+        setStayMapState("error");
+        setStayMapError("Enter the hotel or Airbnb property name.");
+        setError("");
+        focusPlannerField("stay-property-name");
+        return;
+      }
+      if (!stayMapsUrl.trim()) {
+        setStayMapState("error");
+        setStayMapError("Choose the exact hotel or Airbnb location on the map.");
+        setError("");
+        focusPlannerField("stay-map-picker-button");
+        return;
+      }
       if (parseTimeToMinutes(checkOutTime) === null) {
         const message = "Enter the checkout time provided by your hotel or host.";
         setFieldErrors((current) => ({ ...current, checkoutTime: message }));
@@ -778,8 +843,29 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
     } catch { setToast("This browser could not save the itinerary locally."); }
   }
 
+  const mapPickerInitialValue = locationPickerTarget === "stay"
+    && currentVerifiedStay
+    && typeof currentVerifiedStay.lat === "number"
+    && typeof currentVerifiedStay.lng === "number"
+    ? { lat: currentVerifiedStay.lat, lng: currentVerifiedStay.lng }
+    : locationPickerTarget === "start"
+      ? { lat: selectedStart.lat, lng: selectedStart.lng }
+      : BAGUIO_CENTER;
+
   return (
     <div className={`trip-planner ${initialView === "itinerary" ? "results-mode" : "editor-mode"}`}>
+      {locationPickerTarget ? (
+        <LocationPickerDialog
+          title={locationPickerTarget === "start" ? "Choose your Baguio starting point" : `Pin ${stayName.trim()}`}
+          description={locationPickerTarget === "start"
+            ? "Move the map to the exact place where your itinerary should begin."
+            : "Place the pin on the property entrance so directions, travel time, and check-in routing use the right point."}
+          initialValue={mapPickerInitialValue}
+          confirmLabel={locationPickerTarget === "start" ? "Use as starting point" : "Save property pin"}
+          onClose={() => setLocationPickerTarget(null)}
+          onConfirm={confirmMapLocation}
+        />
+      ) : null}
       {initialView === "editor" ? <>
         <nav className="planner-progress" aria-label="Planner steps">
         <span className="progress-line" aria-hidden="true"><i style={{ width: activeStep === 1 ? "0%" : activeStep === 2 ? "50%" : "100%" }} /></span>
@@ -797,7 +883,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
           {requestedPlannerPlace ? <div className="planner-request-notice"><Check size={16} /><span><strong>{requestedPlannerPlace.name}</strong> was added from Explore. Choose at least one more destination below.</span></div> : requestedExplorePlace ? <div className="planner-request-notice warning"><span>ℹ</span><span><strong>{requestedExplorePlace.name}</strong> is listed in Explore but does not yet have verified hours and route guidance, so it was not silently added to your generated route.</span></div> : null}
 
           <div className="trip-detail-grid">
-            <label className="planner-field start-field"><span>Starting point</span><div className="start-input-row"><select value={startLocationId} onChange={(event) => setStartLocationId(event.target.value)}>{customStart ? <option value="current-location">My current location</option> : null}{PLANNER_START_LOCATIONS.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select><button type="button" onClick={useCurrentLocation} disabled={locating} aria-label="Use my current location" title="Use my current location"><Crosshair size={17} className={locating ? "spin" : ""} /></button></div></label>
+            <label className="planner-field start-field"><span>Starting point</span><div className="start-input-row"><select value={startLocationId} onChange={(event) => setStartLocationId(event.target.value)}>{customStart ? <option value={customStart.id}>Chosen map location</option> : null}{PLANNER_START_LOCATIONS.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select><button type="button" onClick={() => setLocationPickerTarget("start")} aria-label="Choose starting point from map" title="Choose from map"><MapPin size={17} /></button></div></label>
             <label className="planner-field"><span>Trip date</span><input type="date" min={localDateValue()} value={tripDate} onChange={(event) => setTripDate(event.target.value)} /></label>
             <label className="planner-field"><span>Number of days</span><select value={numberOfDays} onChange={(event) => setNumberOfDays(Number(event.target.value))}>{[1, 2, 3, 4, 5].map((day) => <option key={day} value={day}>{day} {day === 1 ? "day" : "days"}</option>)}</select></label>
             <label className="planner-field"><span>Daily start time</span><input type="time" required value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
@@ -826,8 +912,14 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
               <StayAutocomplete
                 kind={stayKind}
                 value={stayName}
+                locationSelected={Boolean(currentVerifiedStay)}
+                onChooseFromMap={openStayLocationPicker}
                 onValueChange={(value) => {
                   setStayName(value);
+                  setStayMapsUrl("");
+                  setVerifiedStayMap(null);
+                  setStayMapState("idle");
+                  setStayMapError("");
                   setSaved(false);
                 }}
                 onSelect={(place) => {
@@ -838,7 +930,6 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                   setSaved(false);
                 }}
               />
-              <label className="planner-field stay-map-field"><span>Google Maps place or share link <small>optional with a suggestion</small></span><div><MapPin size={17} /><input type="url" value={stayMapsUrl} onChange={(event) => { setStayMapsUrl(event.target.value); setVerifiedStayMap(null); setSaved(false); }} placeholder="https://maps.app.goo.gl/..." /><a href={googleMapsStaySearchUrl(stayKind, stayName)} target="_blank" rel="noreferrer" aria-label="Find this stay in Google Maps" title="Find in Google Maps"><ExternalLink size={17} /></a></div></label>
               <div className="stay-schedule-grid">
                 <section className="stay-schedule-group">
                   <header><strong>Check-in</strong><small>We will arrive at the property at this time.</small></header>
@@ -860,7 +951,7 @@ export function Planner({ initialView = "editor" }: PlannerProps) {
                 <label className="planner-field"><span>Final departure point <small>optional</small></span><select value={departureLocationId} onChange={(event) => setDepartureLocationId(event.target.value)}><option value="">Not decided yet</option>{PLANNER_START_LOCATIONS.map((location) => <option value={location.id} key={location.id}>{location.name}</option>)}</select></label>
                 <label className="planner-field"><span>Bus / departure time <small>optional</small></span><input type="time" value={departureTime} onChange={(event) => setDepartureTime(event.target.value)} disabled={!departureLocationId} /></label>
               </div>
-              {stayMapsUrl ? <p className={`stay-map-status ${stayMapState === "verified" ? "valid" : stayMapState === "checking" ? "checking" : "invalid"}`} aria-live="polite">{stayMapState === "checking" ? <><LoaderCircle className="spin" size={14} /> Checking the exact Google Maps place…</> : stayMapState === "verified" && currentVerifiedStay ? <><Check size={14} /> {currentVerifiedStay.name} — exact pin confirmed.</> : <>{stayMapError || "Paste the exact place or Share link from Google Maps."}</>}</p> : <p className="stay-map-help"><MapPin size={14} /> Find the property in Google Maps, tap Share, then paste its link here.</p>}
+              {stayMapState === "verified" && currentVerifiedStay ? <p className="stay-map-status valid" aria-live="polite"><Check size={14} /> Exact property pin confirmed at {currentVerifiedStay.lat?.toFixed(5)}, {currentVerifiedStay.lng?.toFixed(5)}.</p> : stayMapState === "checking" ? <p className="stay-map-status checking" aria-live="polite"><LoaderCircle className="spin" size={14} /> Checking the saved property pin…</p> : stayMapError ? <p className="stay-map-status invalid" aria-live="polite"><AlertTriangle size={14} /> {stayMapError}</p> : <p className="stay-map-help"><MapPin size={14} /> Type the property name, then use the location button to choose its exact entrance.</p>}
             </div> : null}
           </section>
 

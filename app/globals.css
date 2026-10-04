@@ -707,7 +707,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .trip-detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px 12px; }
 .planner-field { min-width: 0; display: grid; gap: 7px; }
-.planner-field > span, .auto-pick-select > span { font-size: .68rem; font-weight: 800; }
+.planner-field > span, .planner-field > label, .auto-pick-select > span { font-size: .68rem; font-weight: 800; }
 .planner-field.start-field { grid-column: span 2; }
 .planner-field input, .planner-field select, .auto-pick-select select { min-width: 0; width: 100%; height: 48px; padding: 0 13px; border: 1px solid var(--line); border-radius: 13px; outline: 0; color: var(--ink); background: #fbfcf7; font-size: .74rem; }
 .planner-field input:focus, .planner-field select:focus, .auto-pick-select select:focus { border-color: var(--pine-700); box-shadow: 0 0 0 3px rgba(63, 118, 105, .1); }
@@ -1162,7 +1162,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .planner-progress > button > span:first-child { width: 32px; height: 32px; }
   .planner-progress .progress-line { top: 27px; }
   .trip-detail-grid { gap: 12px 8px; }
-  .planner-field > span { font-size: .6rem; }
+  .planner-field > span, .planner-field > label { font-size: .6rem; }
   .planner-field input, .planner-field select { padding-inline: 9px; font-size: .65rem; }
   .destination-tools { grid-template-columns: 1fr; }
   .auto-pick-select, .auto-pick-button { grid-column: 1; }
@@ -3551,11 +3551,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stay-kind-picker button.active { color: white; border-color: #594532; background: #594532; box-shadow: 0 7px 14px rgba(75,54,35,.14); }
 .stay-map-field, .stay-schedule-grid, .final-day-picker, .departure-fields, .stay-luggage-choice, .luggage-plan-section, .stay-map-status, .stay-map-help { grid-column: 1 / -1; }
 .stay-autocomplete { position: relative; min-width: 0; }
-.stay-autocomplete-input { height: 48px; display: grid; grid-template-columns: 20px minmax(0,1fr) 20px; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid var(--line); border-radius: 13px; background: #fffdf8; }
+.stay-autocomplete-input { height: 48px; display: grid; grid-template-columns: 20px minmax(0,1fr) 20px 43px; align-items: center; gap: 7px; padding: 0 0 0 12px; border: 1px solid var(--line); border-radius: 13px; background: #fffdf8; }
 .stay-autocomplete-input:focus-within { border-color: var(--pine-700); box-shadow: 0 0 0 3px rgba(63,118,105,.1); }
 .stay-autocomplete-input > svg { color: #8a6e51; }
 .stay-autocomplete-input input { min-width: 0; height: 44px; padding: 0; border: 0; background: transparent; box-shadow: none; }
 .stay-autocomplete-input input:focus { box-shadow: none; }
+.stay-search-state { width: 20px; display: grid; place-items: center; color: #8a6e51; }
+.stay-search-state svg { width: 16px; }
+.stay-autocomplete-input > button { width: 43px; height: 100%; display: grid; place-items: center; border: 0; border-left: 1px solid var(--line); border-radius: 0 12px 12px 0; color: var(--pine-800); background: #f0f5ec; cursor: pointer; }
+.stay-autocomplete-input > button:hover { background: #e2ecdd; }
+.stay-autocomplete-input > button.selected { color: white; background: var(--pine-700); }
+.stay-autocomplete-input > button svg { width: 17px; }
 .stay-suggestion-popover { position: absolute; z-index: 40; top: calc(100% + 7px); right: 0; left: 0; overflow: hidden; border: 1px solid #d6cab9; border-radius: 16px; background: #fffef9; box-shadow: 0 20px 45px rgba(47,38,27,.18); }
 .stay-suggestion-popover ul { max-height: 310px; overflow-y: auto; margin: 0; padding: 5px; list-style: none; }
 .stay-suggestion-popover li + li { border-top: 1px solid #eee7db; }

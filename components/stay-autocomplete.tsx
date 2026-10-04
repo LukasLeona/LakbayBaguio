@@ -8,11 +8,13 @@ import type { StayKind } from "@/lib/planner-types";
 type StayAutocompleteProps = {
   kind: StayKind;
   value: string;
+  locationSelected: boolean;
   onValueChange: (value: string) => void;
   onSelect: (place: StayPlaceDetails) => void;
+  onChooseFromMap: () => void;
 };
 
-export function StayAutocomplete({ kind, value, onValueChange, onSelect }: StayAutocompleteProps) {
+export function StayAutocomplete({ kind, value, locationSelected, onValueChange, onSelect, onChooseFromMap }: StayAutocompleteProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const committedValueRef = useRef("");
   const [suggestions, setSuggestions] = useState<StaySuggestion[]>([]);
@@ -66,7 +68,7 @@ export function StayAutocomplete({ kind, value, onValueChange, onSelect }: StayA
         setSuggestions(nextSuggestions);
         setPoweredByGeoapify(Boolean(payload?.poweredByGeoapify));
         setConfigured(payload?.configured !== false);
-        setMessage(nextSuggestions.length ? "" : "No matching Baguio stay yet. You can paste its exact Google Maps link below.");
+        setMessage(nextSuggestions.length ? "" : "No matching Baguio stay yet. Keep the property name, then choose its exact location on the map.");
         setActiveIndex(nextSuggestions.length ? 0 : -1);
         setOpen(true);
       } catch (error) {
@@ -125,11 +127,12 @@ export function StayAutocomplete({ kind, value, onValueChange, onSelect }: StayA
 
   return (
     <div className="stay-autocomplete stay-name-field" ref={rootRef}>
-      <label className="planner-field">
-        <span>Property name</span>
+      <div className="planner-field">
+        <label htmlFor="stay-property-name">Property name</label>
         <div className="stay-autocomplete-input">
           <Search size={17} aria-hidden="true" />
           <input
+            id="stay-property-name"
             type="search"
             role="combobox"
             autoComplete="off"
@@ -143,9 +146,20 @@ export function StayAutocomplete({ kind, value, onValueChange, onSelect }: StayA
             onKeyDown={handleKeyDown}
             placeholder={kind === "hotel" ? "Start typing a hotel name" : "Start typing a stay or Airbnb name"}
           />
-          {loading ? <LoaderCircle className="spin" size={17} aria-label="Searching accommodations" /> : null}
+          <span className="stay-search-state">{loading ? <LoaderCircle className="spin" size={17} aria-label="Searching accommodations" /> : null}</span>
+          <button
+            id="stay-map-picker-button"
+            type="button"
+            className={locationSelected ? "selected" : ""}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => { setOpen(false); onChooseFromMap(); }}
+            aria-label={locationSelected ? "Change property location on map" : "Choose property location from map"}
+            title={locationSelected ? "Change map location" : "Choose from map"}
+          >
+            {locationSelected ? <Check aria-hidden="true" /> : <MapPin aria-hidden="true" />}
+          </button>
         </div>
-      </label>
+      </div>
 
       {open ? (
         <div className="stay-suggestion-popover">
@@ -171,7 +185,7 @@ export function StayAutocomplete({ kind, value, onValueChange, onSelect }: StayA
             </ul>
           ) : message ? <p className="stay-suggestion-message">{message}</p> : null}
           <footer>
-            {!configured ? <span>Showing Baguio Buddy stays. You can also type a name and paste its Maps link.</span> : <span>Select a result to fill its exact map pin.</span>}
+            {!configured ? <span>Showing Baguio Buddy stays. You can also type any property name and choose its location on the map.</span> : <span>Select a result or use the map button to set the exact pin.</span>}
             {poweredByGeoapify ? <span className="stay-data-credit">Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">Geoapify</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a></span> : null}
           </footer>
         </div>
