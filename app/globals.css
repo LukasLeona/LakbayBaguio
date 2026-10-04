@@ -575,15 +575,32 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .brand small { font-size: .54rem; }
   .header-action { min-height: 38px; padding: 9px 12px; font-size: .72rem; }
   .header-action svg { display: none; }
-  .bottom-nav { position: fixed; z-index: 1200; left: 50%; right: auto; bottom: max(8px, env(safe-area-inset-bottom)); width: min(calc(100% - 22px), 430px); height: 66px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 6px 9px; border: 1px solid rgba(8,44,34,.12); border-radius: 22px; background: rgba(255,255,252,.97); box-shadow: 0 12px 34px rgba(8,44,34,.2); backdrop-filter: blur(20px); transform: translateX(-50%); overflow: visible; }
-  .bottom-nav a { position: relative; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #71827c; font-size: .49rem; line-height: 1; font-weight: 600; }
+  .bottom-nav { position: fixed; z-index: 1200; left: 50%; right: auto; bottom: max(8px, env(safe-area-inset-bottom)); width: min(calc(100% - 22px), 430px); height: 66px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 6px 9px; border: 1px solid rgba(8,44,34,.12); border-radius: 22px; background: rgba(255,255,252,.97); box-shadow: 0 12px 34px rgba(8,44,34,.2); backdrop-filter: blur(20px); transform: translateX(-50%); overflow: visible; animation: bottom-dock-in .32s ease-out both; }
+  .bottom-nav a { position: relative; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #71827c; font-size: .49rem; line-height: 1; font-weight: 600; transition: color .18s ease, transform .18s ease; }
   .bottom-nav a.active { color: var(--pine-950); font-weight: 700; }
+  .bottom-label { transition: color .18s ease, font-weight .18s ease; }
   .bottom-icon { position: relative; width: 32px; height: 28px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 10px; transition: color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease; }
   .bottom-nav a.primary { z-index: 2; transform: translateY(-12px); }
   .bottom-nav a.primary .bottom-icon { width: 50px; height: 50px; color: var(--pine-950); border: 5px solid var(--paper); border-radius: 50%; background: linear-gradient(145deg, #e4ee54, #b9cf2f); box-shadow: 0 9px 20px rgba(8,44,34,.25); }
+  .bottom-nav a:not(.primary).active .bottom-icon { color: var(--pine-950); background: #eaf1e7; }
+  .bottom-nav a:not(.primary).active::after { content: ""; position: absolute; bottom: 0; width: 4px; height: 4px; border-radius: 50%; background: var(--pine-800); }
+  .bottom-nav a.primary.active .bottom-icon { box-shadow: 0 0 0 2px var(--pine-950), 0 10px 22px rgba(8,44,34,.3); }
+  .bottom-nav a:not(.primary):active .bottom-icon { transform: scale(.9); }
+  .bottom-nav a.primary:active { transform: translateY(-12px) scale(.94); }
+  .bottom-nav a:focus-visible { outline: 2px solid var(--pine-800); outline-offset: 3px; border-radius: 13px; }
   .nav-pending-dot { position: absolute; top: -3px; right: -2px; width: 8px; height: 8px; border: 2px solid white; border-radius: 50%; background: #e33d38; box-sizing: content-box; box-shadow: 0 2px 5px rgba(142,34,31,.3); }
   .nav-unread-badge { position: absolute; top: -7px; right: -9px; min-width: 19px; height: 19px; display: grid; place-items: center; padding-inline: 4px; border: 2px solid white; border-radius: 999px; color: white; background: #e33d38; box-sizing: border-box; box-shadow: 0 2px 6px rgba(142,34,31,.3); font-size: .5rem; font-style: normal; font-weight: 800; line-height: 1; }
   .bottom-nav a.active::before { display: none; }
+
+  @keyframes bottom-dock-in {
+    from { opacity: 0; transform: translate(-50%, 12px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bottom-nav { animation: none; }
+    .bottom-nav a, .bottom-icon, .bottom-label { transition: none; }
+  }
 
   .home-hero { min-height: auto; }
   .hero-grid { grid-template-columns: 1fr; gap: 28px; min-height: 0; padding-block: 52px 112px; }
