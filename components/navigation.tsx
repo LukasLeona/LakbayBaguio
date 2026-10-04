@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarCheck2, Heart, House, Lightbulb, MessageCircle, Route, Search } from "lucide-react";
+import { Heart, House, Lightbulb, MessageCircle, Plus, Route, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ITINERARY_CHANGE_EVENT, ITINERARY_STORAGE_KEY } from "@/lib/itinerary";
 import { UnreadBadge, useChatNotifications } from "./chat-notifications";
@@ -10,7 +10,7 @@ import { UnreadBadge, useChatNotifications } from "./chat-notifications";
 const mobileNavItems = [
   { href: "/", label: "Home", icon: House },
   { href: "/explore", label: "Explore", icon: Search },
-  { href: "/plan", label: "Itinerary", icon: CalendarCheck2 },
+  { href: "/plan", label: "Plan", desktopLabel: "Itinerary", icon: Plus, primary: true },
   { href: "/wall", label: "Wall", icon: Heart },
   { href: "/chat", label: "Chat", icon: MessageCircle },
 ];
@@ -75,9 +75,9 @@ export function SiteHeader() {
         </Link>
 
         <nav className="desktop-nav" aria-label="Main navigation">
-          {desktopNavItems.map(({ href, label }) => {
+          {desktopNavItems.map(({ href, label, ...item }) => {
             const destination = href === "/plan" && hasPending ? "/plan/itinerary" : href;
-            return <Link key={href} href={destination} className={isActive(pathname, href) ? "active" : ""} title={href === "/plan" && hasPending ? "View your pending itinerary" : undefined}>{label}{href === "/plan" && hasPending ? <i className="desktop-pending-dot" aria-hidden="true" /> : null}{href === "/chat" && unreadCount > 0 ? <UnreadBadge className="desktop-unread-badge" /> : null}</Link>;
+            return <Link key={href} href={destination} className={isActive(pathname, href) ? "active" : ""} title={href === "/plan" && hasPending ? "View your pending itinerary" : undefined}>{"desktopLabel" in item ? item.desktopLabel : label}{href === "/plan" && hasPending ? <i className="desktop-pending-dot" aria-hidden="true" /> : null}{href === "/chat" && unreadCount > 0 ? <UnreadBadge className="desktop-unread-badge" /> : null}</Link>;
           })}
         </nav>
 
@@ -99,17 +99,18 @@ export function BottomNavigation() {
 
   return (
     <nav className="bottom-nav" aria-label="Mobile navigation">
-      {mobileNavItems.map(({ href, label, icon: Icon }) => {
+      {mobileNavItems.map(({ href, label, icon: Icon, ...item }) => {
         const active = isActive(pathname, href);
         const destination = href === "/plan" && hasPending ? "/plan/itinerary" : href;
+        const primary = "primary" in item && item.primary;
         return (
-          <Link key={href} href={destination} className={active ? "active" : ""} aria-current={active ? "page" : undefined} aria-label={href === "/plan" && hasPending ? "Itinerary, pending trip available" : href === "/chat" && unreadCount ? `Chat, ${unreadCount} unread messages` : label}>
+          <Link key={href} href={destination} className={`bottom-nav-link${active ? " active" : ""}${primary ? " primary" : ""}`} aria-current={active ? "page" : undefined} aria-label={href === "/plan" && hasPending ? "Itinerary, pending trip available" : href === "/chat" && unreadCount ? `Chat, ${unreadCount} unread messages` : label}>
             <span className="bottom-icon">
-              <Icon size={19} strokeWidth={2} aria-hidden="true" />
+              <Icon size={primary ? 24 : 18} strokeWidth={primary ? 2.4 : 2} aria-hidden="true" />
               {href === "/plan" && hasPending ? <i className="nav-pending-dot" aria-hidden="true" /> : null}
               {href === "/chat" ? <UnreadBadge /> : null}
             </span>
-            <span>{label}</span>
+            {!primary ? <span className="bottom-label">{label}</span> : null}
           </Link>
         );
       })}
