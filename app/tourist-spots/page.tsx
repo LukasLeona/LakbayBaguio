@@ -10,13 +10,25 @@ import {
   MapPin,
   Mountain,
   Route,
+  ShieldCheck,
   Trees,
 } from "lucide-react";
-import { GuideDisclosure, GuideSourceList } from "@/components/guide-data";
+import { GuideByline, GuideDisclosure, GuideSourceList, GuideTableOfContents } from "@/components/guide-data";
+import {
+  BAGUIO_GUIDE_DESTINATIONS,
+  BAGUIO_GUIDE_LOOPS,
+  BAGUIO_GUIDE_REVIEW_LABEL,
+  destinationPlanningNote,
+  formatGuideTime,
+  formatVisitDuration,
+  getLoopDestinations,
+  routeGuideForLoop,
+} from "@/lib/baguio-guide-data";
+import { getPlace } from "@/lib/places";
 import { GUIDE_REVIEW_LABEL, guideSources } from "@/lib/travel-guide-data";
 
 const canonicalUrl = "https://baguiobuddy.com/tourist-spots";
-const updatedDate = "2026-10-03";
+const updatedDate = "2026-10-05";
 
 const planningFees = [
   { place: "Botanical Garden", area: "East Baguio", time: "60–90 min", allowance: "₱100 adult", extra: "Reduced rates may require valid ID; verify at the entrance" },
@@ -29,15 +41,15 @@ const planningFees = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "Tourist Spots in Baguio: First-Timer Area Guide",
+  title: "48 Baguio Tourist Spots: Area Guide, Routes & Visit Times",
   description:
-    "Discover the best-known tourist spots in Baguio, grouped by area for easier commuting. Compare parks, views, heritage stops, timing, and sample routes.",
+    "Compare 48 Baguio tourist spots and nearby Benguet side trips, grouped into practical routes with visit times, reference hours, commute notes, and itinerary actions.",
   alternates: { canonical: canonicalUrl },
   authors: [{ name: "Baguio Buddy", url: "https://baguiobuddy.com" }],
   openGraph: {
     type: "article",
     url: canonicalUrl,
-    title: "Tourist Spots in Baguio: A Practical First-Timer Guide",
+    title: "48 Baguio Tourist Spots: A Practical First-Timer Area Guide",
     description:
       "Plan Baguio tourist spots by area instead of zigzagging across the city. Includes East Baguio, city-center, south, west, and La Trinidad ideas.",
     siteName: "Baguio Buddy",
@@ -52,68 +64,13 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tourist Spots in Baguio for First-Time Visitors",
-    description: "A practical, area-by-area guide to Baguio parks, views, heritage, and city sights.",
+    title: "48 Tourist Spots in Baguio and Nearby Benguet",
+    description: "A practical, area-by-area directory with visit times, route notes, and itinerary actions.",
     images: ["https://baguiobuddy.com/assets/img/destinations/camp-john-hay.jpg"],
   },
 };
 
-type TouristSpotSummary = {
-  name: string;
-  detail: string;
-  time: string;
-  slug?: string;
-};
-
-type TouristSpotGroup = {
-  area: string;
-  intro: string;
-  spots: readonly TouristSpotSummary[];
-};
-
-const spotGroups: readonly TouristSpotGroup[] = [
-  {
-    area: "East Baguio",
-    intro: "Keep these classics together. They form the easiest first-timer sightseeing cluster.",
-    spots: [
-      { name: "Baguio Botanical Garden", slug: "botanical-garden", detail: "Landscaped gardens, Cordilleran-inspired features, and an easy introduction to the city's pine-covered side.", time: "Allow about 60–90 minutes" },
-      { name: "The Mansion", detail: "A landmark best treated as a short exterior and gate-area stop unless official access information says otherwise.", time: "Allow about 20–40 minutes" },
-      { name: "Wright Park", slug: "wright-park", detail: "Known for its tree-lined Pool of Pines and nearby horseback-riding area; expect slopes and steps in parts of the park.", time: "Allow about 45–75 minutes" },
-      { name: "Mines View Park", slug: "mines-view-park", detail: "A popular mountain-view stop with souvenir stalls. Visibility depends on the weather, so earlier hours can be helpful.", time: "Allow about 45–60 minutes" },
-      { name: "Good Shepherd Convent", detail: "A common pasalubong stop near Mines View. Product availability and queues can vary by day.", time: "Allow about 30–45 minutes" },
-    ],
-  },
-  {
-    area: "City center",
-    intro: "These stops work well after hotel check-in because several can be connected on foot.",
-    spots: [
-      { name: "Burnham Park", slug: "burnham-park", detail: "Baguio's central park for lake views, gardens, cycling, and an easy late-afternoon stroll.", time: "Allow about 60–120 minutes" },
-      { name: "Baguio Cathedral", slug: "baguio-cathedral", detail: "A prominent hilltop church near Session Road. Visit respectfully and avoid disrupting services.", time: "Allow about 30–45 minutes" },
-      { name: "Session Road", detail: "The city's best-known commercial street for cafés, shops, and people-watching.", time: "Allow about 45–90 minutes" },
-      { name: "Baguio City Market", detail: "A practical stop for vegetables and pasalubong, ideally near checkout so purchases do not travel through every park.", time: "Allow about 60–90 minutes" },
-      { name: "Baguio Night Market", detail: "An evening bargain-shopping experience when operations and conditions allow. Confirm the schedule on your travel date.", time: "Allow about 60–90 minutes" },
-    ],
-  },
-  {
-    area: "South and west Baguio",
-    intro: "Give these larger or more spread-out destinations their own half-day instead of squeezing them between East Baguio stops.",
-    spots: [
-      { name: "Camp John Hay", slug: "camp-john-hay", detail: "A broad pine estate rather than one compact attraction. Choose specific places or walking areas before you go.", time: "Allow about 2–4 hours" },
-      { name: "Mirador Heritage and Eco Park", slug: "mirador-heritage-eco-park", detail: "A scenic hillside destination with gardens and viewpoints. Account for stairs, slopes, and travel time.", time: "Allow about 90–150 minutes" },
-      { name: "Diplomat Hotel", detail: "A heritage ruin and viewpoint on Dominican Hill. Treat it as a focused visit and confirm current access before leaving.", time: "Allow about 45–75 minutes" },
-    ],
-  },
-  {
-    area: "La Trinidad side trip",
-    intro: "This is outside Baguio City, so protect enough commute time and avoid pairing it with a packed East Baguio loop.",
-    spots: [
-      { name: "Valley of Colors", detail: "A roadside mural community commonly viewed as a brief photo stop while traveling toward La Trinidad.", time: "Allow about 20–40 minutes plus commute" },
-      { name: "Strawberry Farm area", slug: "strawberry-farm", detail: "A seasonal agricultural visit where activities and produce depend on weather, harvest conditions, and local operations.", time: "Allow about 60–120 minutes plus commute" },
-    ],
-  },
-];
-
-const allSpots = spotGroups.flatMap((group) => group.spots);
+const allSpots = BAGUIO_GUIDE_DESTINATIONS;
 
 const faqs = [
   {
@@ -139,8 +96,8 @@ const jsonLd = {
   "@graph": [
     {
       "@type": "Article",
-      headline: "Tourist Spots in Baguio: First-Timer Area Guide",
-      description: "An area-by-area guide to popular Baguio tourist spots with practical timing and commute notes.",
+      headline: "48 Baguio Tourist Spots: Area Guide, Routes and Visit Times",
+      description: "An area-by-area directory of Baguio tourist spots and nearby Benguet side trips with practical timing and commute notes.",
       datePublished: updatedDate,
       dateModified: updatedDate,
       inLanguage: "en-PH",
@@ -159,8 +116,8 @@ const jsonLd = {
         "@type": "ListItem",
         position: index + 1,
         name: spot.name,
-        description: spot.detail,
-        ...(spot.slug ? { url: `https://baguiobuddy.com/places/${spot.slug}` } : {}),
+        description: spot.description,
+        url: `${canonicalUrl}#spot-${spot.id}`,
       })),
     },
     {
@@ -193,16 +150,30 @@ export default function TouristSpotsPage() {
         <div className="shell seo-hub-hero-inner">
           <nav className="seo-hub-breadcrumbs" aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true">/</span><span>Tourist spots</span></nav>
           <span className="eyebrow"><Compass size={15} /> Area-by-area guide</span>
-          <h1>Tourist spots in Baguio: where to go and how to group your route</h1>
+          <h1>48 Baguio tourist spots: choose the right places for your route</h1>
           <p className="seo-hub-lead">
-            The best Baguio tourist-spot plan is not simply the longest list. Group nearby places, choose one larger destination at a time,
-            and reserve space for meals, traffic, queues, rain, and uphill walking.
+            Compare places in Baguio City and nearby Benguet without turning the trip into a race. Every destination below belongs to a practical area loop
+            and connects to the same catalog used by the itinerary generator.
           </p>
-          <div className="seo-hub-meta"><span><Clock3 size={16} /> Updated {GUIDE_REVIEW_LABEL}</span><span><MapPin size={16} /> Baguio City and one La Trinidad side trip</span></div>
+          <div className="seo-hub-meta"><span><Clock3 size={16} /> Updated {BAGUIO_GUIDE_REVIEW_LABEL}</span><span><MapPin size={16} /> 48 places · 7 route loops</span></div>
           <div className="seo-hub-actions">
             <Link href="/explore" className="button dark">Browse places and photos <ArrowRight size={18} /></Link>
             <Link href="/plan" className="button lime">Add places to an itinerary <Route size={18} /></Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section tourist-directory-intro">
+        <div className="shell">
+          <GuideByline
+            reviewed={BAGUIO_GUIDE_REVIEW_LABEL}
+            scope="Destination names, coordinates, planning hours, visit lengths, route areas, and itinerary actions come from Baguio Buddy's shared planner catalog. Confirm changing access details before departure."
+          />
+          <GuideTableOfContents items={BAGUIO_GUIDE_LOOPS.map((loop) => ({
+            href: `#area-${loop.id}` as `#${string}`,
+            label: loop.title,
+            description: `${getLoopDestinations(loop).length} places · ${loop.timeNeeded}`,
+          }))} />
         </div>
       </section>
 
@@ -260,26 +231,49 @@ export default function TouristSpotsPage() {
         <div className="shell">
           <div className="section-heading">
             <span className="eyebrow"><Camera size={15} /> Popular places</span>
-            <h2 id="spots-title">Baguio tourist spots grouped by area</h2>
-            <p>Suggested times are planning allowances, not official visit limits. Always check current entry rules and operating details.</p>
+            <h2 id="spots-title">All 48 places grouped into routes that make geographic sense</h2>
+            <p>Suggested hours and visit lengths are planner references, not official promises. Reconfirm the attraction&apos;s current access, fee, and last-entry rules.</p>
           </div>
           <div className="seo-hub-group-list">
-            {spotGroups.map((group) => (
-              <section className="seo-hub-area-group" key={group.area} aria-labelledby={`area-${group.area.toLowerCase().replace(/[^a-z]+/g, "-")}`}>
+            {BAGUIO_GUIDE_LOOPS.map((loop) => {
+              const destinations = getLoopDestinations(loop);
+              const routeGuide = routeGuideForLoop(loop);
+              return (
+              <section id={`area-${loop.id}`} className="seo-hub-area-group tourist-directory-group" key={loop.id} aria-labelledby={`area-title-${loop.id}`}>
                 <header>
                   <Mountain size={22} />
-                  <div><h3 id={`area-${group.area.toLowerCase().replace(/[^a-z]+/g, "-")}`}>{group.area}</h3><p>{group.intro}</p></div>
+                  <div><small>{loop.area} · {loop.timeNeeded}</small><h3 id={`area-title-${loop.id}`}>{loop.title}</h3><p>{loop.summary}</p></div>
                 </header>
-                <div className="seo-hub-spot-grid">
-                  {group.spots.map((spot) => (
-                    <article key={spot.name}>
-                      <span><MapPin size={18} /></span>
-                      <div><h4>{spot.slug ? <Link href={`/places/${spot.slug}`}>{spot.name}</Link> : spot.name}</h4><p>{spot.detail}</p><small><Clock3 size={14} /> {spot.time}</small></div>
-                    </article>
-                  ))}
+                <div className="tourist-directory-route-note">
+                  <BusFront size={17} />
+                  <span><strong>Commute reference:</strong> {routeGuide.loadingArea}</span>
                 </div>
+                <div className="seo-hub-spot-grid">
+                  {destinations.map((spot) => {
+                    const curatedPlace = getPlace(spot.id);
+                    return (
+                    <article id={`spot-${spot.id}`} className="tourist-directory-card" key={spot.id}>
+                      <span><MapPin size={18} /></span>
+                      <div>
+                        <small className="tourist-directory-type">{spot.category} · {spot.scope}</small>
+                        <h4>{curatedPlace ? <Link href={`/places/${spot.id}`}>{spot.name}</Link> : spot.name}</h4>
+                        <p>{spot.description}</p>
+                        <div className="tourist-directory-facts">
+                          <span><Clock3 size={13} /> {formatVisitDuration(spot.duration)}</span>
+                          <span>{formatGuideTime(spot.open)}–{formatGuideTime(spot.close)}*</span>
+                        </div>
+                        <small className="tourist-directory-caution">{destinationPlanningNote(spot)}</small>
+                        <div className="tourist-directory-actions">
+                          <Link href={`/plan?place=${spot.id}`}>Add to itinerary <ArrowRight size={14} /></Link>
+                          {curatedPlace ? <Link href={`/places/${spot.id}`}>Visitor guide</Link> : null}
+                        </div>
+                      </div>
+                    </article>
+                  );})}
+                </div>
+                <aside className="tourist-directory-loop-warning"><ShieldCheck size={16} /><span>{loop.travelNote}</span></aside>
               </section>
-            ))}
+            );})}
           </div>
         </div>
       </section>
