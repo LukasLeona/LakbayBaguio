@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowRight,
+  BookOpenCheck,
+  BusFront,
   CalendarPlus,
   Clock3,
   ExternalLink,
@@ -12,6 +14,11 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import {
+  formatGuideTime,
+  getGuideDestination,
+  getGuideLoopForDestination,
+} from "@/lib/baguio-guide-data";
 import { getPlace, places } from "@/lib/places";
 import {
   absoluteUrl,
@@ -101,6 +108,8 @@ export default async function PlaceGuidePage({ params }: PlacePageProps) {
   if (!place) notFound();
 
   const descriptor = kindCopy[place.kind];
+  const plannerDestination = getGuideDestination(place.id);
+  const guideLoop = getGuideLoopForDestination(place.id);
   const nearby = places
     .filter((candidate) => candidate.id !== place.id && candidate.area === place.area)
     .slice(0, 4);
@@ -187,6 +196,23 @@ export default async function PlaceGuidePage({ params }: PlacePageProps) {
                 <p className="place-guide-review-note">Guide reviewed {LAST_CONTENT_REVIEW}. Live operating details should still be verified directly.</p>
               </section>
 
+              {plannerDestination && guideLoop ? <section className="place-guide-commute-section">
+                <span className="eyebrow"><BusFront size={14} /> Commuter planning reference</span>
+                <h2>Reach {place.name} as part of the {guideLoop.title}</h2>
+                <p>{guideLoop.summary} The times below come from the planner catalog and must be checked against the attraction&apos;s current official information.</p>
+                <div className="place-guide-route-facts">
+                  <article><small>Planner hours</small><strong>{formatGuideTime(plannerDestination.open)}–{formatGuideTime(plannerDestination.close)}</strong><p>Reference window only; verify opening day, last entry, and holidays.</p></article>
+                  <article><small>Loading-area check</small><strong>{plannerDestination.routeGuide.modeLabel}</strong><p>{plannerDestination.routeGuide.loadingArea}</p></article>
+                  <article><small>Signboard to ask for</small><strong>{plannerDestination.routeGuide.signboard}</strong><p>{plannerDestination.alight || "Tell the dispatcher the exact visitor entrance before boarding."}</p></article>
+                </div>
+                <aside><strong>Return plan</strong><p>{plannerDestination.routeGuide.returnHint}</p></aside>
+                <div className="place-guide-route-links">
+                  <Link href={`/guides/baguio-travel-guide#loop-${guideLoop.id}`}><BookOpenCheck size={15} /> See the complete area loop</Link>
+                  <Link href={`/plan?place=${place.id}`}><CalendarPlus size={15} /> Add this place to my itinerary</Link>
+                  {plannerDestination.routeGuide.routeReferenceUrl ? <a href={plannerDestination.routeGuide.routeReferenceUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Check route directory</a> : null}
+                </div>
+              </section> : null}
+
               {nearby.length ? <section>
                 <span className="eyebrow">Nearby route ideas</span>
                 <h2>Pair it with other stops in {place.area}</h2>
@@ -210,6 +236,7 @@ export default async function PlaceGuidePage({ params }: PlacePageProps) {
               <strong>Build a complete route</strong>
               <p>Let the planner group this stop with compatible places around your hotel, available hours, check-in, and checkout.</p>
               <Link href={`/plan?place=${place.id}`}>Customize my Baguio itinerary <ArrowRight /></Link>
+              {guideLoop ? <Link href={`/guides/baguio-travel-guide#loop-${guideLoop.id}`}>Read the {guideLoop.title} guide <BookOpenCheck /></Link> : null}
             </aside>
           </div>
         </article>

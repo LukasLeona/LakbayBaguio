@@ -5384,3 +5384,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .tourist-directory-group,
   .tourist-directory-card { break-inside: avoid; box-shadow: none !important; }
 }
+
+.place-guide-route-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 17px 0 10px; }
+.place-guide-route-facts article { padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #f7f9f2; }
+.place-guide-route-facts small { display: block; margin-bottom: 4px; color: var(--pine-700); font-size: .58rem; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; }
+.place-guide-route-facts strong { display: block; font-size: .73rem; line-height: 1.4; }
+.place-guide-route-facts p { margin: 4px 0 0; color: var(--muted); font-size: .62rem; line-height: 1.5; }
+.place-guide-commute-section > aside { padding: 12px 14px; border-left: 3px solid var(--sun); border-radius: 0 12px 12px 0; background: #fff6d8; }
+.place-guide-commute-section > aside strong { font-size: .68rem; }
+.place-guide-commute-section > aside p { margin: 3px 0 0; color: #675f45; font-size: .63rem; line-height: 1.5; }
+.place-guide-route-links { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.place-guide-route-links a { display: inline-flex; align-items: center; gap: 5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; color: var(--pine-800); background: white; font-size: .62rem; font-weight: 850; }
+
+@media screen and (max-width: 760px) {
+  .place-guide-route-facts { grid-template-columns: 1fr; }
+  .place-guide-route-links { display: grid; grid-template-columns: 1fr; }
+  .place-guide-route-links a { min-height: 38px; }
+}

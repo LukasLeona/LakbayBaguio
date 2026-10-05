@@ -40,6 +40,13 @@ export const metadata: Metadata = pageMetadata({
 
 const guides = [
   {
+    title: "Complete Baguio travel guide",
+    description: "The main DIY planning guide: when to visit, buses, stays, commuter routes, 48 tourist spots, sample itineraries, expenses, meals, and luggage.",
+    href: "/guides/baguio-travel-guide",
+    label: "Start here",
+    icon: BookOpenCheck,
+  },
+  {
     title: "Baguio itinerary: 3 days and 2 nights",
     description: "A practical DIY route with area clusters, meals, luggage, hotel timing, and a lighter departure day.",
     href: "/guides/baguio-itinerary-3-days-2-nights",

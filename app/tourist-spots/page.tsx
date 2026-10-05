@@ -331,7 +331,7 @@ export default function TouristSpotsPage() {
           <div className="section-heading"><span className="eyebrow">Next step</span><h2 id="related-title">Turn your shortlist into a trip</h2></div>
           <div className="seo-hub-related-grid">
             <Link href="/plan"><Route /><span><strong>Create an itinerary</strong><small>Arrange chosen places around your dates and stay.</small></span><ArrowRight /></Link>
-            <Link href="/guides/baguio-trip-budget"><Compass /><span><strong>Estimate your Baguio budget</strong><small>Plan for transport, food, stays, and extras.</small></span><ArrowRight /></Link>
+            <Link href="/guides/baguio-travel-guide"><Compass /><span><strong>Read the complete travel guide</strong><small>Connect these places with buses, stays, meals, luggage, and expenses.</small></span><ArrowRight /></Link>
             <Link href="/resources"><MapPin /><span><strong>Check traveler resources</strong><small>Review fares, luggage notes, and map guidance.</small></span><ArrowRight /></Link>
           </div>
         </div>

@@ -52,6 +52,12 @@ const quickActions = [
 
 const planningGuides = [
   {
+    title: "Complete Baguio travel guide",
+    copy: "Start here for tourist-spot loops, DIY commuting, accommodation areas, luggage, meals, sample itineraries, and a transparent trip budget.",
+    href: "/guides/baguio-travel-guide",
+    icon: BookOpenCheck,
+  },
+  {
     title: "Baguio itinerary: 3 days, 2 nights",
     copy: "A realistic first-timer route with East Baguio, the city center, meals, hotel timing, and a flexible checkout day.",
     href: "/guides/baguio-itinerary-3-days-2-nights",
