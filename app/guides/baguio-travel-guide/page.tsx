@@ -19,9 +19,13 @@ import {
 } from "lucide-react";
 import {
   GuideByline,
+  GuideCostTable,
   GuideDisclosure,
   GuideFactGrid,
+  GuideSourceList,
   GuideTableOfContents,
+  GuideTimeline,
+  GuideVerificationStandard,
   type GuideTocItem,
 } from "@/components/guide-data";
 import {
@@ -33,7 +37,14 @@ import {
   routeGuideForLoop,
 } from "@/lib/baguio-guide-data";
 import { pageMetadata, serializeJsonLd, SITE_URL } from "@/lib/seo";
-import { formatPeso, guideSources, sampleBasePerPerson, sampleReadyPerPerson } from "@/lib/travel-guide-data";
+import {
+  formatPeso,
+  guideSources,
+  sampleBasePerPerson,
+  sampleReadyPerPerson,
+  sampleThreeDayPlan,
+  sampleTripCosts,
+} from "@/lib/travel-guide-data";
 
 const canonicalPath = "/guides/baguio-travel-guide";
 
@@ -66,6 +77,29 @@ const tocItems: readonly GuideTocItem[] = [
   { href: "#faq", label: "First-timer FAQ", description: "Fast answers before you generate a route" },
 ];
 
+const guideFaqs = [
+  {
+    question: "How many days are enough for a first Baguio trip?",
+    answer: "Three days and two nights is a practical first visit when Day 1 combines one nearby tourist-spot loop with a flexible evening, Day 2 carries the longest full route, and Day 3 protects checkout and departure.",
+  },
+  {
+    question: "Can I tour Baguio without a private car?",
+    answer: "Yes. A realistic DIY route combines walkable city-center sections, verified jeepney corridors, and taxis for luggage, rain, late returns, or difficult transfers. Confirm the loading point and signboard locally.",
+  },
+  {
+    question: "What should a first-time visitor prioritize?",
+    answer: "Keep Botanical Garden, The Mansion, Wright Park, Mines View, and Good Shepherd together, then pair Burnham Park, Cathedral, and Session Road in a separate city-center period. Choose Camp John Hay or a west-side loop for another day.",
+  },
+  {
+    question: "How much should I prepare for a 3D2N Baguio trip?",
+    answer: `The Baguio Buddy worked example starts at about ${formatPeso(sampleBasePerPerson)} per person for two adults sharing a room. A more prepared target is ${formatPeso(sampleReadyPerPerson)} per person including a shopping cap and contingency fund. Live quotes will vary.`,
+  },
+  {
+    question: "Should I carry luggage while visiting tourist spots?",
+    answer: "A relaxing plan should not assume that a traveler will carry heavy bags through parks. Confirm hotel bag drop or a staffed terminal counter, retain valuables, and keep proof of any storage arrangement.",
+  },
+] as const;
+
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -87,6 +121,13 @@ const jsonLd = {
       },
       image: `${SITE_URL}/assets/img/destinations/botanical-garden.jpg`,
       mainEntityOfPage: `${SITE_URL}${canonicalPath}`,
+      citation: [
+        guideSources.visita.url,
+        guideSources.genesis.url,
+        guideSources.victory.url,
+        guideSources.jeepneyRoutes.url,
+        guideSources.pagasaNormals.url,
+      ],
       about: [
         { "@type": "City", name: "Baguio City" },
         { "@type": "Thing", name: "Baguio itinerary" },
@@ -100,6 +141,14 @@ const jsonLd = {
         { "@type": "ListItem", position: 2, name: "Travel guides", item: `${SITE_URL}/guides` },
         { "@type": "ListItem", position: 3, name: "Baguio travel guide", item: `${SITE_URL}${canonicalPath}` },
       ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: guideFaqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
     },
   ],
 };
@@ -316,6 +365,116 @@ export default function BaguioTravelGuidePage() {
             <div><strong>Do not split the East Baguio classics unnecessarily.</strong><p>Botanical Garden, The Mansion, Wright Park, Mines View, and Good Shepherd belong in one continuous route when the traveler selected them.</p></div>
             <Link className="button primary" href="/plan">Build my route <Route size={17} /></Link>
           </div>
+        </div>
+      </section>
+
+      <section id="sample-itineraries" className="section complete-guide-section" aria-labelledby="sample-itineraries-title">
+        <div className="shell">
+          <div className="section-heading">
+            <span className="eyebrow"><CalendarDays size={15} /> Sample Baguio itineraries</span>
+            <h2 id="sample-itineraries-title">Choose a trip length, then customize around your real arrival and departure</h2>
+            <p>These are route frameworks—not promises that every commute, queue, meal, and attraction will run exactly on time.</p>
+          </div>
+
+          <div className="complete-guide-variant-grid">
+            <article>
+              <span>2D1N</span><h3>First-timer essentials</h3>
+              <ol><li>Day 1: East Baguio loop, check-in and rest, then the city center.</li><li>Day 2: Burnham or market near checkout, collect bags, and depart.</li></ol>
+              <p>Best only with an early arrival and a later confirmed departure. Skip a major loop rather than rushing both days.</p>
+            </article>
+            <article className="recommended">
+              <span>3D2N · recommended</span><h3>Balanced highlights</h3>
+              <ol><li>Day 1: East Baguio classics and a flexible city evening.</li><li>Day 2: Camp John Hay plus one compatible west-side anchor.</li><li>Day 3: Checkout, market or one easy stop, then departure.</li></ol>
+              <p>Gives the first visit two meaningful sightseeing days while protecting hotel and luggage timing.</p>
+            </article>
+            <article>
+              <span>4D3N</span><h3>Slower city plus side trip</h3>
+              <ol><li>Days 1–2: East Baguio, city center, Camp John Hay, and west Baguio.</li><li>Day 3: Choose La Trinidad, Asin/Tuba, or Atok—not all three.</li><li>Day 4: Easy breakfast, market, bags, and departure.</li></ol>
+              <p>Use the extra day for depth and recovery, not simply a longer checklist.</p>
+            </article>
+          </div>
+
+          <div className="complete-guide-timeline-heading">
+            <div><small>Worked example</small><h3>A detailed 3-day route for two DIY commuters</h3></div>
+            <Link href="/guides/baguio-itinerary-3-days-2-nights">Open expenses, booking assumptions, and alternatives <ArrowRight size={16} /></Link>
+          </div>
+          <GuideTimeline days={sampleThreeDayPlan} />
+        </div>
+      </section>
+
+      <section id="budget" className="section complete-guide-section complete-guide-soft" aria-labelledby="budget-title">
+        <div className="shell">
+          <div className="section-heading split">
+            <div>
+              <span className="eyebrow"><CircleDollarSign size={15} /> Budget and expenses</span>
+              <h2 id="budget-title">Show the assumptions behind every total</h2>
+              <p>This example is for two adults sharing a room on a non-holiday weekday. Replace every allowance with your ticket, room, menu, and admission quote.</p>
+            </div>
+            <Link className="text-link" href="/guides/baguio-trip-budget">Build a personal budget <ArrowRight size={16} /></Link>
+          </div>
+          <GuideCostTable costs={sampleTripCosts} caption="Worked 3D2N Baguio budget for two adults, including optional preparation money" />
+          <div className="complete-guide-budget-summary">
+            <article><small>Base trip example</small><strong>{formatPeso(sampleBasePerPerson)}</strong><span>per person before optional shopping</span></article>
+            <article><small>Prepared target</small><strong>{formatPeso(sampleReadyPerPerson)}</strong><span>per person with shopping cap and contingency</span></article>
+            <article><small>Not included automatically</small><strong>Live choices</strong><span>Premium rooms, shopping over the cap, paid activities, and fare changes</span></article>
+          </div>
+          <GuideDisclosure>
+            A search-friendly price is not a quote. Dates, holidays, room occupancy, operator, vehicle class, menus, attraction rates, discounts, and personal shopping change the result.
+          </GuideDisclosure>
+        </div>
+      </section>
+
+      <section id="food-and-rest" className="section complete-guide-section" aria-labelledby="food-rest-title">
+        <div className="shell">
+          <div className="section-heading">
+            <span className="eyebrow"><Utensils size={15} /> Food, rest, and luggage</span>
+            <h2 id="food-rest-title">A route is only practical when the traveler can still enjoy it</h2>
+            <p>Meals, queues, rain, hills, bathroom stops, hotel timing, and bags are itinerary events—not empty space between attractions.</p>
+          </div>
+          <div className="complete-guide-human-grid">
+            <article><span><Utensils /></span><h3>Protect a real meal</h3><p>Reserve 60–90 minutes around lunch. A packed day can use a nearby restaurant, but it should not erase the meal to save the schedule.</p></article>
+            <article><span><Clock3 /></span><h3>Add a seated recovery</h3><p>After long walks or hotel check-in, protect a short recharge period. Let the traveler remove it voluntarily—not by default.</p></article>
+            <article><span><Backpack /></span><h3>Resolve luggage first</h3><p>Show verified or clearly unconfirmed storage options. Do not send someone to several parks with heavy bags as the silent default.</p></article>
+            <article><span><CloudSun /></span><h3>Keep one flexible stop</h3><p>When traffic, rain, fog, or queues grow, drop an optional place while preserving the anchor experience and safe return.</p></article>
+          </div>
+          <aside className="complete-guide-local-note">
+            <strong>Food planning without fake precision</strong>
+            <p>Pick a dining area that follows the route, set a per-meal allowance, and verify the live menu. Famous restaurants can have queues; a nearby backup protects the day better than a rigid reservation-free promise.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section id="faq" className="section seo-guide-faq complete-guide-section complete-guide-soft" aria-labelledby="complete-guide-faq-title">
+        <div className="shell">
+          <div className="section-heading"><span className="eyebrow">Plan with confidence</span><h2 id="complete-guide-faq-title">Baguio travel guide FAQ</h2></div>
+          <div className="seo-guide-faq-list">
+            {guideFaqs.map((faq) => <article key={faq.question}><h3>{faq.question}</h3><p>{faq.answer}</p></article>)}
+          </div>
+        </div>
+      </section>
+
+      <section className="section complete-guide-trust-section" aria-label="Guide verification and sources">
+        <div className="shell">
+          <GuideVerificationStandard />
+          <GuideSourceList
+            reviewed={BAGUIO_GUIDE_REVIEW_LABEL}
+            sources={[
+              guideSources.visita,
+              guideSources.genesis,
+              guideSources.victory,
+              guideSources.jeepneyRoutes,
+              guideSources.fare,
+              guideSources.taxi,
+              guideSources.pagasaNormals,
+            ]}
+          />
+        </div>
+      </section>
+
+      <section className="section complete-guide-final-cta" aria-labelledby="complete-guide-cta-title">
+        <div className="shell">
+          <div><span className="eyebrow">Turn this guide into your trip</span><h2 id="complete-guide-cta-title">Build around your dates, hotel, bags, and favorite places</h2><p>Baguio Buddy groups nearby attractions, protects fixed hotel times, and explains when a selected place needs another day.</p></div>
+          <div><Link className="button lime" href="/plan">Generate my Baguio itinerary <ArrowRight size={18} /></Link><Link className="button secondary" href="/tourist-spots">Browse all tourist spots</Link></div>
         </div>
       </section>
     </main>
