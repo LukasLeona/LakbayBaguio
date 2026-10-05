@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { CalendarCheck, ExternalLink, Info, ReceiptText } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { CalendarCheck, CheckCircle2, ExternalLink, Info, List, ReceiptText, ShieldCheck } from "lucide-react";
 import type { DailyPlan, GuideSource, SampleCost } from "@/lib/travel-guide-data";
 import { formatPeso } from "@/lib/travel-guide-data";
 
@@ -27,6 +29,70 @@ export function GuideDisclosure({ children }: { children: ReactNode }) {
     <aside className="guide-disclosure">
       <Info size={20} aria-hidden="true" />
       <div><strong>Read this before using the numbers</strong><p>{children}</p></div>
+    </aside>
+  );
+}
+
+export type GuideTocItem = {
+  href: `#${string}`;
+  label: string;
+  description?: string;
+};
+
+export function GuideTableOfContents({ items }: { items: readonly GuideTocItem[] }) {
+  return (
+    <nav className="guide-toc" aria-labelledby="guide-toc-title">
+      <div className="guide-toc-heading">
+        <List size={20} aria-hidden="true" />
+        <div><small>Jump to an answer</small><h2 id="guide-toc-title">Inside this Baguio guide</h2></div>
+      </div>
+      <ol>
+        {items.map((item, index) => (
+          <li key={item.href}>
+            <a href={item.href}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <span><strong>{item.label}</strong>{item.description ? <small>{item.description}</small> : null}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+export function GuideByline({
+  reviewed,
+  scope,
+}: {
+  reviewed: string;
+  scope: string;
+}) {
+  return (
+    <aside className="guide-byline" aria-label="Guide authorship and review information">
+      <Image src="/assets/img/kabsat-avatar.svg" alt="Kabsat, Baguio Buddy guide" width={50} height={50} />
+      <div>
+        <small>Prepared by Baguio Buddy</small>
+        <strong>Reviewed for commuter-first trip planning</strong>
+        <p>{scope}</p>
+      </div>
+      <span><ShieldCheck size={17} aria-hidden="true" /> Checked {reviewed}</span>
+    </aside>
+  );
+}
+
+export function GuideVerificationStandard() {
+  return (
+    <aside className="guide-verification" aria-labelledby="guide-verification-title">
+      <div>
+        <span><CheckCircle2 size={20} aria-hidden="true" /></span>
+        <div><small>How this guide is maintained</small><h2 id="guide-verification-title">Useful planning data, with changing details clearly labeled</h2></div>
+      </div>
+      <ul>
+        <li><strong>Coordinates and clusters</strong><span>Match the same destination records used by the itinerary generator.</span></li>
+        <li><strong>Changing details</strong><span>Hours, fees, access, transport, and weather must be reconfirmed close to the trip.</span></li>
+        <li><strong>Original utility</strong><span>Advice is organized around realistic routes, luggage, meals, rest, terrain, and commuter transfers.</span></li>
+      </ul>
+      <p>Found something that changed? <Link href="/suggestions">Send a correction to Kabsat</Link>.</p>
     </aside>
   );
 }
