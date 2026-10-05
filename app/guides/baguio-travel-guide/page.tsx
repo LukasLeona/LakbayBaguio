@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -26,6 +27,10 @@ import {
 import {
   BAGUIO_GUIDE_PUBLISHED_DATE,
   BAGUIO_GUIDE_REVIEW_LABEL,
+  BAGUIO_GUIDE_LOOPS,
+  formatVisitDuration,
+  getLoopDestinations,
+  routeGuideForLoop,
 } from "@/lib/baguio-guide-data";
 import { pageMetadata, serializeJsonLd, SITE_URL } from "@/lib/seo";
 import { formatPeso, guideSources, sampleBasePerPerson, sampleReadyPerPerson } from "@/lib/travel-guide-data";
@@ -258,6 +263,59 @@ export default function BaguioTravelGuidePage() {
             <div><strong>First-time commuter rule</strong><p>If a jeepney leg has no confirmed loading point or signboard, present it as a route to verify—not as turn-by-turn certainty.</p></div>
             <Link href="/guides/baguio-commute-guide">Open the complete commute guide <ArrowRight size={16} /></Link>
           </aside>
+        </div>
+      </section>
+
+      <section id="tourist-spots" className="section complete-guide-section complete-guide-soft" aria-labelledby="tourist-spots-title">
+        <div className="shell">
+          <div className="section-heading split">
+            <div>
+              <span className="eyebrow"><MapPinned size={15} /> Tourist spots by route</span>
+              <h2 id="tourist-spots-title">Seven practical loops—not 48 pins scattered across a map</h2>
+              <p>Choose one geographic anchor for the day, then add nearby places only while meals, rest, opening windows, and return travel still fit.</p>
+            </div>
+            <Link className="text-link" href="/tourist-spots">Compare all tourist spots <ArrowRight size={16} /></Link>
+          </div>
+
+          <div className="complete-guide-loop-list">
+            {BAGUIO_GUIDE_LOOPS.map((loop) => {
+              const destinations = getLoopDestinations(loop);
+              const hero = destinations[0];
+              const routeGuide = routeGuideForLoop(loop);
+              return (
+                <article id={`loop-${loop.id}`} className="complete-guide-loop" key={loop.id}>
+                  {hero ? (
+                    <div className="complete-guide-loop-image">
+                      <Image src={hero.image} alt={`${loop.title} route in and around Baguio`} fill sizes="(max-width: 760px) 100vw, 280px" />
+                    </div>
+                  ) : null}
+                  <div className="complete-guide-loop-copy">
+                    <header><span>{loop.area}</span><small>{loop.timeNeeded}</small></header>
+                    <h3>{loop.title}</h3>
+                    <p>{loop.summary}</p>
+                    <dl>
+                      <div><dt>Best for</dt><dd>{loop.bestFor}</dd></div>
+                      <div><dt>Commute starting point</dt><dd>{routeGuide.loadingArea}</dd></div>
+                    </dl>
+                    <div className="complete-guide-loop-spots" aria-label={`Places in the ${loop.title} loop`}>
+                      {destinations.slice(0, 6).map((destination) => (
+                        <Link href={`/plan?place=${destination.id}`} key={destination.id}>
+                          <span>{destination.name}</span><small>{formatVisitDuration(destination.duration)}</small>
+                        </Link>
+                      ))}
+                      {destinations.length > 6 ? <span className="complete-guide-more">+{destinations.length - 6} more options</span> : null}
+                    </div>
+                    <aside><ShieldCheck size={16} /><span>{loop.travelNote}</span></aside>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="complete-guide-cluster-rule">
+            <div><strong>Do not split the East Baguio classics unnecessarily.</strong><p>Botanical Garden, The Mansion, Wright Park, Mines View, and Good Shepherd belong in one continuous route when the traveler selected them.</p></div>
+            <Link className="button primary" href="/plan">Build my route <Route size={17} /></Link>
+          </div>
         </div>
       </section>
     </main>
