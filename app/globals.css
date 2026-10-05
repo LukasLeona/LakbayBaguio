@@ -5344,3 +5344,43 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .complete-guide-loop { grid-template-columns: 1fr; }
   .complete-guide-loop-copy { padding: 4mm; }
 }
+
+/* Expanded tourist-spot directory */
+.tourist-directory-intro { padding-block: 34px 58px !important; background: #f0f3e9; }
+.tourist-directory-intro .guide-byline { margin-bottom: 16px; }
+.tourist-directory-group { scroll-margin-top: calc(var(--header-height) + 18px); }
+.tourist-directory-group > header small { display: block; margin-bottom: 3px; color: var(--pine-700); font-size: .62rem; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.tourist-directory-route-note { display: flex; align-items: flex-start; gap: 8px; margin: 15px 0; padding: 11px 13px; border-radius: 13px; color: var(--pine-800); background: var(--sage-100); font-size: .67rem; line-height: 1.5; }
+.tourist-directory-route-note svg { flex: 0 0 auto; margin-top: 1px; }
+.tourist-directory-card { scroll-margin-top: calc(var(--header-height) + 16px); align-items: flex-start !important; }
+.tourist-directory-card > div { min-width: 0; width: 100%; }
+.tourist-directory-card .tourist-directory-type { display: block; margin-bottom: 3px; color: var(--pine-700); font-size: .55rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.tourist-directory-card h4 a { text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; transition: text-decoration-color .18s ease; }
+.tourist-directory-card h4 a:hover { text-decoration-color: var(--pine-700); }
+.tourist-directory-facts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tourist-directory-facts span { display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; border-radius: 9px; color: var(--pine-800); background: #edf3ea; font-size: .58rem; font-weight: 750; }
+.tourist-directory-caution { display: block !important; margin-top: 9px; color: #706747 !important; font-size: .58rem !important; line-height: 1.5; }
+.tourist-directory-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+.tourist-directory-actions a { display: inline-flex; align-items: center; gap: 5px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 10px; color: var(--pine-800); background: white; font-size: .6rem; font-weight: 850; }
+.tourist-directory-actions a:first-child { color: white; border-color: var(--pine-800); background: var(--pine-800); }
+.tourist-directory-loop-warning { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; padding: 11px 13px; border-left: 3px solid var(--sun); border-radius: 0 12px 12px 0; color: #685d3e; background: #fff6d8; font-size: .62rem; line-height: 1.5; }
+.tourist-directory-loop-warning svg { flex: 0 0 auto; margin-top: 1px; }
+
+@media screen and (max-width: 760px) {
+  .tourist-directory-intro { padding: 17px 0 33px !important; }
+  .tourist-directory-group { padding: 16px 13px !important; }
+  .tourist-directory-group > header { align-items: flex-start; }
+  .tourist-directory-group > header small { font-size: .53rem; }
+  .tourist-directory-route-note { font-size: .58rem; }
+  .tourist-directory-card { padding: 13px !important; }
+  .tourist-directory-card > span { width: 33px !important; height: 33px !important; }
+  .tourist-directory-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .tourist-directory-actions a { min-height: 35px; justify-content: center; text-align: center; }
+}
+
+@media print {
+  .tourist-directory-intro .guide-toc,
+  .tourist-directory-actions { display: none !important; }
+  .tourist-directory-group,
+  .tourist-directory-card { break-inside: avoid; box-shadow: none !important; }
+}
