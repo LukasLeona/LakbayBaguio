@@ -3,6 +3,7 @@ import { places } from "@/lib/places";
 import { LAST_CONTENT_REVIEW, SITE_URL } from "@/lib/seo";
 
 const reviewedAt = new Date(`${LAST_CONTENT_REVIEW}T00:00:00+08:00`);
+const completeGuideReviewedAt = new Date("2026-10-05T00:00:00+08:00");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const corePages: MetadataRoute.Sitemap = [
@@ -11,6 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/tourist-spots`, lastModified: reviewedAt, changeFrequency: "weekly", priority: 0.9 },
     { url: `${SITE_URL}/explore`, lastModified: reviewedAt, changeFrequency: "weekly", priority: 0.8 },
     { url: `${SITE_URL}/guides`, lastModified: reviewedAt, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${SITE_URL}/guides/baguio-travel-guide`, lastModified: completeGuideReviewedAt, changeFrequency: "weekly", priority: 0.98 },
     { url: `${SITE_URL}/guides/baguio-itinerary-3-days-2-nights`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.95 },
     { url: `${SITE_URL}/guides/baguio-commute-guide`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/guides/baguio-trip-budget`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.85 },
