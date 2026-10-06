@@ -19,6 +19,7 @@ declare global {
     turnstile?: {
       render: (container: HTMLElement, options: TurnstileOptions) => string;
       execute: (widgetId: string) => void;
+      reset: (widgetId: string) => void;
       remove: (widgetId: string) => void;
     };
   }
@@ -28,6 +29,7 @@ export const turnstileEnabled = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_K
 
 export type TurnstileWidgetHandle = {
   execute: () => void;
+  reset: () => void;
 };
 
 type TurnstileWidgetProps = {
@@ -85,7 +87,12 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
       }
       renderWidget();
     },
-  }), [renderWidget]);
+    reset() {
+      pendingExecutionRef.current = false;
+      if (widgetIdRef.current && window.turnstile) window.turnstile.reset(widgetIdRef.current);
+      onToken("");
+    },
+  }), [onToken, renderWidget]);
 
   useEffect(() => {
     renderWidget();
@@ -104,6 +111,7 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
         onReady={renderWidget}
+        onError={onError}
       />
       <div ref={containerRef} />
       {label ? <small>{label}</small> : null}
