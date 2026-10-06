@@ -21,7 +21,7 @@ export function ItineraryShareDialog({ itinerary, open, onClose }: { itinerary: 
   const [error, setError] = useState("");
   const [securityState, setSecurityState] = useState<SecurityState>("idle");
   const securityRef = useRef<TurnstileWidgetHandle>(null);
-  const securityTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const securityTimeoutRef = useRef<number | null>(null);
 
   const clearSecurityTimeout = useCallback(() => {
     if (securityTimeoutRef.current === null) return;
