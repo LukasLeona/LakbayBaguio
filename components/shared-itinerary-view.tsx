@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { ItineraryResults } from "@/components/itinerary-results";
 import type { PlannedItinerary } from "@/lib/planner-engine";
 import { isPlannedItinerary, isShareToken, rememberSharedItinerary } from "@/lib/shared-itinerary";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type SharedPayload = { itinerary: unknown; created_at: string; expires_at: string };
 
@@ -21,28 +20,25 @@ export function SharedItineraryView({ token }: { token: string }) {
       setState("missing");
       return;
     }
-    const client = getSupabaseBrowserClient();
-    if (!client) {
-      setState("error");
-      return;
-    }
     let active = true;
-    void client.rpc("get_shared_itinerary", { p_share_token: token }).then(({ data, error }) => {
-      if (!active) return;
-      const record = Array.isArray(data) ? data[0] as SharedPayload | undefined : undefined;
-      if (error) {
-        setState("error");
-        return;
-      }
-      if (!record || !isPlannedItinerary(record.itinerary)) {
-        setState("missing");
-        return;
-      }
-      setItinerary(record.itinerary);
-      setExpiresAt(record.expires_at);
-      setState("ready");
-      try { rememberSharedItinerary(token, record.itinerary); } catch { /* Home recall is optional. */ }
-    });
+    void fetch(`/api/itineraries/shared/${token}`, { cache: "no-store" })
+      .then(async (response) => ({ response, payload: response.ok ? await response.json() as SharedPayload : null }))
+      .then(({ response, payload }) => {
+        if (!active) return;
+        if (response.status === 404) {
+          setState("missing");
+          return;
+        }
+        if (!response.ok || !payload || !isPlannedItinerary(payload.itinerary)) {
+          setState("error");
+          return;
+        }
+        setItinerary(payload.itinerary);
+        setExpiresAt(payload.expires_at);
+        setState("ready");
+        try { rememberSharedItinerary(token, payload.itinerary); } catch { /* Home recall is optional. */ }
+      })
+      .catch(() => { if (active) setState("error"); });
     return () => { active = false; };
   }, [token]);
 

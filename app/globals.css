@@ -4541,7 +4541,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .share-dialog-security .turnstile-wrap { margin-block: 5px; }
   .share-dialog-security .button { max-width: 350px; }
   .share-dialog-security .button svg { width: 17px; }
-  .share-dialog-security .share-security-error { max-width: 390px; padding: 9px 12px; border: 1px solid #e8a99f; border-radius: 12px; color: #8a2e27; background: #fff0ed; font-weight: 700; }
   .share-security-note { display: flex; align-items: center; justify-content: center; gap: 5px; color: var(--muted); font-size: .52rem; }
   .share-security-note svg { width: 13px; }
   .share-dialog-error > span { padding: 6px 10px; border-radius: 999px; color: #92372e; background: #ffe8e0; font-size: .54rem; font-weight: 800; text-transform: uppercase; }

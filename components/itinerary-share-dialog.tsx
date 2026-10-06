@@ -2,48 +2,32 @@
 
 import { Check, Copy, Link2, LoaderCircle, QrCode, Share2, ShieldCheck, X } from "lucide-react";
 import QRCode from "qrcode";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { PlannedItinerary } from "@/lib/planner-engine";
 import { sharedItineraryPath } from "@/lib/shared-itinerary";
-import { ensureAnonymousIdentity, getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { TurnstileWidget, turnstileEnabled, type TurnstileWidgetHandle } from "./turnstile-widget";
 
 type ShareStage = "loading" | "security" | "ready" | "error";
-type SecurityState = "idle" | "checking" | "failed";
 
 export function ItineraryShareDialog({ itinerary, open, onClose }: { itinerary: PlannedItinerary; open: boolean; onClose: () => void }) {
   const [stage, setStage] = useState<ShareStage>("loading");
-  const [turnstileToken, setTurnstileToken] = useState("");
   const [shareUrl, setShareUrl] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
   const [error, setError] = useState("");
-  const [securityState, setSecurityState] = useState<SecurityState>("idle");
-  const securityRef = useRef<TurnstileWidgetHandle>(null);
-  const securityTimeoutRef = useRef<number | null>(null);
 
-  const clearSecurityTimeout = useCallback(() => {
-    if (securityTimeoutRef.current === null) return;
-    window.clearTimeout(securityTimeoutRef.current);
-    securityTimeoutRef.current = null;
-  }, []);
-
-  const createShare = useCallback(async (captchaToken?: string) => {
-    const client = getSupabaseBrowserClient();
-    if (!client) {
-      setError("Sharing is not configured yet. Please try again later.");
-      setStage("error");
-      return;
-    }
+  const createShare = useCallback(async () => {
     setStage("loading");
     setError("");
     try {
-      await ensureAnonymousIdentity(client, captchaToken);
-      const { data, error: shareError } = await client.rpc("create_shared_itinerary", { p_itinerary: itinerary });
-      if (shareError) throw shareError;
-      if (typeof data !== "string") throw new Error("The share link could not be created.");
-      const url = `${window.location.origin}${sharedItineraryPath(data)}`;
+      const response = await fetch("/api/itineraries/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itinerary }),
+      });
+      const result = await response.json() as { token?: string; error?: string };
+      if (!response.ok || typeof result.token !== "string") throw new Error(result.error || "The share link could not be created.");
+      const url = `${window.location.origin}${sharedItineraryPath(result.token)}`;
       const qr = await QRCode.toDataURL(url, {
         width: 280,
         margin: 2,
@@ -53,49 +37,12 @@ export function ItineraryShareDialog({ itinerary, open, onClose }: { itinerary: 
       setShareUrl(url);
       setQrDataUrl(qr);
       setStage("ready");
-      setSecurityState("idle");
-      setTurnstileToken("");
     } catch (shareError) {
       const message = shareError instanceof Error ? shareError.message : "The share link could not be created.";
-      if (turnstileEnabled && message.toLowerCase().includes("captcha")) {
-        setTurnstileToken("");
-        setSecurityState("failed");
-        setError("The security check expired or could not be completed. Please tap below to try again.");
-        setStage("security");
-        return;
-      }
-      setError(message.includes("Share limit reached") ? "You’ve created several links this hour. Please try again a little later." : message);
+      setError(message);
       setStage("error");
     }
   }, [itinerary]);
-
-  const handleSecurityError = useCallback(() => {
-    clearSecurityTimeout();
-    setTurnstileToken("");
-    setSecurityState("failed");
-    setError("The security check could not load. Check your connection, then try again.");
-  }, [clearSecurityTimeout]);
-
-  const handleSecurityToken = useCallback((token: string) => {
-    setTurnstileToken(token);
-    if (!token) return;
-    clearSecurityTimeout();
-    setSecurityState("checking");
-    void createShare(token);
-  }, [clearSecurityTimeout, createShare]);
-
-  const beginSecurityCheck = useCallback(() => {
-    clearSecurityTimeout();
-    setError("");
-    setTurnstileToken("");
-    setSecurityState("checking");
-    securityRef.current?.reset();
-    securityRef.current?.execute();
-    securityTimeoutRef.current = window.setTimeout(() => {
-      setSecurityState("failed");
-      setError("The security check is taking longer than expected. Please tap below to try again.");
-    }, 12000);
-  }, [clearSecurityTimeout]);
 
   useEffect(() => {
     setCanNativeShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
@@ -103,25 +50,9 @@ export function ItineraryShareDialog({ itinerary, open, onClose }: { itinerary: 
 
   useEffect(() => {
     if (!open || shareUrl) return;
-    const client = getSupabaseBrowserClient();
-    if (!client) {
-      setError("Sharing is not configured yet. Please try again later.");
-      setStage("error");
-      return;
-    }
-    let cancelled = false;
-    void client.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      if (data.session || !turnstileEnabled) void createShare();
-      else {
-        setStage("security");
-        setSecurityState("idle");
-      }
-    });
-    return () => { cancelled = true; };
-  }, [createShare, open, shareUrl]);
-
-  useEffect(() => () => clearSecurityTimeout(), [clearSecurityTimeout]);
+    setStage("security");
+    setError("");
+  }, [open, shareUrl]);
 
   useEffect(() => {
     if (!open) return;
@@ -180,22 +111,10 @@ export function ItineraryShareDialog({ itinerary, open, onClose }: { itinerary: 
         {stage === "security" ? (
           <div className="share-dialog-security">
             <ShieldCheck />
-            <h3>One quick security check</h3>
-            <p>Tap once to verify you’re a real traveler. Your private itinerary link will be created automatically.</p>
-            <TurnstileWidget
-              ref={securityRef}
-              action="share_itinerary"
-              appearance="interaction-only"
-              execution="execute"
-              label={null}
-              onToken={handleSecurityToken}
-              onError={handleSecurityError}
-            />
-            {securityState === "failed" ? <p className="share-security-error" role="alert">{error}</p> : null}
-            <button className="button primary full" type="button" disabled={securityState === "checking"} onClick={beginSecurityCheck}>
-              {securityState === "checking" ? <><LoaderCircle className="spin" /> Verifying…</> : <><Link2 /> {securityState === "failed" ? "Retry security check" : "Verify & generate link"}</>}
-            </button>
-            <small className="share-security-note"><ShieldCheck /> Protected by Cloudflare Turnstile</small>
+            <h3>Your private link is ready to create</h3>
+            <p>One tap packages this itinerary into a read-only link that remains available for 90 days.</p>
+            <button className="button primary full" type="button" onClick={() => void createShare()}><Link2 /> Generate my link</button>
+            <small className="share-security-note"><ShieldCheck /> Protected by private hourly sharing limits</small>
           </div>
         ) : null}
 
@@ -215,7 +134,7 @@ export function ItineraryShareDialog({ itinerary, open, onClose }: { itinerary: 
         ) : null}
 
         {stage === "error" ? (
-          <div className="share-dialog-error"><span>Link unavailable</span><h3>We couldn’t prepare this share yet.</h3><p>{error}</p><button className="button primary" type="button" onClick={() => { if (turnstileEnabled && !turnstileToken) { setStage("security"); setSecurityState("idle"); setError(""); } else void createShare(turnstileToken || undefined); }}>Try again</button></div>
+          <div className="share-dialog-error"><span>Link unavailable</span><h3>We couldn’t prepare this share yet.</h3><p>{error}</p><button className="button primary" type="button" onClick={() => void createShare()}>Try again</button></div>
         ) : null}
       </section>
     </div>
