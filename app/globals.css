@@ -2758,6 +2758,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     color: #87938e;
     font-size: .62rem;
   }
+  .place-editorial-fit { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin: 17px 0; }
+  .place-editorial-fit article { padding: 13px 14px; border: 1px solid var(--line); border-radius: 14px; background: #f5f7ef; }
+  .place-editorial-fit small, .place-editorial-fit strong { display: block; }
+  .place-editorial-fit small { margin-bottom: 4px; color: var(--pine-700); font-size: .55rem; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+  .place-editorial-fit strong { font-size: .67rem; line-height: 1.45; }
+  .place-editorial-steps { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+  .place-editorial-steps li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 10px; align-items: start; }
+  .place-editorial-steps li > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: white; background: var(--pine-800); font-size: .58rem; font-weight: 850; }
+  .place-editorial-steps strong { display: block; font-size: .69rem; }
+  .place-editorial-steps p { margin: 3px 0 0; color: var(--muted); font-size: .63rem; line-height: 1.5; }
+  .place-editorial-plan > aside { display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 11px; margin-top: 18px; padding: 14px; border-radius: 15px; background: #fff6d8; }
+  .place-editorial-plan > aside > svg { width: 34px; height: 34px; padding: 8px; border-radius: 10px; color: var(--pine-900); background: var(--sun); }
+  .place-editorial-plan > aside strong { font-size: .68rem; }
+  .place-editorial-plan > aside ul { display: grid; gap: 5px; margin: 7px 0 0; padding-left: 16px; color: #675f45; font-size: .61rem; line-height: 1.45; }
   .nearby-place-links {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3232,6 +3246,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .place-guide-main h2 + p {
     font-size: .72rem;
   }
+  .place-editorial-fit { grid-template-columns: 1fr; }
   .place-guide-sidebar {
     position: static;
     padding: 23px;

@@ -9,6 +9,8 @@ import {
   CalendarPlus,
   Clock3,
   ExternalLink,
+  Footprints,
+  ListChecks,
   MapPin,
   Navigation,
   ShieldCheck,
@@ -20,6 +22,7 @@ import {
   getGuideLoopForDestination,
 } from "@/lib/baguio-guide-data";
 import { getPlace, places } from "@/lib/places";
+import { getPlaceGuideEditorial } from "@/lib/place-guide-content";
 import {
   absoluteUrl,
   LAST_CONTENT_REVIEW,
@@ -85,6 +88,7 @@ export async function generateMetadata({ params }: PlacePageProps): Promise<Meta
   if (!place) return {};
 
   const descriptor = kindCopy[place.kind];
+  const editorial = getPlaceGuideEditorial(place);
   const searchName = placeSearchName(place);
   return pageMetadata({
     title: `${searchName}: ${descriptor.titleSuffix}`,
@@ -121,6 +125,8 @@ export default async function PlaceGuidePage({ params }: PlacePageProps) {
     name: place.name,
     url: `${SITE_URL}/places/${place.id}`,
     description: place.description,
+    dateModified: LAST_CONTENT_REVIEW,
+    mainEntityOfPage: `${SITE_URL}/places/${place.id}`,
     ...(place.image ? { image: absoluteUrl(place.image) } : {}),
     geo: {
       "@type": "GeoCoordinates",
@@ -136,6 +142,7 @@ export default async function PlaceGuidePage({ params }: PlacePageProps) {
     },
     hasMap: directionsUrl(place),
     priceRange: priceRange(place),
+    isAccessibleForFree: place.price === "Free",
     ...(place.externalUrl ? { sameAs: [place.externalUrl] } : {}),
   };
   const breadcrumbJsonLd = {
@@ -183,6 +190,20 @@ export default async function PlaceGuidePage({ params }: PlacePageProps) {
                 <h2>Plan enough time to enjoy {place.name}</h2>
                 <p>{place.description} The suggested visit time includes a little room to look around without treating the stop like a quick checklist.</p>
                 <div className="tag-row">{place.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+              </section>
+
+              <section className="place-editorial-plan">
+                <span className="eyebrow"><ListChecks size={14} /> A practical visit plan</span>
+                <h2>How to fit {place.name} into your itinerary</h2>
+                <p>{editorial.intro}</p>
+                <div className="place-editorial-fit">
+                  <article><small>Best for</small><strong>{editorial.bestFor}</strong></article>
+                  <article><small>Planning pace</small><strong>{editorial.pace}</strong></article>
+                </div>
+                <ol className="place-editorial-steps">
+                  {editorial.visitPlan.map((step, index) => <li key={step.title}><span>{index + 1}</span><div><strong>{step.title}</strong><p>{step.copy}</p></div></li>)}
+                </ol>
+                <aside><Footprints /><div><strong>Small details that protect the day</strong><ul>{editorial.practicalTips.map((tip) => <li key={tip}>{tip}</li>)}</ul></div></aside>
               </section>
 
               <section>
