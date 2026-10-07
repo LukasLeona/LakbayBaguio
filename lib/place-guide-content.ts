@@ -84,6 +84,36 @@ const placeEditorial: Record<string, PlaceGuideEditorial> = {
       "Budget for the campus approach and the walk back to the main road or next loading point.",
     ],
   },
+  "camp-john-hay": {
+    intro: "Camp John Hay is a large estate, not a single attraction pin. Choose the forest, heritage, café, or recreation areas you actually want before arriving, then keep the stop long enough to enjoy them. Crossing the property or changing gates can consume more time than a simple map estimate suggests.",
+    bestFor: "Pine scenery, a longer relaxed visit, heritage, and light walking",
+    pace: "About 150 minutes for a focused visit; longer for several paid activities",
+    visitPlan: [
+      { title: "Pick two priorities", copy: "Choose a realistic pair such as a forest walk and a heritage stop instead of assuming every activity fits one short visit." },
+      { title: "Navigate to the correct area", copy: "Confirm the entrance or internal destination with the driver because a general Camp John Hay pin may leave you far from your intended stop." },
+      { title: "Protect the exit time", copy: "Leave room to walk or ride back to a practical pickup point before the next fixed meal, reservation, or sunset plan." },
+    ],
+    practicalTips: [
+      "Separate free grounds from activities with their own tickets, hours, and operators.",
+      "Expect cool, damp, or muddy conditions on forest paths after rain.",
+      "A taxi is often more practical than forcing a complicated transfer when time is limited.",
+    ],
+  },
+  "chaya": {
+    intro: "Chaya works best as a protected lunch or dinner rather than a quick gap between attractions. Its Legarda Road location is close to central Baguio, but ordering, dining, and peak-period demand still need a real block in the itinerary.",
+    bestFor: "Travelers who want an unrushed Japanese meal after sightseeing",
+    pace: "About 90 minutes, plus waiting time during busy meal periods",
+    visitPlan: [
+      { title: "Confirm before the meal", copy: "Check the current opening day, service hours, reservation policy, and seating availability directly with the restaurant." },
+      { title: "End a nearby route here", copy: "Use the meal after a city-center, Burnham, or Legarda-area sequence instead of interrupting an East or West Baguio loop." },
+      { title: "Keep the evening flexible", copy: "Allow ordering and payment time before a fixed bus departure, Night Market visit, or hotel curfew." },
+    ],
+    practicalTips: [
+      "Menu items and prices can change; review current options before setting a strict food budget.",
+      "Ask about dietary needs and ingredient restrictions before ordering.",
+      "Use the exact Legarda Road pin and confirm the pickup side when booking a ride after dark or rain.",
+    ],
+  },
 };
 
 function genericEditorial(place: Place): PlaceGuideEditorial {
