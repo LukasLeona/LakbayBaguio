@@ -88,7 +88,6 @@ export async function generateMetadata({ params }: PlacePageProps): Promise<Meta
   if (!place) return {};
 
   const descriptor = kindCopy[place.kind];
-  const editorial = getPlaceGuideEditorial(place);
   const searchName = placeSearchName(place);
   return pageMetadata({
     title: `${searchName}: ${descriptor.titleSuffix}`,
@@ -112,6 +111,7 @@ export default async function PlaceGuidePage({ params }: PlacePageProps) {
   if (!place) notFound();
 
   const descriptor = kindCopy[place.kind];
+  const editorial = getPlaceGuideEditorial(place);
   const plannerDestination = getGuideDestination(place.id);
   const guideLoop = getGuideLoopForDestination(place.id);
   const nearby = places

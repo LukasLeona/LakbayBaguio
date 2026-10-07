@@ -12,7 +12,8 @@
     "generate:icons": "node scripts/generate-brand-icons.mjs",
     "lint": "tsc --noEmit",
     "audit:routes": "tsx scripts/audit-planner-routes.ts",
-    "audit:guides": "tsx scripts/audit-guide-catalog.ts"
+    "audit:guides": "tsx scripts/audit-guide-catalog.ts",
+    "audit:search-index": "tsx scripts/audit-search-index.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.57.4",
