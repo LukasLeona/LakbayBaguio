@@ -116,6 +116,16 @@ const planningQuestions = [
   },
 ] as const;
 
+const featuredPlaceGuides = [
+  { title: "Mines View Park", copy: "Mountain viewpoint, public entrance, visit time, and East Baguio pairings.", href: "/places/mines-view-park" },
+  { title: "Wright Park", copy: "Pool of Pines, horseback-riding area, terrain, and nearby stops.", href: "/places/wright-park" },
+  { title: "Camp John Hay", copy: "A realistic long visit for forest paths, heritage areas, and cafés.", href: "/places/camp-john-hay" },
+  { title: "BenCab Museum", copy: "Asin Road travel allowance, art collections, gardens, and route planning.", href: "/places/bencab-museum" },
+  { title: "Museo Kordilyera", copy: "A focused Cordilleran culture stop near the city-center route.", href: "/places/museo-kordilyera" },
+  { title: "Baguio Cathedral", copy: "A short heritage visit above Session Road with a hilly approach.", href: "/places/baguio-cathedral" },
+  { title: "Chaya", copy: "A slower Japanese meal on Legarda Road with practical evening timing.", href: "/places/chaya" },
+] as const;
+
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -233,6 +243,24 @@ export default function GuidesPage() {
                 <h3>{item.title}</h3>
                 <p>{item.copy}</p>
               </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section guide-library-places" aria-labelledby="guide-place-title">
+        <div className="shell">
+          <div className="section-heading split">
+            <div><span className="eyebrow"><MapPinned size={15} /> Detailed place guides</span><h2 id="guide-place-title">Check the stop before you put it in your day</h2><p>Open a visitor guide for realistic visit time, area pairings, map coordinates, commuter notes, and live-detail checks.</p></div>
+            <Link className="text-link" href="/explore">Browse every Baguio place <ArrowRight size={16} /></Link>
+          </div>
+          <div className="seo-guide-card-grid">
+            {featuredPlaceGuides.map((place) => (
+              <Link className="seo-guide-card" href={place.href} key={place.href}>
+                <span><MapPinned size={21} /></span>
+                <div><small>Visitor guide</small><h3>{place.title}</h3><p>{place.copy}</p></div>
+                <ArrowRight size={18} />
+              </Link>
             ))}
           </div>
         </div>
