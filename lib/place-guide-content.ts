@@ -39,6 +39,51 @@ const placeEditorial: Record<string, PlaceGuideEditorial> = {
       "Use a taxi fallback if rain, mobility needs, or tired legs make the next uphill connection impractical.",
     ],
   },
+  "baguio-cathedral": {
+    intro: "Baguio Cathedral is a short heritage and reflection stop above the Session Road area. It fits naturally into a city-center walk, but the climb from the commercial district can feel steeper than the map suggests. Use the upper road approach when stairs or weather make the direct pedestrian route uncomfortable.",
+    bestFor: "A quiet heritage stop between Session Road and nearby city sights",
+    pace: "About 35 minutes, plus the uphill approach you choose",
+    visitPlan: [
+      { title: "Check the church schedule", copy: "Treat worship services, ceremonies, and parish activity as the priority and adjust sightseeing quietly around them." },
+      { title: "Choose stairs or road access", copy: "The direct city-center approach climbs; a vehicle drop-off nearer the upper entrance may be more comfortable." },
+      { title: "Continue on foot", copy: "Session Road, Porta Vaga, SM Baguio, and other central stops are easier to combine than a distant attraction." },
+    ],
+    practicalTips: [
+      "Dress and behave respectfully inside an active place of worship.",
+      "Do not block entrances or services for photos.",
+      "Allow extra walking time when the pavement is wet or the city center is crowded.",
+    ],
+  },
+  "bencab-museum": {
+    intro: "BenCab Museum is a destination visit along Asin Road rather than a quick downtown add-on. Protect time for both the galleries and the grounds, then include the full outbound and return journey. A rushed slot misses the main reason to travel this far from the city center.",
+    bestFor: "Art, Cordilleran culture, gardens, and a slower half-day outing",
+    pace: "About 150 minutes on site, excluding the substantial Asin Road trip",
+    visitPlan: [
+      { title: "Confirm access first", copy: "Check the museum's current opening day, last admission, entrance rules, and weather conditions before leaving Baguio proper." },
+      { title: "Protect gallery and garden time", copy: "Start with the collections, then decide how much of the outdoor area fits your energy and the weather." },
+      { title: "Secure the return", copy: "Arrange or confirm a taxi, driver, or reliable pickup plan before the end of the visit instead of assuming an immediate ride back." },
+    ],
+    practicalTips: [
+      "Do not place this between two fixed city-center reservations.",
+      "Keep a rain layer and shoes suitable for paths and changes in elevation.",
+      "Confirm photography rules inside the galleries before taking pictures.",
+    ],
+  },
+  "museo-kordilyera": {
+    intro: "Museo Kordilyera is a focused indoor stop for understanding Cordilleran peoples through material culture, exhibition research, and interpretation. It works well as the cultural anchor of a city-center day, especially when rain makes an outdoor-heavy route less appealing.",
+    bestFor: "Travelers who want context for Cordilleran art, history, and culture",
+    pace: "About 75 minutes, with time to read rather than only photograph displays",
+    visitPlan: [
+      { title: "Verify the museum calendar", copy: "Because the museum is within UP Baguio, confirm current opening days, campus access, holidays, and any exhibition changeover." },
+      { title: "Follow the exhibit story", copy: "Allow time for labels and interpretation so the stop adds context to the rest of the Baguio trip." },
+      { title: "Keep the next stop central", copy: "Pair the museum with Session Road, Burnham Park, Baguio Cathedral, or a nearby meal rather than a distant area loop." },
+    ],
+    practicalTips: [
+      "Use quiet indoor time here as a weather fallback, but still confirm same-day access.",
+      "Respect exhibit photography restrictions and university rules.",
+      "Budget for the campus approach and the walk back to the main road or next loading point.",
+    ],
+  },
 };
 
 function genericEditorial(place: Place): PlaceGuideEditorial {
