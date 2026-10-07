@@ -21,6 +21,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/guides/baguio-first-timer-guide`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE_URL}/resources`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.75 },
     { url: `${SITE_URL}/about`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${SITE_URL}/help`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.55 },
+    { url: `${SITE_URL}/privacy`, lastModified: reviewedAt, changeFrequency: "yearly", priority: 0.35 },
+    { url: `${SITE_URL}/partner`, lastModified: reviewedAt, changeFrequency: "monthly", priority: 0.4 },
   ];
 
   const placePages: MetadataRoute.Sitemap = places.map((place) => ({

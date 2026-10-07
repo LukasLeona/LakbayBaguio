@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, HeartHandshake, MapPin, ShieldCheck } from "lucide-react";
 import { PartnerForm } from "@/components/partner-form";
-import { noIndexMetadata } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = noIndexMetadata(
-  "Local business feature inquiry",
-  "A private inquiry form for Baguio restaurants, stays, tours, and local shops seeking a possible Baguio Buddy feature review.",
-);
+export const metadata = pageMetadata({
+  title: "Baguio Local Business Feature Inquiry",
+  description: "Baguio restaurants, stays, tours, and local shops can submit a private inquiry for an independent Baguio Buddy feature review.",
+  path: "/partner",
+  keywords: ["Baguio local business", "Baguio restaurant feature", "Baguio hotel feature"],
+});
 
 export default function PartnerPage() {
   return (

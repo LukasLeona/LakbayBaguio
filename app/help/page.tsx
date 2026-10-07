@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, CircleHelp, Mail } from "lucide-react";
-import { noIndexMetadata } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = noIndexMetadata(
-  "Help & FAQs",
-  "Answers about itinerary planning, commute estimates, Nearby, anonymous chat, and the Baguio Wall.",
-);
+export const metadata = pageMetadata({
+  title: "Baguio Buddy Help & Itinerary Planner FAQs",
+  description: "Answers about the Baguio itinerary generator, commute estimates, nearby suggestions, anonymous chat, and the Baguio Wall.",
+  path: "/help",
+  keywords: ["Baguio itinerary planner help", "Baguio Buddy FAQ", "Baguio route planner questions"],
+});
 
 const faqs = [
   ["How does the itinerary generator work?", "Choose your starting point, dates, destinations, travel style, and transport options. Baguio Buddy groups nearby stops and builds a route with estimated travel time, fares, directions, meal breaks, hotel timing, and pacing safeguards."],

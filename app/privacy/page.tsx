@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, Mail, ShieldCheck } from "lucide-react";
-import { noIndexMetadata } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = noIndexMetadata(
-  "Privacy Policy",
-  "How Baguio Buddy handles itinerary, location, community, and inquiry information.",
-);
+export const metadata = pageMetadata({
+  title: "Privacy Policy",
+  description: "How Baguio Buddy handles itinerary, location, community, shared-trip, and inquiry information.",
+  path: "/privacy",
+  keywords: ["Baguio Buddy privacy", "Baguio itinerary planner privacy"],
+});
 
 export default function PrivacyPage() {
   return (
