@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   BaggageClaim,
+  BookOpenCheck,
   BusFront,
   CarFront,
   ExternalLink,
@@ -13,7 +14,7 @@ import {
 import { LTFRB_FARE_POLICY, resolveFarePolicy } from "@/lib/fare-policy";
 import { PLANNER_BAGGAGE_OPTIONS } from "@/lib/planner-data";
 import { JEEPNEY_ROAD_PATH_DISCLAIMER } from "@/lib/planner-engine";
-import { pageMetadata } from "@/lib/seo";
+import { pageMetadata, serializeJsonLd, SITE_URL } from "@/lib/seo";
 
 export const metadata = pageMetadata({
   title: "Baguio Commute Guide, Jeepney Fares & Luggage Storage",
@@ -30,6 +31,27 @@ export const metadata = pageMetadata({
 
 const routeDirectoryUrl = "https://alternateroutes.baguio.gov.ph/jeepneyroutes/";
 const baggageResources = PLANNER_BAGGAGE_OPTIONS["victory-liner"];
+const resourcesJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": `${SITE_URL}/resources#page`,
+      name: "Baguio commute, fare, and luggage guide",
+      url: `${SITE_URL}/resources`,
+      description: "Planning references for Baguio jeepney and taxi fares, luggage counters, map pins, and first-time commuting.",
+      about: { "@type": "City", name: "Baguio City" },
+      isPartOf: { "@id": `${SITE_URL}/#website` },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+        { "@type": "ListItem", position: 2, name: "Travel resources", item: `${SITE_URL}/resources` },
+      ],
+    },
+  ],
+};
 
 function pesos(value: number) {
   return `₱${Number.isInteger(value) ? value : value.toFixed(1)}`;
@@ -44,7 +66,9 @@ export default function ResourcesPage() {
 
   return (
     <main id="main-content" className="resources-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(resourcesJsonLd) }} />
       <div className="shell resources-shell">
+        <nav className="seo-breadcrumbs resources-breadcrumbs" aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><span aria-current="page">Travel resources</span></nav>
         <header className="resources-hero">
           <div>
             <span className="eyebrow light"><ShieldCheck size={15} /> Traveler reference desk</span>
@@ -141,6 +165,15 @@ export default function ResourcesPage() {
             <article><strong>Exact property location</strong><p>Use the location button beside the property name, then place the pin on the entrance so check-in, checkout, and route estimates use the correct coordinates.</p></article>
             <article><strong>Live conditions</strong><p>Confirm traffic, temporary closures, opening hours, and the public entrance shortly before each trip leg.</p></article>
           </div>
+        </section>
+
+        <section className="resources-related-guides" aria-labelledby="resources-related-title">
+          <div><small>USE THESE REFERENCES IN CONTEXT</small><h2 id="resources-related-title">Continue with a practical Baguio plan</h2></div>
+          <nav aria-label="Related Baguio guides">
+            <Link href="/guides/baguio-commute-guide"><BookOpenCheck /><span><strong>Baguio commute guide</strong><small>Loading points, transfers, final walks, and taxi fallbacks</small></span><ArrowRight /></Link>
+            <Link href="/guides/baguio-itinerary-3-days-2-nights"><BookOpenCheck /><span><strong>3 days and 2 nights</strong><small>See where fares, bags, meals, and buffers fit in a real route</small></span><ArrowRight /></Link>
+            <Link href="/guides/baguio-trip-budget"><BookOpenCheck /><span><strong>Baguio trip budget</strong><small>Turn transport rates into a prepared per-person allowance</small></span><ArrowRight /></Link>
+          </nav>
         </section>
 
         <section className="resources-return-card">

@@ -4862,6 +4862,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 /* Travel reference library */
 .resources-page { min-height: calc(100vh - var(--header-height)); padding: 32px 0 72px; background: radial-gradient(circle at 88% 4%, rgba(215,228,60,.18), transparent 24rem), #f3f3e9; }
 .resources-shell { display: grid; gap: 18px; }
+.resources-breadcrumbs { margin: 0 4px -4px; }
 .resources-hero { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0,1fr) 280px; align-items: end; gap: 44px; padding: clamp(32px, 5vw, 62px); border-radius: 36px; color: white; background: radial-gradient(circle at 92% 8%, rgba(215,228,60,.27), transparent 20rem), linear-gradient(135deg, #073b2d, #0d5a43); box-shadow: 0 26px 70px rgba(7,55,42,.18); }
 .resources-hero::after { content: ""; position: absolute; right: -80px; bottom: -130px; width: 320px; height: 320px; border: 1px solid rgba(255,255,255,.13); border-radius: 50%; }
 .resources-hero > div, .resources-hero > aside { position: relative; z-index: 1; }
@@ -4922,6 +4923,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .resources-return-card small { color: var(--lime); }
 .resources-return-card a { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; padding: 13px 17px; border-radius: 14px; color: var(--pine-950); background: var(--lime); font-size: .65rem; font-weight: 850; text-decoration: none; }
 .resources-return-card a svg { width: 16px; }
+.resources-related-guides { display: grid; grid-template-columns: minmax(220px,.7fr) minmax(0,1.3fr); gap: 30px; align-items: start; padding: 30px; border: 1px solid var(--line); border-radius: 28px; background: var(--paper); }
+.resources-related-guides small { color: var(--pine-700); font-size: .55rem; font-weight: 850; letter-spacing: .09em; }
+.resources-related-guides h2 { margin: 7px 0 0; font-size: clamp(1.35rem,3vw,2rem); line-height: 1.08; }
+.resources-related-guides nav { display: grid; gap: 8px; }
+.resources-related-guides nav a { display: grid; grid-template-columns: 34px minmax(0,1fr) 18px; align-items: center; gap: 10px; padding: 12px; border-radius: 15px; color: var(--pine-950); background: #f0f4e9; }
+.resources-related-guides nav a > svg:first-child { width: 34px; height: 34px; padding: 8px; border-radius: 10px; color: white; background: var(--pine-800); }
+.resources-related-guides nav a span { display: grid; gap: 2px; }
+.resources-related-guides nav a strong { font-size: .67rem; }
+.resources-related-guides nav a small { color: var(--muted); font-size: .5rem; font-weight: 600; letter-spacing: 0; }
 
 @media screen and (max-width: 900px) {
   .resources-hero { grid-template-columns: 1fr; gap: 25px; }
@@ -4933,6 +4943,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media screen and (max-width: 600px) {
   .resources-page { padding: 10px 0 32px; }
   .resources-shell { gap: 12px; }
+  .resources-breadcrumbs { margin: 3px 6px 0; }
   .resources-hero { gap: 18px; padding: 27px 21px; border-radius: 27px; }
   .resources-hero h1 { font-size: 2.25rem; }
   .resources-hero > div > p { margin-top: 14px; font-size: .69rem; }
@@ -4953,6 +4964,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .luggage-resource-grid article a { width: fit-content; }
   .resources-return-card { align-items: stretch; flex-direction: column; padding: 23px 20px; border-radius: 23px; }
   .resources-return-card a { justify-content: center; }
+  .resources-related-guides { grid-template-columns: 1fr; gap: 18px; padding: 22px 18px; border-radius: 22px; }
 }
 
 /* Keep every mobile overlay centered instead of presenting it as a bottom sheet. */
