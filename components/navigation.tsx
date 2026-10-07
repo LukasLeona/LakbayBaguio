@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, House, Lightbulb, MessageCircle, Plus, Route, Search } from "lucide-react";
+import { BookOpenCheck, Heart, House, Lightbulb, MessageCircle, Plus, Route, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ITINERARY_CHANGE_EVENT, ITINERARY_STORAGE_KEY } from "@/lib/itinerary";
 import { UnreadBadge, useChatNotifications } from "./chat-notifications";
@@ -16,7 +16,9 @@ const mobileNavItems = [
 ];
 
 const desktopNavItems = [
-  ...mobileNavItems.slice(0, 4),
+  ...mobileNavItems.slice(0, 2),
+  { href: "/guides", label: "Guides", icon: BookOpenCheck },
+  ...mobileNavItems.slice(2, 4),
   { href: "/suggestions", label: "Suggestions", icon: Lightbulb },
   mobileNavItems[4],
 ];

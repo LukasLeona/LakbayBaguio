@@ -160,7 +160,7 @@ export default function HomePage() {
           </div>
           <div className="home-feature-rail">
             {parks.slice(0, 4).map((place, index) => (
-              <Link href={`/plan?place=${place.id}`} className={`home-feature-card feature-${index + 1}`} key={place.id}>
+              <Link href={`/places/${place.id}`} className={`home-feature-card feature-${index + 1}`} key={place.id}>
                 <img src={place.image} alt="" loading="lazy" />
                 <span className="feature-shade" />
                 <span className="feature-number">0{index + 1}</span>
@@ -260,6 +260,18 @@ export default function HomePage() {
             <Link href="/privacy"><ShieldCheck /><span><strong>Privacy policy</strong><small>How your information is handled</small></span></Link>
             <Link href="/help"><CircleHelp /><span><strong>Help & FAQs</strong><small>Quick answers about Baguio Buddy</small></span></Link>
           </nav>
+          <div className="home-footer-popular" aria-label="Popular Baguio place guides">
+            <strong>Popular place guides</strong>
+            <div>
+              <Link href="/places/baguio-cathedral">Baguio Cathedral</Link>
+              <Link href="/places/bencab-museum">BenCab Museum</Link>
+              <Link href="/places/camp-john-hay">Camp John Hay</Link>
+              <Link href="/places/chaya">Chaya Baguio</Link>
+              <Link href="/places/mines-view-park">Mines View Park</Link>
+              <Link href="/places/museo-kordilyera">Museo Kordilyera</Link>
+              <Link href="/places/wright-park">Wright Park</Link>
+            </div>
+          </div>
           <div className="home-footer-bottom"><span>© 2026 Baguio Buddy</span><span>Built with care in the Philippines.</span></div>
         </div>
       </footer>
